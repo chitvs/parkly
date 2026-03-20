@@ -1,0 +1,31 @@
+<nav class="navbar navbar-expand-lg" data-bs-theme="dark" style="background-color: var(--parkly-blue);">
+  <div class="container">
+
+    <!-- logo + nome -->
+    <a class="navbar-brand d-flex align-items-center gap-2" href="index.html">
+      <img src="/client/assets/car.svg" alt="logo" width="30" height="24"
+           class="d-inline-block align-text-top"
+           onerror="this.style.display='none'">
+      Parkly
+    </a>
+
+    <!-- hamburger (mobile) -->
+    <button class="navbar-toggler" type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#navbarParkly"
+            aria-controls="navbarParkly"
+            aria-expanded="false"
+            aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <!-- bottoni login e registrati -->
+    <div class="collapse navbar-collapse" id="navbarParkly">
+      <form class="d-flex ms-auto gap-2">
+        <a href="login.html" class="btn btn-outline-light">Accedi</a>
+        <a href="register.html" class="btn btn-light">Registrati</a>
+      </form>
+    </div>
+
+  </div>
+</nav>
