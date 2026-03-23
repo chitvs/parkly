@@ -25,7 +25,7 @@ CREATE TABLE Garage (
     Planimetria_URL VARCHAR(255), -- Percorso planimetria per selezione posto 
     IsAttivo BOOLEAN DEFAULT TRUE, -- Per la disattivazione temporanea 
     DataCreazione TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (ID_Gestore) REFERENCES Utenti(ID_Utente) ON DELETE CASCADE
+    FOREIGN KEY (ID_Gestore) REFERENCES Utente(ID_Utente) ON DELETE CASCADE
 );
 
 -- 3. POSTO AUTO 
@@ -57,7 +57,7 @@ CREATE TABLE Prenotazione (
     PrezzoTotale DECIMAL(8, 2) NOT NULL,
     Stato ENUM('ATTIVA', 'ANNULLATA', 'CONCLUSA') DEFAULT 'ATTIVA',
     DataCreazione TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (ID_Utente) REFERENCES Utenti(ID_Utente) ON DELETE CASCADE,
-    FOREIGN KEY (ID_Posto) REFERENCES PostiAuto(ID_Posto) ON DELETE CASCADE,
+    FOREIGN KEY (ID_Utente) REFERENCES Utente(ID_Utente) ON DELETE CASCADE,
+    FOREIGN KEY (ID_Posto) REFERENCES PostoAuto(ID_Posto) ON DELETE CASCADE,
     CONSTRAINT CHK_DateSosta CHECK (FineSosta > InizioSosta)
 );
