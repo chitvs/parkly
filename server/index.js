@@ -27,6 +27,18 @@ app.get('/test-db', (req, res) => {
     });
 });
 
+// api per ritornare i garage
+app.get('/api/garage', (req, res) => {
+  db.any('SELECT * FROM Garage')
+    .then(data => {
+      res.json({ success: true, risultati: data.length, garage: data });
+    })
+    .catch(error => {
+      console.error('Errore nel recupero dei garage:', error);
+      res.status(500).json({ success: false, error: 'Errore interno' });
+    });
+});
+
 app.listen(port, () => {
   console.log(`Server in ascolto sulla porta ${port}...`);
 });
