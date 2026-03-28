@@ -1,142 +1,300 @@
-<!-- 
- ref = serve a creare variabili "reattive" 
- onMounted serve a fare cose esattamente nel momento in cui la pagina finisce di caricare.
-
--->
-
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
+import Header from '../components/Header.vue'
+import Footer from '../components/Footer.vue'
 
-// Creiamo la variabile che mostrerà lo stato del server a schermo (la inizializziamo con un messaggio di attesa) 
-const messaggioDalServer = ref('In attesa del database...')
+// Logica di ricerca invariata
+const searchLocation = ref('')
+const checkIn = ref('')
+const checkOut = ref('')
 
-// Funzione per chiamare il tuo backend sulla porta 3000 e aggiornare il messaggio a schermo in base alla risposta
-const collegaAlDatabase = async () => {
-  try {
-    const risposta = await fetch('http://localhost:3000/') 
-    if (!risposta.ok) throw new Error('Errore dal server')
-    
-    const dati = await risposta.text() // Se il server restituisce un testo semplice, altrimenti usa .json() se restituisce JSON
-    messaggioDalServer.value = "🟢 Backend Connesso: " + dati
-  } catch (errore) {
-    messaggioDalServer.value = "🔴 Errore: " + errore.message
-  }
+const handleSearch = () => {
+  console.log('Ricerca:', searchLocation.value, checkIn.value, checkOut.value)
+  alert(`Cerco parcheggi a ${searchLocation.value} dal ${checkIn.value} al ${checkOut.value}`)
 }
-
-// Avvia la chiamata appena apri la pagina
-onMounted(() => {
-  collegaAlDatabase()
-})
 </script>
+
 <template>
-    <div class="server-status">
-      Status Server: {{ messaggioDalServer }}
-    </div>
   <div class="home-wrapper">
-    
-    <header class="placeholder-header">Navigazione Parkly</header>
+    <Header />
 
     <main class="main-content">
-      <section class="hero">
-        <h1 class="hero-title">Trova il parcheggio perfetto con <span class="highlight">Parkly</span></h1>
-        <p class="hero-subtitle">
-          La webapp intelligente per gestire i tuoi spazi in modo semplice e veloce. 
-          Unisciti a noi e semplifica la tua giornata.
-        </p>
-        <button class="cta-button">Inizia ora</button>
+      
+      <section class="hero-header">
+        <div class="hero-text">
+          <h1>Sostare non è mai stato così <span class="highlight">semplice</span>.</h1>
+          <p>La piattaforma intelligente per prenotare il tuo posto auto in totale sicurezza.</p>
+        </div>
       </section>
+
+      <section class="search-container">
+        <form @submit.prevent="handleSearch" class="search-box">
+          
+          <div class="input-group location-group">
+            <div class="icon">📍</div>
+            <div class="fields">
+              <label>Dove vuoi parcheggiare?</label>
+              <input type="text" v-model="searchLocation" placeholder="Città, indirizzo o stazione..." required>
+            </div>
+          </div>
+
+          <div class="input-group">
+            <label>Check-in</label>
+            <input type="datetime-local" v-model="checkIn" required>
+          </div>
+
+          <div class="input-group">
+            <label>Check-out</label>
+            <input type="datetime-local" v-model="checkOut" required>
+          </div>
+
+          <button type="submit" class="search-btn">
+             Cerca
+          </button>
+          
+        </form>
+      </section>
+
+      <section class="why-parkly">
+        <h2>Perché scegliere Parkly?</h2>
+        <div class="cards-grid">
+          <div class="card">
+            <div class="card-icon">🔒</div>
+            <h3>Posti Sicuri</h3>
+            <p>Solo garage verificati e protetti per la tua auto.</p>
+          </div>
+          <div class="card">
+            <div class="card-icon">⚡</div>
+            <h3>Prenotazione Rapida</h3>
+            <p>Trova e prenota il tuo posto in meno di 2 minuti.</p>
+          </div>
+          <div class="card">
+            <div class="card-icon">💰</div>
+            <h3>Tariffe Chiari</h3>
+            <p>Nessun costo nascosto, paghi quello che vedi.</p>
+          </div>
+        </div>
+      </section>
+
     </main>
 
-    <footer class="placeholder-footer">Footer Parkly &copy; 2026</footer>
-    
+    <Footer />
   </div>
 </template>
 
 <style scoped>
-/* 1. VARIABILI CSS: Il segreto dei veri professionisti per mantenere i colori coerenti */
+/* 1. VARIABILI CSS: Il segreto per coerenza visiva */
 .home-wrapper {
-  --primary-color: #2ecc71; /* Il verde principale di Parkly */
-  --primary-dark: #27ae60;
-  --text-dark: #2c3e50;
-  --text-light: #7f8c8d;
-  --bg-light: #f8f9fa;
+  /* Toni di Blu professionali */
+  --primary-blue: #0066cc;    /* Blu acceso per pulsanti e link */
+  --deep-blue: #002e5c;       /* Blu profondo per lo sfondo Hero */
+  --text-dark: #333333;       /* Testo principale */
+  --text-light: #ecf0f1;      /* Testo su sfondi scuri */
+  --white: #ffffff;           /* Sfondo search box e card */
+  --bg-light: #f4f7f6;        /* Sfondo generale pagina */
+  --border-light: #e0e0e0;    /* Linee di separazione */
 
-  /* Flexbox per spingere il footer sempre in fondo allo schermo */
   display: flex;
   flex-direction: column;
-  min-height: 100vh; 
-  font-family: 'Inter', 'Segoe UI', sans-serif;
-
-  .server-status {
-  background-color: #333;
-  color: #f1c40f;
-  text-align: center;
-  padding: 10px;
-  font-family: monospace;
-}
+  min-height: 100vh;
+  background-color: var(--bg-light);
+  font-family: 'Inter', -apple-system, sans-serif;
 }
 
-/* 2. STILI TEMPORANEI: Per visualizzare l'ingombro di Header e Footer */
-.placeholder-header, .placeholder-footer {
-  background-color: var(--text-dark);
-  color: white;
-  padding: 1.5rem;
-  text-align: center;
-  font-weight: bold;
-  letter-spacing: 1px;
-}
-
-/* 3. IL CORPO CENTRALE: Occupa tutto lo spazio rimanente (flex: 1) e centra il contenuto */
 .main-content {
   flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-color: var(--bg-light);
-  padding: 2rem;
 }
 
-/* 4. LA SEZIONE HERO: Il blocco visivo di forte impatto */
-.hero {
+/* 2. HERO HEADER BLU PROFONDO */
+.hero-header {
+  background-color: var(--deep-blue);
+  color: var(--white);
+  padding: 5rem 2rem 10rem 2rem; /* Spazio extra in basso per il "floating" */
   text-align: center;
-  max-width: 650px; /* Evita che il testo diventi troppo largo sugli schermi grandi */
 }
 
-.hero-title {
+.hero-text h1 {
   font-size: 3rem;
-  color: var(--text-dark);
   margin-bottom: 1rem;
   line-height: 1.2;
 }
 
 .highlight {
-  color: var(--primary-color); /* Diamo enfasi al nome del brand */
+  color: #66b2ff; /* Un azzurro più chiaro per l'enfasi sul testo blu scuro */
 }
 
-.hero-subtitle {
-  font-size: 1.25rem;
-  color: var(--text-light);
-  margin-bottom: 2.5rem;
-  line-height: 1.6;
+.hero-text p {
+  font-size: 1.3rem;
+  color: rgba(255,255,255,0.8);
+  max-width: 700px;
+  margin: 0 auto;
 }
 
-/* 5. IL BOTTONE CALL-TO-ACTION (CTA) con animazioni fluide */
-.cta-button {
-  background-color: var(--primary-color);
+/* 3. SEARCH BOX PULITA BIANCA E BLU */
+.search-container {
+  max-width: 1050px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  margin-top: -4rem; /* Trucco CSS: fluttuazione sopra la zona blu */
+  position: relative;
+  z-index: 10;
+}
+
+.search-box {
+  display: flex;
+  background: var(--white);
+  padding: 1rem;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1); /* Ombra più morbida per eleganza */
+  gap: 10px;
+}
+
+/* Rielaborazione input group per uno stile pulito "app" */
+.input-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem 1rem;
+  background: var(--white);
+  border-radius: 8px;
+  border: 2px solid var(--border-light); /* Bordo grigio chiaro di base */
+  transition: all 0.3s;
+}
+
+/* Effetto focus sul gruppo di input */
+.input-group:focus-within {  
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+}
+
+.location-group {
+  flex: 1.5; /* Più spazio per l'indirizzo */
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+.location-group .fields {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.location-group .icon {
+  font-size: 1.3rem;
+}
+
+.input-group label {
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: var(--primary-blue); /* Label colorate di blu */
+  margin-bottom: 4px;
+}
+
+.input-group input {
+  border: none;
+  outline: none;
+  font-size: 1rem;
+  font-family: inherit;
+  width: 100%;
+  color: var(--text-dark);
+}
+
+.input-group input::placeholder {
+  color: #999;
+}
+
+/* PULSANTE BLU ACCESO (Call to Action) */
+.search-btn {
+  background-color: var(--primary-blue);
   color: white;
   border: none;
-  padding: 15px 40px;
-  font-size: 1.1rem;
-  font-weight: 600;
-  border-radius: 50px; /* Bordi arrotondati moderni */
+  font-size: 1.2rem;
+  font-weight: bold;
+  padding: 0 2.5rem;
+  border-radius: 8px;
   cursor: pointer;
-  box-shadow: 0 4px 6px rgba(46, 204, 113, 0.2);
-  transition: all 0.3s ease; /* Transizione morbida */
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.cta-button:hover {
-  background-color: var(--primary-dark);
-  transform: translateY(-3px); /* Effetto sollevamento al passaggio del mouse */
-  box-shadow: 0 6px 12px rgba(46, 204, 113, 0.3);
+.search-btn:hover {
+  background-color: #0052a3; /* Un blu leggermente più scuro al passaggio */
+  transform: translateY(-2px);
+}
+
+/* 4. SEZIONE VANTAGGI SOTTOSTANTE */
+.why-parkly {
+  max-width: 1050px;
+  margin: 6rem auto 4rem auto;
+  padding: 0 1rem;
+}
+
+.why-parkly h2 {
+  color: var(--deep-blue);
+  margin-bottom: 2.5rem;
+  text-align: center;
+  font-size: 2.2rem;
+}
+
+.cards-grid {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.card {
+  flex: 1;
+  background: var(--white);
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+  border: 1px solid var(--border-light);
+  transition: transform 0.3s;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(0, 102, 204, 0.2);
+}
+
+.card-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.card h3 {
+  color: var(--deep-blue);
+  margin-bottom: 0.7rem;
+}
+
+.card p {
+  color: #666;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+/* Responsività per Smartphone (Ancora più pulita) */
+@media (max-width: 900px) {
+  .search-box {
+    flex-direction: column;
+    padding: 0.5rem;
+    gap: 5px;
+  }
+  .input-group {
+    border-radius: 6px;
+  }
+  .search-btn {
+    padding: 1.2rem;
+    justify-content: center;
+  }
+  .cards-grid {
+    flex-direction: column;
+  }
+  .hero-text h1 {
+    font-size: 2.2rem;
+  }
 }
 </style>
