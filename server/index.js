@@ -1,44 +1,66 @@
 const express = require('express');
+const session = require('express-session');
 const cors = require('cors');
 require('dotenv').config();
-
 const db = require('./database/db'); 
-
+const authRoutes = require('./routes/auth'); 
 const app = express();
 const port = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
 
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'parkly_secret',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { maxAge: 1000 * 60 * 60 * 24 } // 24 ore
+}));
+
+app.use('/api/auth', authRoutes); // collegamento con auth.js
+
 app.get('/', (req, res) => {
-  res.send('Server di Parkly operativo!');
+    res.send('Server di Parkly operativo!');
 });
 
 // test 
 app.get('/test-db', (req, res) => {
-  db.any('SELECT NOW()')
-    .then(data => {
-      console.log('Risultati della query:', data);
-      res.json({ success: true, orario: data[0].now });
-    })
+    db.any('SELECT NOW()')
+        .then(data => {
+            console.log('Risultati della query:', data);
+            res.json({ 
+                success: true, 
+                orario: data[0].now 
+            });
+        })
     .catch(error => {
-      console.error('Errore nella query:', error);
-      res.status(500).json({ success: false, error: 'Connessione fallita' });
+        console.error('Errore nella query:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Connessione fallita' 
+        });
     });
 });
 
 // api per ritornare i garage
 app.get('/api/garage', (req, res) => {
-  db.any('SELECT * FROM Garage')
-    .then(data => {
-      res.json({ success: true, risultati: data.length, garage: data });
-    })
-    .catch(error => {
-      console.error('Errore nel recupero dei garage:', error);
-      res.status(500).json({ success: false, error: 'Errore interno' });
-    });
+    db.any('SELECT * FROM Garage')
+        .then(data => {
+            res.json({ 
+                success: true, 
+                risultati: data.length, 
+                garage: data 
+            });
+        })
+        .catch(error => {
+            console.error('Errore nel recupero dei garage:', error);
+            res.status(500).json({ 
+                success: false, 
+                error: 'Errore interno' 
+            });
+        });
 });
 
 app.listen(port, () => {
-  console.log(`Server in ascolto sulla porta ${port}...`);
+    console.log(`Server in ascolto sulla porta ${port}...`);
 });
