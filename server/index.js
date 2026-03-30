@@ -11,9 +11,9 @@ app.use(cors());
 app.use(express.json());
 
 app.use(session({
-    secret: process.env.SESSION_SECRET || 'parkly_secret',
-    resave: false,
-    saveUninitialized: false,
+    secret: 'parkly_s3cur1ty', // sicurezza, firma digitale per i cookie
+    resave: false, // non salvare la sessione se non ci sono modifiche
+    saveUninitialized: false, // non creare la sessione finchè non viene salvato qualcosa
     cookie: { maxAge: 1000 * 60 * 60 * 24 } // 24 ore
 }));
 

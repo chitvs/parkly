@@ -2,7 +2,10 @@ function isLoggato(req, res, next) {
     if (req.session.utente) {
         next(); // è loggato, ok
     } else {
-        res.status(401).json({ success: false, error: 'Devi essere loggato' });
+        res.status(401).json({ 
+            success: false, 
+            error: 'Devi essere loggato' 
+        });
     }
 }
 

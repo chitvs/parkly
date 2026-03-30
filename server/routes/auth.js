@@ -32,8 +32,8 @@ router.post('/register', async (req, res) => {
 
         // salvataggio nel db
         await db.none(
-            'INSERT INTO Utente (Nome, Cognome, Email, PasswordHash, Ruolo) VALUES ($1, $2, $3, $4, $5)',
-            [nome, cognome, email, passwordHash, ruolo || 'CLIENTE', telefono, codiceFiscale] // default CLIENTE se ruolo non specificato
+            'INSERT INTO Utente (Nome, Cognome, Email, PasswordHash, Ruolo, Telefono, codiceFiscale) VALUES ($1, $2, $3, $4, $5)',
+            [nome, cognome, email, passwordHash, ruolo || 'CLIENTE', telefono || null, codiceFiscale || null] // default CLIENTE se ruolo non specificato
         );
 
         res.json({ 
