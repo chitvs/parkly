@@ -33,7 +33,7 @@ router.post('/register', async (req, res) => {
         // salvataggio nel db
         await db.none(
             'INSERT INTO Utente (Nome, Cognome, Email, PasswordHash, Ruolo) VALUES ($1, $2, $3, $4, $5)',
-            [nome, cognome, email, passwordHash, ruolo, telefono, codiceFiscale]
+            [nome, cognome, email, passwordHash, ruolo || 'CLIENTE', telefono, codiceFiscale] // default CLIENTE se ruolo non specificato
         );
 
         res.json({ 
@@ -61,14 +61,20 @@ router.post('/login', async (req, res) => {
         const utente = await db.oneOrNone('SELECT * FROM Utente WHERE Email = $1', [email]);
         
         if (!utente) {
-            return res.status(401).json({ success: false, error: 'Credenziali non valide' });
+            return res.status(401).json({ 
+                success: false, 
+                error: 'Email non valida' 
+            });
         }
 
         // confronto le pw usando bcrypt
         const passwordOk = await bcrypt.compare(password, utente.passwordhash);
 
         if (!passwordOk) {
-            return res.status(401).json({ success: false, error: 'Credenziali non valide' });
+            return res.status(401).json({ 
+                success: false, 
+                error: 'Password errata' 
+            });
         }
 
         // salvo utente nella sessione
@@ -86,7 +92,10 @@ router.post('/login', async (req, res) => {
 
     } catch (err) {
         console.error('Errore login:', err);
-        res.status(500).json({ success: false, error: 'Errore interno' });
+        res.status(500).json({ 
+            success: false, 
+            error: 'Errore interno' 
+        });
     }
 });
 
