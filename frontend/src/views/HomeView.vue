@@ -28,6 +28,7 @@ const handleSearch = () => {
       </section>
 
       <section class="search-container">
+        <!-- significa: "Quando l'utente preme Invio, PREVIENI il comportamento normale del browser (che ricaricherebbe la pagina sfasando tutto) ed esegui solo la mia funzione handleSearch"-->
         <form @submit.prevent="handleSearch" class="search-box">
           
           <div class="input-group location-group">
@@ -122,7 +123,10 @@ const handleSearch = () => {
 .highlight {
   color: #66b2ff; /* Un azzurro più chiaro per l'enfasi sul testo blu scuro */
 }
-
+/* Stile Sottotitolo Hero:
+  - Opacità 80%: dà priorità visiva al titolo principale
+  - Max 700px + margin auto: centra il testo e previene righe troppo lunghe
+*/
 .hero-text p {
   font-size: 1.3rem;
   color: rgba(255,255,255,0.8);
