@@ -71,7 +71,7 @@ const handleSearch = () => {
           </div>
           <div class="card">
             <div class="card-icon">💰</div>
-            <h3>Tariffe Chiari</h3>
+            <h3>Tariffe Chiare</h3>
             <p>Nessun costo nascosto, paghi quello che vedi.</p>
           </div>
         </div>

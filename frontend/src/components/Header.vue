@@ -1,7 +1,7 @@
 <script setup>
 import { RouterLink } from 'vue-router'
 // IMPORTIAMO L'IMMAGINE: Diciamo a Vue dove si trova il file del logo
-import logoUrl from '../assets/logo.png'
+import logoUrl from '../assets/Primo_Logo_00408A.svg'
 </script>
 
 <template>
