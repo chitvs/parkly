@@ -1,13 +1,21 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import * as bootstrap from 'bootstrap'
 import logoUrl from '../assets/Primo_Logo_00408A.svg'
+import { authStore } from '../store/auth.js' // Importa lo store
 
 const router = useRouter()
 
 const loginEmail = ref('')
 const loginPassword = ref('')
+
+const forceCleanupModal = () => {
+  // Rimuove le classi di blocco di Bootstrap dal body
+  document.body.classList.remove('modal-open');
+  document.body.style = '';
+  document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+}
 
 const handleLogin = async () => {
 
@@ -26,22 +34,23 @@ const handleLogin = async () => {
     const data = await response.json();
 
     if (data.success) {
-
-      localStorage.setItem('utente', JSON.stringify(data.utente));
-      alert(`Bentornato, ${data.utente.nome}!`);
-
+      
       const modalElement = document.getElementById('modalLogin');
       const modal = bootstrap.Modal.getInstance(modalElement);
-
-      if (modal) modal.hide();
-      location.reload(); 
+      modal.hide()
       
+      modalElement.addEventListener('hidden.bs.modal', () => {
+        forceCleanupModal();
+      }, { once: true });
+      
+      authStore.setUtente(data.utente); // Aggiorna lo store  
+
     } else {
-      alert("Errore: " + (data.error || "Credenziali non valide"));
+        alert("Errore: " + (data.error || "Credenziali non valide"));
     }
   } catch (err) {
-    console.error("Errore di rete:", err);
-    alert("Impossibile connettersi al server. Assicurati che il backend sia attivo.");
+      console.error("Errore di rete:", err);
+      alert("Impossibile connettersi al server. Assicurati che il backend sia attivo.");
   }
 }
 
@@ -51,17 +60,20 @@ const goToRegister = () => {
   
   if (modal) {
     modal.hide();
-    modal.dispose();
   }
 
   // per rimuovere l'ombra che rimarrebbe quando vai su registrati ora
-  document.body.classList.remove('modal-open');
-  document.body.style.overflow = '';
-  document.body.style.paddingRight = '';
-  const backdrops = document.querySelectorAll('.modal-backdrop');
-  backdrops.forEach(b => b.remove());
+  forceCleanupModal();
 
-  router.push('/register');
+  setTimeout(() => {
+    router.push('/register');
+  }, 100);
+}
+
+// Funzione per il Logout
+const handleLogout = () => {
+  authStore.setUtente(null); // Pulisce sia lo store che il localStorage
+  router.push('/');
 }
 
 </script>
@@ -81,10 +93,17 @@ const goToRegister = () => {
     </nav>
 
     <div class="user-actions">
-      <RouterLink to="/register" class="register-btn">Registrati</RouterLink>
-      <button type="button" class="login-btn" data-bs-toggle="modal" data-bs-target="#modalLogin">
-        Accedi
-      </button>
+      <template v-if="!authStore.utente">
+        <RouterLink to="/register" class="register-btn">Registrati</RouterLink>
+        <button type="button" class="login-btn" data-bs-toggle="modal" data-bs-target="#modalLogin">
+          Accedi
+        </button>
+      </template>
+
+      <div v-else class="logged-user-zone">
+        <span class="user-name">Ciao, <strong>{{ authStore.utente.nome }}</strong></span>
+        <button @click="handleLogout" class="logout-btn">Esci</button>
+      </div>
     </div>
   </header>
 
@@ -244,4 +263,32 @@ const goToRegister = () => {
 .register-link:hover {
   text-decoration: underline;
 }
+
+.logged-user-zone {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.user-name {
+  color: #2c3e50;
+  font-size: 0.95rem;
+}
+
+.logout-btn {
+  background: transparent;
+  border: 1px solid #dc3545;
+  color: #dc3545;
+  padding: 0.4rem 1rem;
+  border-radius: 20px;
+  font-weight: 600;
+  transition: all 0.3s;
+  cursor: pointer;
+}
+
+.logout-btn:hover {
+  background-color: #dc3545;
+  color: white;
+}
+
 </style>

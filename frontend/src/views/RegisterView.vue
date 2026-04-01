@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from 'vue'
-// Se usi Vue Router per cambiare pagina, importa useRouter
-// import { useRouter } from 'vue-router' 
+import { useRouter } from 'vue-router' 
+import { authStore } from '../store/auth.js' // Importa lo store
 
 const nome = ref('')
 const cognome = ref('')
@@ -11,7 +11,7 @@ const telefono = ref('')
 const password = ref('')
 const passwordConfirm = ref('')
 
-// const router = useRouter() // Inizializza il router
+const router = useRouter()
 
 const handleRegister = async () => {
   if (password.value !== passwordConfirm.value) {
@@ -30,23 +30,28 @@ const handleRegister = async () => {
 
   try {
     const response = await fetch('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
     });
 
     const data = await response.json();
+    console.log("Risposta del server:", data); // <-- GUARDA QUESTO NELLA CONSOLE
 
-    if (data.success) {
-      alert("Account creato con successo!");
-      router.push('/') 
+    if (data.success && data.utente) {
+        authStore.setUtente(data.utente); 
+        console.log("Reindirizzamento in corso...");
+        router.push('/'); 
     } else {
-      alert("Errore: " + (data.error || "Riprova più tardi"));
+        // Se il DB si aggiorna ma non torni alla home, il problema è qui
+        console.warn("Dati ricevuti non validi per il login automatico:", data);
+        alert("Registrazione completata, ma non è stato possibile effettuare il login automatico. Prova ad accedere manualmente.");
+        router.push('/'); // Forza comunque il ritorno alla home
     }
-  } catch (err) {
-    console.error("Errore fetch:", err);
-    alert("Errore di connessione al server");
-  }
+    } catch (err) {
+        console.error("Errore durante la registrazione:", err);
+        alert("Errore di connessione");
+    }
 }
 </script>
 
