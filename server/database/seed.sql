@@ -1,15 +1,15 @@
 -- UTENTI
 INSERT INTO Utente (Ruolo, Nome, Cognome, CodiceFiscale, Email, PasswordHash, Telefono) VALUES
-('GESTORE', 'Alessandro', 'Galli', 'GLLLSN70A01H501A', 'alessandro.g@garage.it', 'hash1', '3310000001'),
-('GESTORE', 'Roberta', 'Randi', 'RNDRRT75B41H501B', 'roberta.r@garage.it', 'hash2', '3310000002'),
-('GESTORE', 'Fabio', 'Santi', 'SNTFBA80C01H501C', 'fabio.s@garage.it', 'hash3', '3310000003'),
-('GESTORE', 'Sonia', 'Fabbri', 'FBBSNO85D41H501D', 'sonia.f@garage.it', 'hash4', '3310000004'),
-('CLIENTE', 'Marco', 'Liberti', 'LBRMRC90E15H501E', 'marco.l@email.com', 'pass1', '3400000001'),
-('CLIENTE', 'Chiara', 'Valenti', 'VLNCHR92F52H501F', 'chiara.v@email.com', 'pass2', '3400000002'),
-('CLIENTE', 'Paolo', 'Dessi', 'DSSPLA94G10H501G', 'paolo.d@email.com', 'pass3', '3400000003'),
-('CLIENTE', 'Simona', 'Reale', 'RLESNO96H50H501H', 'simona.r@email.com', 'pass4', '3400000004'),
-('CLIENTE', 'Davide', 'Moro', 'MRODVD98L20H501I', 'davide.m@email.com', 'pass5', '3400000005'),
-('CLIENTE', 'Giada', 'Serra', 'SRRGDA99M45H501L', 'giada.s@email.com', 'pass6', '3400000006');
+('GESTORE', 'Alessandro', 'Galli', 'GLLLSN70A01H501A', 'alessandro.g@garage.it', '$2b$10$WPKYQS3SIp5VEf4SKRKx3O5HVlY6XMOM1lle/fnGc2/ZKhek5VQu.', '3310000001'),
+('GESTORE', 'Roberta', 'Randi', 'RNDRRT75B41H501B', 'roberta.r@garage.it', '$2b$10$lN6k5YY30hrFMFHedDL9v.UFgP9VoXScHZbRRk9HmwkLNqnpEJBR2', '3310000002'),
+('GESTORE', 'Fabio', 'Santi', 'SNTFBA80C01H501C', 'fabio.s@garage.it', '$2b$10$vEVaU1KOg6DeaPoFWA0HBOZffryYgBkdZah.P/h4J6T9KaLQtuzue', '3310000003'),
+('GESTORE', 'Sonia', 'Fabbri', 'FBBSNO85D41H501D', 'sonia.f@garage.it', '$2b$10$xEdYdhxpEHU5KuYqGTDJs.y5C5eiicy9jy70qCM5z62/x86pV43MG', '3310000004'),
+('CLIENTE', 'Marco', 'Liberti', 'LBRMRC90E15H501E', 'marco.l@email.com', '$2b$10$WsxqnMAdJjFvYWsm0uPN6OuZ8xkaMibrt3FLvr33f4czAXyfxvc3i', '3400000001'),
+('CLIENTE', 'Chiara', 'Valenti', 'VLNCHR92F52H501F', 'chiara.v@email.com', '$2b$10$xxeT0orM5SGPJ67LL1oGgOVwuLYqdyo//nyw0CZHNz.8olX9nNXu2', '3400000002'),
+('CLIENTE', 'Paolo', 'Dessi', 'DSSPLA94G10H501G', 'paolo.d@email.com', '$2b$10$ISIhd1D5EU5GPKq3Tr2CIeAkJSATIDPfUSdBQoV05l14muNDSuOh2', '3400000003'),
+('CLIENTE', 'Simona', 'Reale', 'RLESNO96H50H501H', 'simona.r@email.com', '$2b$10$wrEc8cgwi3KysvKawcYUgePJbVFHwJUlIuropNQwDHL7sDuX8DYui', '3400000004'),
+('CLIENTE', 'Davide', 'Moro', 'MRODVD98L20H501I', 'davide.m@email.com', '$2b$10$nLxPdWaiThqojfaCZ5RgGeUq4viZBRg5.CO72k6uu3V1xFtAom6rm', '3400000005'),
+('CLIENTE', 'Giada', 'Serra', 'SRRGDA99M45H501L', 'giada.s@email.com', '$2b$10$LXSwRxWPIl0wRboIgW4NSuF3LQ/A6CvyRpVj8QD0Cw/0uWkVwQ.ty', '3400000006');
 
 -- GARAGE
 INSERT INTO Garage (ID_Gestore, Nome, Descrizione, Indirizzo, Latitudine, Longitudine, AltezzaMassima, TariffaBase, OrarioApertura, OrarioChiusura, Is24h) VALUES
