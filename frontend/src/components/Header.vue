@@ -22,6 +22,7 @@ import logoUrl from '../assets/Primo_Logo_00408A.svg'
     </nav>
 
     <div class="user-actions">
+      <RouterLink to="/register" class="register-btn">Registrati</RouterLink>
       <RouterLink to="/login" class="login-btn">Accedi</RouterLink>
     </div>
 
@@ -78,21 +79,48 @@ import logoUrl from '../assets/Primo_Logo_00408A.svg'
   color: #2ecc71;  Diventano verdi al passaggio del mouse 
 }*/
 
+/* 4. CONTENITORE AZIONI UTENTE */
+.user-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem; /* Crea spazio automatico tra i due bottoni */
+}
 
-/* 4. STILE DEL BOTTONE ACCEDI */
-.login-btn {
-  background-color: #312ecc;
-  color: white !important;
+/* STILE BASE PER ENTRAMBI I BOTTONI (Per non ripetere codice) */
+.login-btn, .register-btn {
   padding: 0.6rem 1.5rem;
   border-radius: 25px;
   text-decoration: none;
   font-weight: bold;
   transition: all 0.3s ease;
+  font-size: 0.9rem;
+  display: inline-block;
+  text-align: center;
 }
 
-.login-btn:hover {
-  background-color: #27ae60;
-  transform: translateY(-2px); /* Effetto sollevamento */
-  box-shadow: 0 4px 8px rgba(46, 204, 113, 0.3);
+/* STILE SPECIFICO: ACCEDI (Solid) */
+.login-btn {
+  background-color: #00408A;
+  color: white !important;
+  border: 2px solid #00408A; /* Aggiunto per bilanciare le dimensioni */
 }
+
+.login-btn:hover{
+  transform: translateY(-2px);
+}
+
+/* STILE SPECIFICO: REGISTRATI (Outline) */
+.register-btn {
+  background-color: transparent;
+  color: #312ecc !important;
+  border: 2px solid #00408A;
+}
+
+.register-btn:hover{
+  background-color: #00408A;
+  color: white !important;
+  transform: translateY(-2px);
+}
+
 </style>
+
