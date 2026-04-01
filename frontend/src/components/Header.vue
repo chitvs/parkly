@@ -1,18 +1,77 @@
 <script setup>
-import { RouterLink } from 'vue-router'
-// IMPORTIAMO L'IMMAGINE: Diciamo a Vue dove si trova il file del logo
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import * as bootstrap from 'bootstrap'
 import logoUrl from '../assets/Primo_Logo_00408A.svg'
+
+const router = useRouter()
+
+const loginEmail = ref('')
+const loginPassword = ref('')
+
+const handleLogin = async () => {
+
+  const payload = {
+    email: loginEmail.value,
+    password: loginPassword.value
+  };
+
+  try {
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+
+      localStorage.setItem('utente', JSON.stringify(data.utente));
+      alert(`Bentornato, ${data.utente.nome}!`);
+
+      const modalElement = document.getElementById('modalLogin');
+      const modal = bootstrap.Modal.getInstance(modalElement);
+
+      if (modal) modal.hide();
+      location.reload(); 
+      
+    } else {
+      alert("Errore: " + (data.error || "Credenziali non valide"));
+    }
+  } catch (err) {
+    console.error("Errore di rete:", err);
+    alert("Impossibile connettersi al server. Assicurati che il backend sia attivo.");
+  }
+}
+
+const goToRegister = () => {
+  const modalElement = document.getElementById('modalLogin');
+  const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+  
+  if (modal) {
+    modal.hide();
+    modal.dispose();
+  }
+
+  // per rimuovere l'ombra che rimarrebbe quando vai su registrati ora
+  document.body.classList.remove('modal-open');
+  document.body.style.overflow = '';
+  document.body.style.paddingRight = '';
+  const backdrops = document.querySelectorAll('.modal-backdrop');
+  backdrops.forEach(b => b.remove());
+
+  router.push('/register');
+}
+
 </script>
 
 <template>
-  
   <header class="main-header">
     
     <RouterLink to="/" class="logo-link">
       <div class="logo">
-        
         <img :src="logoUrl" alt="Logo Parkly" class="logo-image" />
-        
       </div>
     </RouterLink>
 
@@ -23,70 +82,88 @@ import logoUrl from '../assets/Primo_Logo_00408A.svg'
 
     <div class="user-actions">
       <RouterLink to="/register" class="register-btn">Registrati</RouterLink>
-      <RouterLink to="/login" class="login-btn">Accedi</RouterLink>
+      <button type="button" class="login-btn" data-bs-toggle="modal" data-bs-target="#modalLogin">
+        Accedi
+      </button>
     </div>
-
   </header>
+
+  <div class="modal fade" id="modalLogin" tabindex="-1" aria-labelledby="modalLoginLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content parkly-modal">
+        
+        <div class="modal-header border-0">
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body text-center px-4 pb-5">
+          <img :src="logoUrl" alt="logo parkly" width="80" class="mb-4">
+          <h2 class="modal-title-text mb-4">Bentornato su Parkly</h2>
+          
+          <form @submit.prevent="handleLogin">
+            <div class="mb-3">
+              <input 
+                type="email" 
+                class="form-control modal-input" 
+                placeholder="Indirizzo Email" 
+                v-model="loginEmail" 
+                required
+              >
+            </div>
+            <div class="mb-3">
+              <input 
+                type="password" 
+                class="form-control modal-input" 
+                placeholder="Password" 
+                v-model="loginPassword" 
+                required
+              >
+            </div>
+            <div class="d-grid mt-4">
+              <button type="submit" class="btn btn-primary modal-submit-btn">Accedi</button>
+            </div>
+          </form>
+
+          <div class="mt-4 modal-footer-text">
+            <p class="mb-0">Non hai un account? 
+              <a href="#" @click.prevent="goToRegister" class="register-link">Registrati ora </a>
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
 </template>
 
 <style scoped>
-/* 1. CONTENITORE PRINCIPALE */
+/* --- STILI HEADER ESISTENTI --- */
 .main-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  /* 1rem = 16 pixel mentre 5% = 5% della larghezza del viewport */
   padding: 1rem 5%;
   background-color: #ffffff;
-  /* Sottile ombra per dare profondità */
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  
-  /* Effetto Sticky: l'header rimane incollato in alto quando l'utente scorre giù */
   position: sticky;
   top: 0;
   z-index: 1000;
 }
 
-/* 2. STILI DEL LOGO */
-.logo-link {
-  text-decoration: none;
-}
+.logo-link { text-decoration: none; }
+.logo { display: flex; align-items: center; }
+.logo-image { height: 45px; width: auto; display: block; }
 
-.logo {
-  display: flex;
-  align-items: center;
-}
-
-.logo-image {
-  height: 45px; /* Modifica questo numero se vuoi il logo più grande o più piccolo */
-  width: auto;  /* Evita che il logo si deformi o si schiacci */
-  display: block;
-}
-
-/* 3. STILI DEI LINK CENTRALI */
-.nav-links {
-  display: flex;
-  gap: 2rem;
-}
-
+.nav-links { display: flex; gap: 2rem; }
 .nav-links a {
   text-decoration: none;
   color: #2c3e50;
   font-weight: 600;
   transition: color 0.3s;
 }
-/*.nav-links a:hover {
-  color: #2ecc71;  Diventano verdi al passaggio del mouse 
-}*/
 
-/* 4. CONTENITORE AZIONI UTENTE */
-.user-actions {
-  display: flex;
-  align-items: center;
-  gap: 1rem; /* Crea spazio automatico tra i due bottoni */
-}
+.user-actions { display: flex; align-items: center; gap: 1rem; }
 
-/* STILE BASE PER ENTRAMBI I BOTTONI (Per non ripetere codice) */
 .login-btn, .register-btn {
   padding: 0.6rem 1.5rem;
   border-radius: 25px;
@@ -96,31 +173,75 @@ import logoUrl from '../assets/Primo_Logo_00408A.svg'
   font-size: 0.9rem;
   display: inline-block;
   text-align: center;
+  cursor: pointer;
 }
 
-/* STILE SPECIFICO: ACCEDI (Solid) */
 .login-btn {
   background-color: #00408A;
   color: white !important;
-  border: 2px solid #00408A; /* Aggiunto per bilanciare le dimensioni */
-}
-
-.login-btn:hover{
-  transform: translateY(-2px);
-}
-
-/* STILE SPECIFICO: REGISTRATI (Outline) */
-.register-btn {
-  background-color: transparent;
-  color: #312ecc !important;
   border: 2px solid #00408A;
 }
 
-.register-btn:hover{
+.login-btn:hover { transform: translateY(-2px); }
+
+.register-btn {
+  background-color: transparent;
+  color: #00408A !important;
+  border: 2px solid #00408A;
+}
+
+.register-btn:hover {
   background-color: #00408A;
   color: white !important;
   transform: translateY(-2px);
 }
 
-</style>
+/* --- NUOVI STILI MODAL PERSONALIZZATI --- */
+.parkly-modal {
+  border-radius: 24px;
+  border: none;
+  box-shadow: 0 15px 50px rgba(0,0,0,0.2);
+}
 
+.modal-title-text {
+  font-weight: 700;
+  color: #00408A;
+  font-size: 1.5rem;
+}
+
+.modal-input {
+  height: 52px;
+  border-radius: 12px;
+  border: 1px solid #dee2e6;
+  padding: 0 15px;
+}
+
+.modal-input:focus {
+  border-color: #00408A;
+  box-shadow: 0 0 0 3px rgba(0, 64, 138, 0.1);
+}
+
+.modal-submit-btn {
+  background-color: #00408A;
+  border: none;
+  height: 52px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.modal-footer-text {
+  font-size: 0.9rem;
+  color: #6c757d;
+}
+
+.register-link {
+  color: #00408A;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.register-link:hover {
+  text-decoration: underline;
+}
+</style>

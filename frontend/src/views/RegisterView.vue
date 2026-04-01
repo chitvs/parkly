@@ -39,9 +39,7 @@ const handleRegister = async () => {
 
     if (data.success) {
       alert("Account creato con successo!");
-      // In Vue si usa il router invece di window.location
-      // router.push('/') 
-      window.location.href = "/"; 
+      router.push('/') 
     } else {
       alert("Errore: " + (data.error || "Riprova più tardi"));
     }
