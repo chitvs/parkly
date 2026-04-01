@@ -84,17 +84,8 @@ const handleSearch = () => {
 </template>
 
 <style scoped>
-/* 1. VARIABILI CSS: Il segreto per coerenza visiva */
-.home-wrapper {
-  /* Toni di Blu professionali */
-  --primary-blue: #0066cc;    /* Blu acceso per pulsanti e link */
-  --deep-blue: #002e5c;       /* Blu profondo per lo sfondo Hero */
-  --text-dark: #333333;       /* Testo principale */
-  --text-light: #ecf0f1;      /* Testo su sfondi scuri */
-  --white: #ffffff;           /* Sfondo search box e card */
-  --bg-light: #f4f7f6;        /* Sfondo generale pagina */
-  --border-light: #e0e0e0;    /* Linee di separazione */
 
+.home-wrapper {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
@@ -121,7 +112,7 @@ const handleSearch = () => {
 }
 
 .highlight {
-  color: #66b2ff; /* Un azzurro più chiaro per l'enfasi sul testo blu scuro */
+  color: var(--accent-blue); /* Un azzurro più chiaro per l'enfasi sul testo blu scuro */
 }
 /* Stile Sottotitolo Hero:
   - Opacità 80%: dà priorità visiva al titolo principale

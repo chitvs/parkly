@@ -41,7 +41,7 @@ import { RouterLink } from 'vue-router'
 
 .main-footer {
   background-color: #2c3e50;
-  color: #ecf0f1;
+  color: var(--text-light);
   padding: 3rem 5% 1rem;
   font-family: 'Inter', 'Segoe UI', sans-serif;
   margin-top: auto; 
@@ -59,7 +59,7 @@ import { RouterLink } from 'vue-router'
   min-width: 200px;
 }
 .brand-name {
-  color: #2e3ecc;
+  color: var(--white);
   font-size: 1.8rem;
   margin-bottom: 0.5rem;
 }
@@ -88,7 +88,7 @@ ul a {
   transition: color 0.3s ease;
 }
 ul a:hover {
-  color: #2e3ecc;
+  color: #6d7cff;
 }
 .footer-bottom {
   text-align: center;

@@ -18,49 +18,25 @@ const forceCleanupModal = () => {
 }
 
 const handleLogin = async () => {
+  const data = await authStore.login(loginEmail.value, loginPassword.value);
 
-  const payload = {
-    email: loginEmail.value,
-    password: loginPassword.value
-  };
-
-  try {
-    const response = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    const data = await response.json();
-
-    if (data.success) {
-      
-      const modalElement = document.getElementById('modalLogin');
-      const modal = bootstrap.Modal.getInstance(modalElement);
-      modal.hide()
-      
-      modalElement.addEventListener('hidden.bs.modal', () => {
-        forceCleanupModal();
-      }, { once: true });
-      
-      authStore.setUtente(data.utente); // Aggiorna lo store  
-
-    } else {
-        alert("Errore: " + (data.error || "Credenziali non valide"));
-    }
-  } catch (err) {
-      console.error("Errore di rete:", err);
-      alert("Impossibile connettersi al server. Assicurati che il backend sia attivo.");
+  if (data.success) {
+    const modalElement = document.getElementById('modalLogin');
+    const modal = bootstrap.Modal.getInstance(modalElement);
+    modal.hide();
+    
+    modalElement.addEventListener('hidden.bs.modal', () => {
+      forceCleanupModal();
+    }, { once: true });
+  } else {
+    alert("Errore: " + (data.error || "Credenziali non valide"));
   }
 }
 
 const goToRegister = () => {
   const modalElement = document.getElementById('modalLogin');
   const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
-  
-  if (modal) {
-    modal.hide();
-  }
+  modal.hide()
 
   // per rimuovere l'ombra che rimarrebbe quando vai su registrati ora
   forceCleanupModal();
@@ -72,7 +48,7 @@ const goToRegister = () => {
 
 // Funzione per il Logout
 const handleLogout = () => {
-  authStore.setUtente(null); // Pulisce sia lo store che il localStorage
+  authStore.logout()
   router.push('/');
 }
 
@@ -156,7 +132,7 @@ const handleLogout = () => {
 </template>
 
 <style scoped>
-/* --- STILI HEADER ESISTENTI --- */
+
 .main-header {
   display: flex;
   justify-content: space-between;
@@ -176,7 +152,7 @@ const handleLogout = () => {
 .nav-links { display: flex; gap: 2rem; }
 .nav-links a {
   text-decoration: none;
-  color: #2c3e50;
+  color: var(--text-dark);
   font-weight: 600;
   transition: color 0.3s;
 }
@@ -196,21 +172,21 @@ const handleLogout = () => {
 }
 
 .login-btn {
-  background-color: #00408A;
+  background-color: var(--primary-blue);
   color: white !important;
-  border: 2px solid #00408A;
+  border: 2px solid var(--primary-blue);
 }
 
 .login-btn:hover { transform: translateY(-2px); }
 
 .register-btn {
   background-color: transparent;
-  color: #00408A !important;
-  border: 2px solid #00408A;
+  color: var(--primary-blue) !important;
+  border: 2px solid var(--primary-blue);
 }
 
 .register-btn:hover {
-  background-color: #00408A;
+  background-color: var(--primary-blue);
   color: white !important;
   transform: translateY(-2px);
 }

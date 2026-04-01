@@ -28,30 +28,15 @@ const handleRegister = async () => {
     codiceFiscale: cf.value || null,
   }
 
-  try {
-    const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
+  const data = await authStore.register(payload)
 
-    const data = await response.json();
-    console.log("Risposta del server:", data); // <-- GUARDA QUESTO NELLA CONSOLE
-
-    if (data.success && data.utente) {
-        authStore.setUtente(data.utente); 
-        console.log("Reindirizzamento in corso...");
-        router.push('/'); 
-    } else {
-        // Se il DB si aggiorna ma non torni alla home, il problema è qui
-        console.warn("Dati ricevuti non validi per il login automatico:", data);
-        alert("Registrazione completata, ma non è stato possibile effettuare il login automatico. Prova ad accedere manualmente.");
-        router.push('/'); // Forza comunque il ritorno alla home
-    }
-    } catch (err) {
-        console.error("Errore durante la registrazione:", err);
-        alert("Errore di connessione");
-    }
+  if (data.success) {
+    console.log("Registrazione e login automatico riusciti")
+    alert("Registrazione avvenuta con successo.")
+    router.push('/')
+  } else {
+    alert(data.error || "Errore durante la registrazione")
+  }
 }
 </script>
 
@@ -119,13 +104,11 @@ const handleRegister = async () => {
 </template>
 
 <style scoped>
-/* Import del font */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
 
 .register-wrapper {
   font-family: 'Inter', sans-serif;
   /* Gradient Parkly: dal blu scuro al crema */
-  background: linear-gradient(180deg, #00408A 0%, #fffdf2 100%);
+  background: linear-gradient(180deg, var(--primary-blue) 0%, var(--bg-crema) 100%);
   background-attachment: fixed;
   min-height: 100vh;
   width: 100%;
@@ -134,7 +117,7 @@ const handleRegister = async () => {
 }
 
 .register-card {
-  background: #ffffff;
+  background: var(--white);
   border-radius: 24px; /* Arrotondamento moderno */
   border: none;
   padding: 40px;
@@ -147,7 +130,7 @@ const handleRegister = async () => {
 }
 
 h2 {
-  color: #00408A;
+  color: var(--primary-blue);
   font-size: 26px;
   letter-spacing: -0.5px;
 }
@@ -163,14 +146,14 @@ h2 {
 }
 
 .form-control:focus {
-  border-color: #00408A;
+  border-color:var(--primary-blue);
   box-shadow: 0 0 0 4px rgba(0, 64, 138, 0.1);
   outline: none;
 }
 
 /* Bottone Parkly */
 .btn-primary {
-  background-color: #00408A;
+  background-color: var(--primary-blue);
   border: none;
   border-radius: 12px;
   height: 55px;
