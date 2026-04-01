@@ -2,7 +2,9 @@ const express = require('express');
 const session = require('express-session');
 const cors = require('cors');
 const path = require('path')
-require('dotenv').config();
+require('dotenv').config({
+  path: require('path').resolve(__dirname, '.env')
+});
 const db = require('./database/db'); 
 const authRoutes = require('./routes/auth'); 
 const app = express();
