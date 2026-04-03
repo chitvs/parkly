@@ -3,7 +3,11 @@
   "version": "1.0.0",
   "scripts": {
     "server": "node server/index.js",
+<<<<<<< HEAD
     "client": "npm run dev --prefix frontend",
+=======
+    "client": "npm run dev --prefix client",
+>>>>>>> f61dcf4cf4cab1fd1cdccc34538d07ad0cf1ec96
     "dev": "concurrently \"npm run server\" \"npm run client\""
   },
   "type": "commonjs",
