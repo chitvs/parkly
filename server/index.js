@@ -1,10 +1,7 @@
 const express = require('express');
 const session = require('express-session');
 const cors = require('cors');
-const path = require('path')
-require('dotenv').config({
-  path: require('path').resolve(__dirname, '.env')
-});
+require('dotenv').config();
 const db = require('./database/db'); 
 const authRoutes = require('./routes/auth'); 
 const app = express();
@@ -20,19 +17,10 @@ app.use(session({
     cookie: { maxAge: 1000 * 60 * 60 * 24 } // 24 ore
 }));
 
-// COLLEGAMENTO FRONTEND
-
-app.use('/client', express.static(path.join(__dirname, '../client')));
-
-app.get('/register', (req, res) => {
-    res.sendFile(path.join(__dirname, '../client/pages/register.html'))});
-
-// -----------------------
-
 app.use('/api/auth', authRoutes); // collegamento con auth.js
 
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../client/index.html'));
+    res.send('Server di Parkly operativo!');
 });
 
 // test 
