@@ -1,0 +1,18 @@
+{
+  "name": "parkly",
+  "version": "1.0.0",
+  "scripts": {
+    "server": "node server/index.js",
+    "client": "npm run dev --prefix client",
+    "dev": "concurrently \"npm run server\" \"npm run client\""
+  },
+  "type": "commonjs",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "bootstrap": "^5.3.8",
+    "express-session": "^1.19.0"
+  }
+}
