@@ -7,7 +7,7 @@ function isLoggato(req, res, next) {
             error: 'Devi essere loggato' 
         });
     }
-}
+} 
 
 function isGestore(req, res, next) {
     if (req.session.utente && req.session.utente.ruolo === 'GESTORE') {
