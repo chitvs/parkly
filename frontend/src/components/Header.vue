@@ -142,7 +142,7 @@ const handleLogout = async () => {
   position: sticky;
   top: 0;
   z-index: 1000;
-}
+} 
 
 .logo-link { text-decoration: none; }
 .logo { display: flex; align-items: center; }
