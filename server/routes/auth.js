@@ -17,10 +17,10 @@ router.post('/register', async (req, res) => {
 
     try {
         // l'email esiste?
-        const utenteEsistente = await db.oneOrNone('SELECT * FROM Utente WHERE Email = $1', [email]);
+        const utente = await db.oneOrNone('SELECT * FROM Utente WHERE Email = $1', [email]);
     
         // se l'email esiste, lancio un errore
-        if (utenteEsistente) {
+        if (utente) {
             return res.status(400).json({ 
                 success: false, 
                 error: 'Email già registrata' 
@@ -31,22 +31,14 @@ router.post('/register', async (req, res) => {
         const passwordHash = await bcrypt.hash(password, 10);
 
         // salvataggio nel db
-        const nuovoUtente = await db.one(
-            'INSERT INTO Utente (Nome, Cognome, Email, PasswordHash, Ruolo, Telefono, codiceFiscale) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id_utente, nome, email, ruolo    ',
+        await db.none(
+            'INSERT INTO Utente (Nome, Cognome, Email, PasswordHash, Ruolo, Telefono, codiceFiscale) VALUES ($1, $2, $3, $4, $5)',
             [nome, cognome, email, passwordHash, ruolo || 'CLIENTE', telefono || null, codiceFiscale || null] // default CLIENTE se ruolo non specificato
         );
 
-        req.session.utente = {
-            id: nuovoUtente.id_utente,
-            nome: nuovoUtente.nome,
-            email: nuovoUtente.email,
-            ruolo: nuovoUtente.ruolo
-        };
-
         res.json({ 
             success: true, 
-            messaggio: 'Registrazione completata',
-            utente: req.session.utente 
+            messaggio: 'Registrazione completata' 
         });
 
     } catch (err) {
