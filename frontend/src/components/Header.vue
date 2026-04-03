@@ -46,9 +46,8 @@ const goToRegister = () => {
   }, 100);
 }
 
-// Funzione per il Logout
-const handleLogout = () => {
-  authStore.logout()
+const handleLogout = async () => {
+  await authStore.logout(); 
   router.push('/');
 }
 
