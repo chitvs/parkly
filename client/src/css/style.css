@@ -1,0 +1,19 @@
+:root {
+  --primary-blue: #00408A;    
+  --deep-blue: #002e5c;       
+  --accent-blue: #66b2ff;     
+  --text-dark: #333333;       
+  --text-light: #ecf0f1;      
+  --white: #ffffff;           
+  --bg-light: #f4f7f6;        
+  --bg-crema: #fffdf2;        
+  --border-light: #e0e0e0;    
+  --error-red: #dc3545;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', -apple-system, sans-serif;
+  background-color: var(--bg-light);
+  color: var(--text-dark);
+}
