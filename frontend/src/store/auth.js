@@ -54,7 +54,17 @@ export const authStore = reactive({
     }
   },
 
-  logout() {
-    this.setUtente(null);
+// Logica Logout completa
+  async logout() {
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+    } catch (err) {
+      console.error("Errore durante il logout lato server:", err);
+    } finally {
+      this.setUtente(null);
+    }
   }
 })
