@@ -2,13 +2,14 @@
   "name": "parkly",
   "version": "1.0.0",
   "scripts": {
-    "server": "node server/index.js",
+    "server": "nodemon server/index.js",
     "client": "npm run dev --prefix client",
     "dev": "concurrently \"npm run server\" \"npm run client\""
   },
   "type": "commonjs",
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "concurrently": "^9.2.1",
+    "nodemon": "^3.1.14"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
