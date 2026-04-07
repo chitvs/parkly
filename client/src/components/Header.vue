@@ -48,7 +48,7 @@ const goToRegister = () => {
 
 const handleLogout = async () => {
   await authStore.logout(); 
-  router.push('/');
+  router.replace('/');
 }
 
 </script>

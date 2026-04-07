@@ -10,15 +10,23 @@ const authRoutes = require('./routes/auth');
 const app = express();
 const port = process.env.PORT || 3000;
 
+
+// 1. MIDDLEWARE DI BASE
 app.use(cors());
 app.use(express.json());
 
+// 2. CONFIGURAZIONE DELLA SESSIONE
 app.use(session({
     secret: 'parkly_s3cur1ty', // sicurezza, firma digitale per i cookie
     resave: false, // non salvare la sessione se non ci sono modifiche
     saveUninitialized: false, // non creare la sessione finchè non viene salvato qualcosa
     cookie: { maxAge: 1000 * 60 * 60 * 24 } // 24 ore
 }));
+
+app.use((req, res, next) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    next();
+});
 
 // COLLEGAMENTO FRONTEND
 
