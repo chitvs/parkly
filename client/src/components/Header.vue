@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import * as bootstrap from 'bootstrap'
 import logoUrl from '../assets/Primo_Logo_00408A.svg'
@@ -13,44 +13,55 @@ const loginEmail = ref('')
 const loginPassword = ref('')
 const isPasswordVisible = ref(false)
 
+const modalElement = ref(null)
+let modalInstance = null
+
+onMounted(() => {
+  modalInstance = new bootstrap.Modal(modalElement.value)
+})
+
+onUnmounted(() => {
+  if (modalInstance) {
+    modalInstance.dispose()
+  }
+})
+
 const forceCleanupModal = () => {
-  // Rimuove le classi di blocco di Bootstrap dal body
   document.body.classList.remove('modal-open')
   document.body.style = ''
-  document.querySelectorAll('.modal-backdrop').forEach((el) => el.remove())
+  const backdrop = document.querySelector('.modal-backdrop')
+  if (backdrop) backdrop.remove()
+}
+
+const closeLoginModal = () => {
+  return new Promise((resolve) => {
+    if (!modalElement.value.classList.contains('show')) {
+      resolve()
+      return
+    }
+
+    modalElement.value.addEventListener('hidden.bs.modal', () => {
+      forceCleanupModal()
+      resolve()
+    }, { once: true })
+
+    modalInstance.hide()
+  })
 }
 
 const handleLogin = async () => {
   const data = await authStore.login(loginEmail.value, loginPassword.value)
 
   if (data.success) {
-    const modalElement = document.getElementById('modalLogin')
-    const modal = bootstrap.Modal.getInstance(modalElement)
-    modal.hide()
-
-    modalElement.addEventListener(
-      'hidden.bs.modal',
-      () => {
-        forceCleanupModal()
-      },
-      { once: true },
-    )
+    await closeLoginModal()
   } else {
     alert('Errore: ' + (data.error || 'Credenziali non valide'))
   }
 }
 
-const goToRegister = () => {
-  const modalElement = document.getElementById('modalLogin')
-  const modal = bootstrap.Modal.getOrCreateInstance(modalElement)
-  modal.hide()
-
-  // per rimuovere l'ombra che rimarrebbe quando vai su registrati ora
-  forceCleanupModal()
-
-  setTimeout(() => {
-    router.push('/register')
-  }, 100)
+const goToRegister = async () => {
+  await closeLoginModal()
+  router.push('/register')
 }
 
 const handleLogout = async () => {
@@ -81,30 +92,18 @@ const handleLogout = async () => {
       </template>
 
       <div v-else class="logged-user-zone">
-        <span class="user-name"
-          >Ciao, <strong>{{ authStore.utente.nome }}</strong></span
-        >
+        <span class="user-name">Ciao, <strong>{{ authStore.utente.nome }}</strong></span>
         <button @click="handleLogout" class="logout-btn">Esci</button>
       </div>
     </div>
   </header>
 
-  <div
-    class="modal fade"
-    id="modalLogin"
-    tabindex="-1"
-    aria-labelledby="modalLoginLabel"
-    aria-hidden="true"
-  >
+  <div class="modal fade" id="modalLogin" ref="modalElement" tabindex="-1" aria-labelledby="modalLoginLabel"
+    aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content parkly-modal">
         <div class="modal-header border-0">
-          <button
-            type="button"
-            class="btn-close"
-            data-bs-dismiss="modal"
-            aria-label="Close"
-          ></button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
 
         <div class="modal-body text-center px-4 pb-5">
@@ -113,34 +112,16 @@ const handleLogout = async () => {
 
           <form @submit.prevent="handleLogin">
             <div class="mb-3">
-              <input
-                type="email"
-                class="form-control modal-input"
-                placeholder="Indirizzo Email"
-                v-model="loginEmail"
-                required
-              />
+              <input type="email" class="form-control modal-input" placeholder="Indirizzo Email" v-model="loginEmail"
+                required />
             </div>
             <div class="mb-3">
               <div class="input-group password-group">
-                <input
-                  :type="isPasswordVisible ? 'text' : 'password'"
-                  class="form-control password-field"
-                  placeholder="Password"
-                  v-model="loginPassword"
-                  required
-                />
-                <button
-                  class="btn toggle-password-btn"
-                  type="button"
-                  @click="isPasswordVisible = !isPasswordVisible"
-                  tabindex="-1"
-                >
-                  <img
-                    :src="isPasswordVisible ? eyeClosedUrl : eyeUrl"
-                    class="password-icon"
-                    alt="Toggle Password"
-                  />
+                <input :type="isPasswordVisible ? 'text' : 'password'" class="form-control password-field"
+                  placeholder="Password" v-model="loginPassword" required />
+                <button class="btn toggle-password-btn" type="button" @click="isPasswordVisible = !isPasswordVisible"
+                  tabindex="-1">
+                  <img :src="isPasswordVisible ? eyeClosedUrl : eyeUrl" class="password-icon" alt="Toggle Password" />
                 </button>
               </div>
             </div>
@@ -177,10 +158,12 @@ const handleLogout = async () => {
 .logo-link {
   text-decoration: none;
 }
+
 .logo {
   display: flex;
   align-items: center;
 }
+
 .logo-image {
   height: 45px;
   width: auto;
@@ -191,6 +174,7 @@ const handleLogout = async () => {
   display: flex;
   gap: 2rem;
 }
+
 .nav-links a {
   text-decoration: none;
   color: var(--text-dark);
@@ -258,7 +242,8 @@ const handleLogout = async () => {
 }
 
 .modal-input:focus {
-  border-color: #00408a; /*primary blue*/
+  border-color: #00408a;
+  /*primary blue*/
   box-shadow: 0 0 0 3px rgba(0, 64, 138, 0.1);
 }
 
@@ -324,7 +309,8 @@ const handleLogout = async () => {
 }
 
 .password-group:focus-within {
-  border-color: #00408a; /*primary blue*/
+  border-color: #00408a;
+  /*primary blue*/
   box-shadow: 0 0 0 3px rgba(0, 64, 138, 0.1);
 }
 
