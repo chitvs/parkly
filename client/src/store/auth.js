@@ -95,6 +95,33 @@ async getProfile() {
   }
 },
 
+// Funzione per salvare le modifiche al profilo
+async updateProfile(payload) {
+  try {
+    const response = await fetch('/api/auth/profile', {
+      method: 'PUT', // Usiamo PUT per l'aggiornamento
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      credentials: 'include', // FONDAMENTALE come sempre!
+      body: JSON.stringify(payload) // Inviamo i nuovi dati
+    });
+    
+    const data = await response.json();
+    
+    // Se è andato tutto bene, aggiorniamo l'utente nello store frontend
+    // Così se ha cambiato nome, il menu a tendina "Ciao, Nome" si aggiorna all'istante
+    if (data.success && data.utente) {
+      this.setUtente(data.utente);
+    }
+    
+    return data;
+  } catch (error) {
+    console.error("Errore salvataggio profilo:", error);
+    return { success: false, error: "Errore di connessione col server" };
+  }
+},
+
 // Logica Logout completa
   async logout() {
     try {

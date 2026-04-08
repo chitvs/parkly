@@ -56,15 +56,26 @@ const hasChanges = computed(() => {
          formData.codiceFiscale !== originalData.value.codiceFiscale;
 })
 
+
 const handleSave = async () => {
-  if (!hasChanges.value) return
+  if (!hasChanges.value) return // Sicurezza extra
 
   try {
-    console.log("Dati da salvare:", formData)
-    originalData.value = { ...formData }
-    alert("Modifiche salvate con successo!")
+    // Chiamiamo lo store passandogli i dati del form
+    const response = await authStore.updateProfile(formData)
+    
+    if (response.success) {
+      // Se il server risponde "success: true", sovrascriviamo originalData
+      // Questo farà spegnere (disabilitare) in automatico il tasto "Salva Modifiche"
+      originalData.value = { ...formData }
+      alert("Modifiche salvate con successo!")
+    } else {
+      // Mostriamo l'errore (es. se l'email è già usata)
+      alert(response.error || "Errore durante il salvataggio dei dati.")
+    }
+    
   } catch (error) {
-    alert("Errore durante il salvataggio dei dati.")
+    alert("Errore imprevisto durante la comunicazione col server.")
   }
 }
 </script>

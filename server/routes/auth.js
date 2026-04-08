@@ -143,6 +143,58 @@ router.get('/profile', async (req, res) => {
     }
 });
 
+
+// Aggiornamento dati profilo utente loggato
+router.put('/profile', async (req, res) => {
+    // 1. Controllo sicurezza: l'utente è loggato?
+    if (!req.session.utente || !req.session.utente.id) {
+        return res.status(401).json({ 
+            success: false, 
+            error: 'Non autorizzato. Effettua il login.' 
+        });
+    }
+
+    const { nome, cognome, email, telefono, codiceFiscale } = req.body;
+
+    try {
+        // 2. Controllo se l'utente sta cercando di usare un'email già presa da qualcun altro
+        const emailEsistente = await db.oneOrNone(
+            'SELECT id_utente FROM Utente WHERE Email = $1 AND id_utente != $2', 
+            [email, req.session.utente.id]
+        );
+
+        if (emailEsistente) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Questa email è già in uso da un altro account' 
+            });
+        }
+
+        // 3. Eseguo l'UPDATE nel database
+        const utenteAggiornato = await db.one(
+            `UPDATE Utente 
+             SET Nome = $1, Cognome = $2, Email = $3, Telefono = $4, codiceFiscale = $5 
+             WHERE id_utente = $6 
+             RETURNING id_utente, nome, email, ruolo`,
+            [nome, cognome, email, telefono || null, codiceFiscale || null, req.session.utente.id]
+        );
+
+        // 4. Aggiorno i dati salvati nella sessione (nel caso abbia cambiato nome o email)
+        req.session.utente.nome = utenteAggiornato.nome;
+        req.session.utente.email = utenteAggiornato.email;
+
+        res.json({ 
+            success: true, 
+            messaggio: 'Profilo aggiornato con successo',
+            utente: req.session.utente // Rimandiamo indietro l'utente aggiornato
+        });
+
+    } catch (err) {
+        console.error('Errore aggiornamento profilo:', err);
+        res.status(500).json({ success: false, error: 'Errore interno del server' });
+    }
+});
+
 // Logout
 router.post('/logout', (req, res) => {
     if (!req.session) {
