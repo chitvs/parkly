@@ -54,6 +54,25 @@ export const authStore = reactive({
     }
   },
 
+// chiamo API per ricevere dati:
+async getProfile() {
+  try {
+    // Assicurati che credenziali/cookie vengano inviati per leggere la sessione
+    const response = await fetch('/api/auth/profile', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      credentials: 'include' // <-- FONDAMENTALE per far funzionare le sessioni Express
+    });
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Errore fetch profilo:", error);
+    return { success: false };
+  }
+},
+
 // Logica Logout completa
   async logout() {
     try {

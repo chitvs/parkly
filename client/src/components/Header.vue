@@ -98,7 +98,7 @@ const handleLogout = async () => {
             </RouterLink>
           </li>
           <li>
-            <RouterLink class="dropdown-item" to="/profilo" @click="isMenuOpen = false">
+            <RouterLink class="dropdown-item" to="/profile" @click="isMenuOpen = false">
               I Tuoi Dati
             </RouterLink>
           </li>
@@ -294,8 +294,11 @@ const handleLogout = async () => {
 
 .parkly-dropdown {
   border-radius: 16px;
-  margin-top: 10px !important;
   overflow: hidden; /* Mantiene i bordi arrotondati anche all'hover degli item */
+
+  border-top: 10px solid transparent; /* Questo è il "ponte" su cui cammina il mouse */
+  background-clip: padding-box; /* Evita che un eventuale colore di sfondo invada il ponte invisibile */
+  margin-top: 0 !important; /* Assicuriamoci che non ci siano margini residui */
 }
 
 .parkly-dropdown .dropdown-item {

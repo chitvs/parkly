@@ -107,6 +107,41 @@ router.post('/login', async (req, res) => {
     }
 });
 
+// Recupero dati profilo utente loggato
+router.get('/profile', async (req, res) => {
+    // Controllo se l'utente ha una sessione attiva
+    if (!req.session.utente || !req.session.utente.id) {
+        return res.status(401).json({ 
+            success: false, 
+            error: 'Non autorizzato. Effettua il login.' 
+        });
+    }
+
+    try {
+        // 2. Cerco l'utente nel DB tramite il suo ID (salvato nella sessione)
+        // N.B: NON selezioniamo la password (PasswordHash) per sicurezza!
+        const utente = await db.oneOrNone(
+            `SELECT id_utente, nome, cognome, email, telefono, codiceFiscale, ruolo 
+             FROM Utente WHERE id_utente = $1`, 
+            [req.session.utente.id]
+        );
+
+        if (!utente) {
+            return res.status(404).json({ success: false, error: 'Utente non trovato' });
+        }
+
+        // 3. Restituisco i dati al frontend
+        res.json({ 
+            success: true, 
+            data: utente 
+        });
+
+    } catch (err) {
+        console.error('Errore recupero profilo:', err);
+        res.status(500).json({ success: false, error: 'Errore interno del server' });
+    }
+});
+
 // Logout
 router.post('/logout', (req, res) => {
     req.session.destroy();
