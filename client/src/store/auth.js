@@ -1,13 +1,35 @@
 import { reactive } from 'vue'
 
 export const authStore = reactive({
-  utente: JSON.parse(localStorage.getItem('utente')) || null,
+  utente: null,
+  isInitialized: false,
 
+  
   // Funzione centralizzata per il SET dell'utente
   setUtente(dati) {
     this.utente = dati;
-    if (dati) localStorage.setItem('utente', JSON.stringify(dati));
-    else localStorage.removeItem('utente');
+    if (dati) 
+      localStorage.setItem('utente', JSON.stringify(dati));
+    else 
+      localStorage.removeItem('utente');
+  },
+  
+  // Verifica se la sessione server sia ancora valida
+  async checkAuth() {
+    try {
+      const response = await fetch('/api/auth/me');
+      if (response.ok) {
+        const data = await response.json();
+        this.setUtente(data.utente);
+      } else {
+        this.setUtente(null);
+      }
+    } catch (err) {
+      console.error("Errore verifica auth:", err);
+      this.setUtente(null);
+    } finally {
+      this.isInitialized = true;
+    }
   },
 
   // Logica Login centralizzata
