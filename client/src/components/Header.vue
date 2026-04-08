@@ -202,28 +202,29 @@ const handleLogout = async () => {
 }
 
 .login-btn {
-  background-color: var(--primary-blue);
+  background-color: #00408a;
   color: white !important;
-  border: 2px solid var(--primary-blue);
+  border: 2px solid #00408a;
 }
 
 .login-btn:hover {
+  background-color: #00336e;
+  border-color: #00336e;
   transform: translateY(-2px);
 }
 
 .register-btn {
   background-color: transparent;
-  color: var(--primary-blue) !important;
-  border: 2px solid var(--primary-blue);
+  color: #00408a !important;
+  border: 2px solid #00408a;
 }
 
 .register-btn:hover {
-  background-color: var(--primary-blue);
+  background-color: #00408a;
   color: white !important;
   transform: translateY(-2px);
 }
 
-/* --- NUOVI STILI MODAL PERSONALIZZATI --- */
 .parkly-modal {
   border-radius: 24px;
   border: none;
@@ -239,14 +240,19 @@ const handleLogout = async () => {
 .modal-input {
   height: 52px;
   border-radius: 12px;
+  border: 1px solid #e0e0e0;
+  padding: 10px 18px;
+  font-size: 15px;
+  transition: all 0.2s ease;
 }
 
 .modal-input:focus {
   border-color: #00408a;
-  /*primary blue*/
   box-shadow: 0 0 0 3px rgba(0, 64, 138, 0.1);
+  outline: none;
 }
 
+.modal-submit-btn.btn-primary,
 .modal-submit-btn {
   background-color: #00408a;
   border: none;
@@ -254,10 +260,28 @@ const handleLogout = async () => {
   border-radius: 12px;
   font-weight: 600;
   font-size: 1.1rem;
+  color: white;
+  transition: background-color 0.2s;
 }
 
+.modal-submit-btn.btn-primary:hover,
+.modal-submit-btn:hover {
+  background-color: #00336e;
+  border: none;
+}
+
+.modal-submit-btn.btn-primary:focus,
 .modal-submit-btn:focus {
+  background-color: #00408a;
+  border: none;
   box-shadow: 0 0 0 3px rgba(0, 64, 138, 0.1);
+}
+
+.modal-submit-btn.btn-primary:active,
+.modal-submit-btn:active {
+  background-color: #00336e !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 .modal-footer-text {
@@ -310,7 +334,6 @@ const handleLogout = async () => {
 
 .password-group:focus-within {
   border-color: #00408a;
-  /*primary blue*/
   box-shadow: 0 0 0 3px rgba(0, 64, 138, 0.1);
 }
 
@@ -321,7 +344,6 @@ const handleLogout = async () => {
   height: 52px;
 }
 
-/* Bottone e Icona */
 .toggle-password-btn {
   border: none !important;
   box-shadow: none !important;

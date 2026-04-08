@@ -84,7 +84,7 @@ const handleRegister = async () => {
               </div>
 
               <div class="d-grid">
-                <button type="submit" class="btn btn-primary btn-lg">Registrati</button>
+                <button type="submit" class="btn btn-primary register-btn">Registrati</button>
               </div>
             </form>
 
@@ -107,8 +107,7 @@ const handleRegister = async () => {
 
 .register-wrapper {
   font-family: 'Inter', sans-serif;
-  /* Gradient Parkly: dal blu scuro al crema */
-  background: linear-gradient(180deg, var(--primary-blue) 0%, var(--bg-crema) 100%);
+  background: linear-gradient(180deg, #00408a 0%, var(--bg-crema) 100%);
   background-attachment: fixed;
   min-height: 100vh;
   width: 100%;
@@ -118,7 +117,7 @@ const handleRegister = async () => {
 
 .register-card {
   background: var(--white);
-  border-radius: 24px; /* Arrotondamento moderno */
+  border-radius: 24px;
   border: none;
   padding: 40px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
@@ -130,12 +129,11 @@ const handleRegister = async () => {
 }
 
 h2 {
-  color: var(--primary-blue);
+  color: #00408a;
   font-size: 26px;
   letter-spacing: -0.5px;
 }
 
-/* Stilizzazione Input */
 .form-control {
   height: 52px;
   border-radius: 12px;
@@ -146,32 +144,43 @@ h2 {
 }
 
 .form-control:focus {
-  border-color:var(--primary-blue);
-  box-shadow: 0 0 0 4px rgba(0, 64, 138, 0.1);
+  border-color: #00408a;
+  box-shadow: 0 0 0 3px rgba(0, 64, 138, 0.1);
   outline: none;
 }
 
-/* Bottone Parkly */
-.btn-primary {
-  background-color: var(--primary-blue);
+.register-btn.btn-primary,
+.register-btn {
+  background-color: #00408a;
   border: none;
+  height: 52px;
   border-radius: 12px;
-  height: 55px;
   font-weight: 600;
-  font-size: 16px;
-  transition: transform 0.2s, background-color 0.2s;
+  font-size: 1.1rem;
+  color: white;
+  transition: background-color 0.2s;
 }
 
-.btn-primary:hover {
-  background-color: #00336E;
-  transform: translateY(-1px);
+.register-btn.btn-primary:hover,
+.register-btn:hover {
+  background-color: #00336e;
+  border: none;
 }
 
-.btn-primary:active {
-  transform: translateY(0);
+.register-btn.btn-primary:focus,
+.register-btn:focus {
+  background-color: #00408a;
+  border: none;
+  box-shadow: 0 0 0 3px rgba(0, 64, 138, 0.1);
 }
 
-/* Link footer */
+.register-btn.btn-primary:active,
+.register-btn:active {
+  background-color: #00336e !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
 .footer-text {
   line-height: 1.5;
 }
@@ -179,18 +188,47 @@ h2 {
 .footer-text a {
   color: #00408A;
   text-decoration: none;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .footer-text a:hover {
   text-decoration: underline;
 }
 
-/* Responsive adjustments */
 @media (max-width: 576px) {
   .register-card {
     padding: 25px;
     margin: 1rem;
   }
+}
+
+.password-group {
+  border: 1px solid #dee2e6;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.password-group:focus-within {
+  border-color: #00408a;
+  box-shadow: 0 0 0 3px rgba(0, 64, 138, 0.1);
+}
+
+.password-field {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  height: 52px;
+}
+
+.toggle-password-btn {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  align-items: center;
+}
+
+.password-icon {
+  width: 20px;
+  height: 20px;
 }
 </style>
