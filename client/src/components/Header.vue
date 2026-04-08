@@ -40,10 +40,14 @@ const closeLoginModal = () => {
       return
     }
 
-    modalElement.value.addEventListener('hidden.bs.modal', () => {
-      forceCleanupModal()
-      resolve()
-    }, { once: true })
+    modalElement.value.addEventListener(
+      'hidden.bs.modal',
+      () => {
+        forceCleanupModal()
+        resolve()
+      },
+      { once: true },
+    )
 
     modalInstance.hide()
   })
@@ -92,18 +96,31 @@ const handleLogout = async () => {
       </template>
 
       <div v-else class="logged-user-zone">
-        <span class="user-name">Ciao, <strong>{{ authStore.utente.nome }}</strong></span>
+        <span class="user-name"
+          >Ciao, <strong>{{ authStore.utente.nome }}</strong></span
+        >
         <button @click="handleLogout" class="logout-btn">Esci</button>
       </div>
     </div>
   </header>
 
-  <div class="modal fade" id="modalLogin" ref="modalElement" tabindex="-1" aria-labelledby="modalLoginLabel"
-    aria-hidden="true">
+  <div
+    class="modal fade"
+    id="modalLogin"
+    ref="modalElement"
+    tabindex="-1"
+    aria-labelledby="modalLoginLabel"
+    aria-hidden="true"
+  >
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content parkly-modal">
         <div class="modal-header border-0">
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+            aria-label="Close"
+          ></button>
         </div>
 
         <div class="modal-body text-center px-4 pb-5">
@@ -112,16 +129,34 @@ const handleLogout = async () => {
 
           <form @submit.prevent="handleLogin">
             <div class="mb-3">
-              <input type="email" class="form-control modal-input" placeholder="Indirizzo Email" v-model="loginEmail"
-                required />
+              <input
+                type="email"
+                class="form-control modal-input"
+                placeholder="Indirizzo Email"
+                v-model="loginEmail"
+                required
+              />
             </div>
             <div class="mb-3">
               <div class="input-group password-group">
-                <input :type="isPasswordVisible ? 'text' : 'password'" class="form-control password-field"
-                  placeholder="Password" v-model="loginPassword" required />
-                <button class="btn toggle-password-btn" type="button" @click="isPasswordVisible = !isPasswordVisible"
-                  tabindex="-1">
-                  <img :src="isPasswordVisible ? eyeClosedUrl : eyeUrl" class="password-icon" alt="Toggle Password" />
+                <input
+                  :type="isPasswordVisible ? 'text' : 'password'"
+                  class="form-control password-field"
+                  placeholder="Password"
+                  v-model="loginPassword"
+                  required
+                />
+                <button
+                  class="btn toggle-password-btn"
+                  type="button"
+                  @click="isPasswordVisible = !isPasswordVisible"
+                  tabindex="-1"
+                >
+                  <img
+                    :src="isPasswordVisible ? eyeClosedUrl : eyeUrl"
+                    class="password-icon"
+                    alt="Toggle Password"
+                  />
                 </button>
               </div>
             </div>
