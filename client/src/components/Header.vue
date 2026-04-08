@@ -139,7 +139,6 @@ const handleLogout = async () => {
                   <img
                     :src="isPasswordVisible ? eyeClosedUrl : eyeUrl"
                     class="password-icon"
-                    alt="Toggle Password"
                   />
                 </button>
               </div>
@@ -335,7 +334,6 @@ const handleLogout = async () => {
   height: 52px;
 }
 
-/* Bottone e Icona */
 .toggle-password-btn {
   border: none !important;
   box-shadow: none !important;
