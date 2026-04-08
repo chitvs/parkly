@@ -53,6 +53,8 @@ CREATE TABLE PostoAuto (
     IsCoperto BOOLEAN DEFAULT TRUE,    
     TariffaOraria DECIMAL(5, 2) NOT NULL,  
     -- IsDisponibile BOOLEAN DEFAULT TRUE, basta calcolarla con il tempo reale e i parametri InizioSosta e FineSosta della tabella Prenotazione
+    Coord_X DECIMAL(5, 2) NOT NULL DEFAULT 0.00,
+    Coord_Y DECIMAL(5, 2) NOT NULL DEFAULT 0.00,
     FOREIGN KEY (ID_Garage) REFERENCES Garage(ID_Garage) ON DELETE CASCADE,
     UNIQUE(ID_Garage, CodicePosto)
 );

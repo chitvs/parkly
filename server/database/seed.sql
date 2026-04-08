@@ -12,28 +12,44 @@ INSERT INTO Utente (Ruolo, Nome, Cognome, CodiceFiscale, Email, PasswordHash, Te
 ('CLIENTE', 'Giada', 'Serra', 'SRRGDA99M45H501L', 'giada.s@email.com', '$2b$10$LXSwRxWPIl0wRboIgW4NSuF3LQ/A6CvyRpVj8QD0Cw/0uWkVwQ.ty', '3400000006');
 
 -- GARAGE
-INSERT INTO Garage (ID_Gestore, Nome, Descrizione, Indirizzo, Latitudine, Longitudine, AltezzaMassima, TariffaBase, OrarioApertura, OrarioChiusura, Is24h) VALUES
-(1, 'EUR business parking', 'Ampio parcheggio zona uffici EUR.', 'Viale Europa, 150, 00144 Roma', 41.8285, 12.4673, 2.50, 3.00, '08:00:00', '20:00:00', FALSE),
-(2, 'Parioli green parking', 'Esclusivo e videosorvegliato.', 'Via dei Parioli, 12, 00197 Roma', 41.9258, 12.4883, 2.10, 6.00, '07:00:00', '23:00:00', FALSE),
-(3, 'San Giovanni 24/7 parking', 'Vicinissimo alla Metro A.', 'Via Appia Nuova, 45, 00183 Roma', 41.8851, 12.5105, 2.30, 4.00, '00:00:00', '23:59:59', TRUE),
-(4, 'Ostiense 24/7 parking', 'Ideale per la zona Gazometro.', 'Via del Porto Fluviale, 5, 00154 Roma', 41.8722, 12.4811, 3.50, 3.50, '00:00:00', '23:59:59', TRUE),
-(1, 'Vaticano parking', 'A due passi da Piazza San Pietro.', 'Via delle Fornaci, 20, 00165 Roma', 41.9001, 12.4550, 2.10, 5.50, '06:00:00', '22:00:00', FALSE),
-(2, 'Testaccio market garage', 'Perfetto per il mercato e i locali.', 'Via Galvani, 30, 00153 Roma', 41.8775, 12.4789, 2.40, 3.00, '07:00:00', '02:00:00', FALSE);
+INSERT INTO Garage (ID_Gestore, Nome, Descrizione, Indirizzo, Latitudine, Longitudine, AltezzaMassima, TariffaBase, OrarioApertura, OrarioChiusura, Is24h, Planimetria_URL) VALUES
+(1, 'EUR business parking', 'Ampio parcheggio zona uffici EUR.', 'Viale Europa, 150, 00144 Roma', 41.8285, 12.4673, 2.50, 3.00, '08:00:00', '20:00:00', FALSE, '/assets/mappe/eur.png'),
+(2, 'Parioli green parking', 'Esclusivo e videosorvegliato.', 'Via dei Parioli, 12, 00197 Roma', 41.9258, 12.4883, 2.10, 6.00, '07:00:00', '23:00:00', FALSE, '/assets/mappe/parioli.png'),
+(3, 'San Giovanni 24/7 parking', 'Vicinissimo alla Metro A.', 'Via Appia Nuova, 45, 00183 Roma', 41.8851, 12.5105, 2.30, 4.00, '00:00:00', '23:59:59', TRUE, '/assets/mappe/sangiovanni.png'),
+(4, 'Ostiense 24/7 parking', 'Ideale per la zona Gazometro.', 'Via del Porto Fluviale, 5, 00154 Roma', 41.8722, 12.4811, 3.50, 3.50, '00:00:00', '23:59:59', TRUE, '/assets/mappe/ostiense.png'),
+(1, 'Vaticano parking', 'A due passi da Piazza San Pietro.', 'Via delle Fornaci, 20, 00165 Roma', 41.9001, 12.4550, 2.10, 5.50, '06:00:00', '22:00:00', FALSE, '/assets/mappe/vaticano.png'),
+(2, 'Testaccio market garage', 'Perfetto per il mercato e i locali.', 'Via Galvani, 30, 00153 Roma', 41.8775, 12.4789, 2.40, 3.00, '07:00:00', '02:00:00', FALSE, '/assets/mappe/testaccio.png');
 
 -- POSTI AUTO
-INSERT INTO PostoAuto (ID_Garage, CodicePosto, TipoVeicolo, IsDisabili, IsElettrica, IsCoperto, TariffaOraria) VALUES
+INSERT INTO PostoAuto (ID_Garage, CodicePosto, TipoVeicolo, IsDisabili, IsElettrica, IsCoperto, TariffaOraria, Coord_X, Coord_Y) VALUES
 -- Garage 1: EUR
-(1, 'E01', 'AUTO', FALSE, TRUE, TRUE, 3.50), (1, 'E02', 'AUTO', FALSE, FALSE, TRUE, 3.00), (1, 'E03', 'FURGONE', FALSE, FALSE, FALSE, 5.00),
+(1, 'E01', 'AUTO', FALSE, TRUE, TRUE, 3.50, 10.0, 20.0), 
+(1, 'E02', 'AUTO', FALSE, FALSE, TRUE, 3.00, 20.0, 20.0), 
+(1, 'E03', 'FURGONE', FALSE, FALSE, FALSE, 5.00, 30.0, 20.0),
+(1, 'E04', 'AUTO', FALSE, FALSE, TRUE, 3.00, 40.0, 20.0),
+(1, 'E05', 'AUTO', TRUE, FALSE, TRUE, 3.00, 50.0, 20.0),
 -- Garage 2: Parioli
-(2, 'P01', 'AUTO', TRUE, FALSE, TRUE, 6.00), (2, 'P02', 'AUTO', FALSE, TRUE, TRUE, 7.50), (2, 'P03', 'MOTO', FALSE, FALSE, TRUE, 2.50),
+(2, 'P01', 'AUTO', TRUE, FALSE, TRUE, 6.00, 15.0, 15.0), 
+(2, 'P02', 'AUTO', FALSE, TRUE, TRUE, 7.50, 15.0, 30.0), 
+(2, 'P03', 'MOTO', FALSE, FALSE, TRUE, 2.50, 15.0, 45.0),
 -- Garage 3: San Giovanni
-(3, 'S01', 'AUTO', FALSE, FALSE, TRUE, 4.00), (3, 'S02', 'AUTO', FALSE, FALSE, TRUE, 4.00), (3, 'S03', 'AUTO', TRUE, FALSE, TRUE, 4.00), (3, 'S04', 'BICI', FALSE, FALSE, TRUE, 1.00),
+(3, 'S01', 'AUTO', FALSE, FALSE, TRUE, 4.00, 10.0, 10.0), 
+(3, 'S02', 'AUTO', FALSE, FALSE, TRUE, 4.00, 25.0, 10.0), 
+(3, 'S03', 'AUTO', TRUE, FALSE, TRUE, 4.00, 40.0, 10.0), 
+(3, 'S04', 'BICI', FALSE, FALSE, TRUE, 1.00, 55.0, 10.0),
 -- Garage 4: Ostiense
-(4, 'O01', 'CAMPER', FALSE, FALSE, FALSE, 10.00), (4, 'O02', 'FURGONE', FALSE, FALSE, FALSE, 7.00), (4, 'O03', 'AUTO', FALSE, TRUE, TRUE, 4.50),
+(4, 'O01', 'CAMPER', FALSE, FALSE, FALSE, 10.00, 5.0, 50.0), 
+(4, 'O02', 'FURGONE', FALSE, FALSE, FALSE, 7.00, 20.0, 50.0), 
+(4, 'O03', 'AUTO', FALSE, TRUE, TRUE, 4.50, 35.0, 50.0),
+(4, 'O04', 'AUTO', FALSE, FALSE, TRUE, 3.50, 50.0, 50.0),
 -- Garage 5: Vaticano
-(5, 'V01', 'AUTO', FALSE, FALSE, TRUE, 5.50), (5, 'V02', 'AUTO', FALSE, TRUE, TRUE, 6.50), (5, 'V03', 'MOTO', FALSE, FALSE, TRUE, 3.00),
+(5, 'V01', 'AUTO', FALSE, FALSE, TRUE, 5.50, 80.0, 20.0), 
+(5, 'V02', 'AUTO', FALSE, TRUE, TRUE, 6.50, 80.0, 35.0), 
+(5, 'V03', 'MOTO', FALSE, FALSE, TRUE, 3.00, 80.0, 50.0),
 -- Garage 6: Testaccio
-(6, 'T01', 'AUTO', FALSE, FALSE, TRUE, 3.00), (6, 'T02', 'AUTO', FALSE, FALSE, TRUE, 3.00), (6, 'T03', 'AUTO', TRUE, FALSE, TRUE, 3.00);
+(6, 'T01', 'AUTO', FALSE, FALSE, TRUE, 3.00, 40.0, 70.0), 
+(6, 'T02', 'AUTO', FALSE, FALSE, TRUE, 3.00, 50.0, 70.0), 
+(6, 'T03', 'AUTO', TRUE, FALSE, TRUE, 3.00, 60.0, 70.0);
 
 -- PRENOTAZIONI
 INSERT INTO Prenotazione (ID_Utente, ID_Posto, CodicePrenotazione, Targa, Note, InizioSosta, FineSosta, PrezzoTotale, Stato) VALUES
