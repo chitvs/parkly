@@ -110,10 +110,16 @@ router.post('/login', async (req, res) => {
 
 // Logout
 router.post('/logout', (req, res) => {
-    req.session.destroy();
-    res.json({ 
-        success: true, 
-        messaggio: 'Logout effettuato' 
+    if (!req.session) {
+        return res.status(400).json({ success: false, message: "Nessuna sessione attiva" });
+    }
+    req.session.destroy((err) => {
+        if (err) {
+            console.error("Errore durante la distruzione della sessione:", err);
+            return res.status(500).json({ success: false, message: "Impossibile chiudere la sessione" });
+        }
+        res.clearCookie('connect.sid');
+        res.json({ success: true, message: "Logout effettuato con successo" });
     });
 });
 
