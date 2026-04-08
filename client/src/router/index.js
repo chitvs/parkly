@@ -20,7 +20,7 @@ const router = createRouter({
       path: '/profile',
       name: 'profile',
       component: () => import('../views/ProfileView.vue'),
-      meta: { guestOnly: true }
+      
     },
     { // link inventati 
     path: '/:pathMatch(.*)*', 
