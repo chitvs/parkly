@@ -243,17 +243,28 @@ router.post('/upload-avatar', upload.single('avatar'), async (req, res) => {
         const file = req.file;
         const utenteId = req.session.utente.id;
         
-        // Creo un nome unico per il file usando l'ID Utente(es. 12_avatar.jpg)
-        const estensione = file.originalname.split('.').pop();
-        const nomeFile = `${utenteId}_avatar.${estensione}`;
+        // RECUPERO E CANCELLO LA FOTO VECCHIA (se esiste)
+        const vecchiaUrl = req.session.utente.fotoProfilo_URL;
+        
+        if (vecchiaUrl) {
+            // Estrapolo solo il nome del file finale dall'URL (es: 12_avatar_1690000.jpg)
+            const vecchioNomeFile = vecchiaUrl.split('/').pop();
+            
+            // Dico a Supabase di cancellarlo dal bucket
+            await supabase.storage.from('avatars').remove([vecchioNomeFile]);
+        }
 
+        //CREO LA NUOVA FOTO
+        const estensione = file.originalname.split('.').pop();
+        const nomeFile = `${utenteId}_avatar_${Date.now()}.${estensione}`;
+        
         // Carico il file su Supabase Storage nel bucket 'avatars'
         const { data, error } = await supabase
             .storage
             .from('avatars')
             .upload(nomeFile, file.buffer, {
                 contentType: file.mimetype,
-                upsert: true // Se l'utente cambia foto, sovrascrive la vecchia!
+                upsert: false // Messo a false: avendo Date.now() il nome è sempre unico, non c'è niente da sovrascrivere
             });
 
         if (error) throw error;
@@ -269,7 +280,7 @@ router.post('/upload-avatar', upload.single('avatar'), async (req, res) => {
         // Salvo l'URL nel database PostgreSQL aggiornando l'utente
         await db.none('UPDATE Utente SET FotoProfilo_URL = $1 WHERE id_utente = $2', [urlFoto, utenteId]);
 
-        //Aggiorna la sessione attuale con la nuova foto
+        // Aggiorna la sessione attuale con la nuova foto
         req.session.utente.fotoProfilo_URL = urlFoto;
 
         res.json({ success: true, url: urlFoto });
