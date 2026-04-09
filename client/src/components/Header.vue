@@ -122,7 +122,7 @@ const handleLogout = async () => {
           style="position: absolute; right: 0; top: 100%; margin-top: 0;"
         >
           <li>
-            <RouterLink class="dropdown-item" to="/prenotazioni" @click="isMenuOpen = false">
+            <RouterLink class="dropdown-item" to="/bookings" @click="isMenuOpen = false">
               Le Tue Prenotazioni
             </RouterLink>
           </li>

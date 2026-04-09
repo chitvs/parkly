@@ -22,6 +22,12 @@ const router = createRouter({
       component: () => import('../views/ProfileView.vue'),
       
     },
+    {
+      path: '/bookings',
+      name: 'bookings',
+      component: () => import('../views/BookingsView.vue'),
+      
+    },
     { // link inventati 
     path: '/:pathMatch(.*)*', 
     redirect: '/' 
