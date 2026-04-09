@@ -103,8 +103,17 @@ const handleLogout = async () => {
         @mouseleave="isMenuOpen = false"
       >
         
-        <button class="btn user-name-btn">
-          Ciao, <strong>{{ authStore.utente.nome }}</strong>
+        <button class="btn user-name-btn d-flex align-items-center gap-2">
+          
+          <img 
+            :src="authStore.utente?.fotoProfilo_URL || '/default-avatar.png'" 
+            alt="Avatar" 
+            class="rounded-circle border"
+            style="width: 28px; height: 28px; object-fit: cover; border-color: #dee2e6;"
+          >
+          
+          <span>Ciao, <strong>{{ authStore.utente.nome }}</strong></span>
+          
         </button>
         
         <ul 
@@ -390,8 +399,8 @@ const handleLogout = async () => {
   border-radius: 16px;
   overflow: hidden; /* Mantiene i bordi arrotondati anche all'hover degli item */
 
-  border-top: 10px solid transparent; /* Questo è il "ponte" su cui cammina il mouse */
-  background-clip: padding-box; /* Evita che un eventuale colore di sfondo invada il ponte invisibile */
+  border-top: 10px solid transparent; 
+  background-clip: padding-box; 
   margin-top: 0 !important; /* Assicuriamoci che non ci siano margini residui */
 }
 

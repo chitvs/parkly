@@ -2,33 +2,35 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { authStore } from '../store/auth.js'
 
-// 1. IMPORTA HEADER E FOOTER (Assicurati che il percorso sia corretto)
-
+// Importo Header e Footer (OCCHIO AI PERCORSI)
 import Header from '../components/Header.vue' 
 import Footer from '../components/Footer.vue'
 
+// Dati originali per il confronto
 const originalData = ref({
   nome: '',
   cognome: '',
   email: '',
   telefono: '',
-  codiceFiscale: ''
+  codiceFiscale: '',
+  fotoProfilo_URL: ''
 })
 
+// Dati reattivi collegati agli input del form
 const formData = reactive({
   nome: '',
   cognome: '',
   email: '',
   telefono: '',
-  codiceFiscale: ''
+  codiceFiscale: '',
+  fotoProfilo_URL: ''
 })
 
+// Caricamento dati all'apertura della pagina
 onMounted(async () => {
-  // Richiamiamo il backend per avere i dati veri
   const response = await authStore.getProfile()
 
   if (response.success) {
-    // Backend ha risposto con successo, prendiamo i dati
     const userDb = response.data
     
     const datiDalServer = {
@@ -36,18 +38,18 @@ onMounted(async () => {
       cognome: userDb.cognome || '',
       email: userDb.email || '',
       telefono: userDb.telefono || '',
-      codiceFiscale: userDb.codicefiscale || '' // occhio a come Postgres formatta le chiavi (spesso in minuscolo)
+      codiceFiscale: userDb.codicefiscale || '', 
+      fotoProfilo_URL: userDb.fotoprofilo_url || '' 
     }
     
-    // Riempiamo i campi modificabili
     originalData.value = { ...datiDalServer }
     Object.assign(formData, datiDalServer)
   } else {
-    // Se fallisce (es. sessione scaduta), potresti reindirizzare al login
     alert(response.error || "Impossibile caricare il profilo")
   }
 })
 
+// Controllo per abilitare/disabilitare il tasto "Salva"
 const hasChanges = computed(() => {
   return formData.nome !== originalData.value.nome ||
          formData.cognome !== originalData.value.cognome ||
@@ -56,26 +58,58 @@ const hasChanges = computed(() => {
          formData.codiceFiscale !== originalData.value.codiceFiscale;
 })
 
-
+// Salvataggio dei dati testuali
 const handleSave = async () => {
-  if (!hasChanges.value) return // Sicurezza extra
+  if (!hasChanges.value) return 
 
   try {
-    // Chiamiamo lo store passandogli i dati del form
     const response = await authStore.updateProfile(formData)
     
     if (response.success) {
-      // Se il server risponde "success: true", sovrascriviamo originalData
-      // Questo farà spegnere (disabilitare) in automatico il tasto "Salva Modifiche"
       originalData.value = { ...formData }
       alert("Modifiche salvate con successo!")
     } else {
-      // Mostriamo l'errore (es. se l'email è già usata)
       alert(response.error || "Errore durante il salvataggio dei dati.")
     }
-    
   } catch (error) {
     alert("Errore imprevisto durante la comunicazione col server.")
+  }
+}
+
+// Upload della foto profilo
+const handleFileUpload = async (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const data = new FormData();
+  data.append('avatar', file); 
+
+  try {
+    const response = await fetch('/api/auth/upload-avatar', {
+      method: 'POST',
+      credentials: 'include', 
+      body: data 
+    });
+
+    const result = await response.json();
+    
+    if (result.success) {
+      formData.fotoProfilo_URL = result.url;
+      originalData.value.fotoProfilo_URL = result.url;
+
+      if (authStore.utente) {
+        authStore.utente.fotoProfilo_URL = result.url;
+        // Per sicurezza salviamo l'aggiornamento nel localStorage
+        localStorage.setItem('utente', JSON.stringify(authStore.utente)); 
+    }
+
+      alert("Foto profilo aggiornata!");
+    } else {
+      alert(result.error);
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Errore durante il caricamento dell'immagine.");
   }
 }
 </script>
@@ -88,8 +122,21 @@ const handleSave = async () => {
       <div class="row justify-content-center">
         <div class="col-12 col-md-8 col-lg-6">
           
-          <h2 class="fw-bold mb-1 title-color">Il tuo Profilo</h2>
-          <p class="text-muted mb-4">Modifica le tue informazioni personali</p>
+          <h2 class="fw-bold mb-1 title-color text-center">Il tuo Profilo</h2>
+          <p class="text-muted mb-4 text-center">Modifica le tue informazioni personali</p>
+
+          <div class="text-center mb-4 pb-3 border-bottom">
+            <img 
+              :src="formData.fotoProfilo_URL || '/default-avatar.png'" 
+              alt="Foto Profilo" 
+              class="rounded-circle mb-3 shadow-sm" 
+              style="width: 120px; height: 120px; object-fit: cover; border: 3px solid var(--primary-blue, #00408A);"
+              >
+            <div>
+              <label class="form-label fw-semibold mb-2">Cambia foto profilo</label>
+              <input type="file" @change="handleFileUpload" accept="image/*" class="form-control form-control-sm w-75 mx-auto">
+            </div>
+          </div>
 
           <form @submit.prevent="handleSave">
             
@@ -140,7 +187,6 @@ const handleSave = async () => {
 </template>
 
 <style scoped>
-/* Aggiungiamo un wrapper per spingere il footer in fondo alla pagina se il contenuto è poco */
 .page-wrapper {
   display: flex;
   flex-direction: column;
@@ -166,6 +212,14 @@ const handleSave = async () => {
   font-size: 15px;
   transition: all 0.2s ease;
   background-color: #fafafa;
+}
+
+/* Fix per l'input di tipo file che è più piccolo */
+input[type="file"].form-control-sm {
+  height: auto;
+  padding: 8px 12px;
+  font-size: 13px;
+  border-radius: 8px;
 }
 
 .form-control:focus {
