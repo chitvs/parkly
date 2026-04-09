@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcrypt');
 const db = require('../database/db');
+const { isLoggato } = require('../middleware/authMiddleware');
 
 // Registrazione
 router.post('/register', async (req, res) => {
@@ -102,17 +103,31 @@ router.post('/login', async (req, res) => {
         console.error('Errore login:', err);
         res.status(500).json({ 
             success: false, 
-            error: 'Errore interno' 
+            error: 'Errore interno'     
         });
     }
 });
 
 // Logout
 router.post('/logout', (req, res) => {
-    req.session.destroy();
+    if (!req.session) {
+        return res.status(400).json({ success: false, message: "Nessuna sessione attiva" });
+    }
+    req.session.destroy((err) => {
+        if (err) {
+            console.error("Errore durante la distruzione della sessione:", err);
+            return res.status(500).json({ success: false, message: "Impossibile chiudere la sessione" });
+        }
+        res.clearCookie('connect.sid');
+        res.json({ success: true, message: "Logout effettuato con successo" });
+    });
+});
+
+// Sincronizzazione del frontend con sessione reale sul server
+router.get('/me', isLoggato, (req, res) => {
     res.json({ 
         success: true, 
-        messaggio: 'Logout effettuato' 
+        utente: req.session.utente 
     });
 });
 
