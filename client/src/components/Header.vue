@@ -11,6 +11,7 @@ const router = useRouter()
 
 const loginEmail = ref('')
 const loginPassword = ref('')
+const isMenuOpen = ref(false)
 const isPasswordVisible = ref(false)
 
 const modalElement = ref(null)
@@ -95,13 +96,51 @@ const handleLogout = async () => {
         </button>
       </template>
 
-      <div v-else class="logged-user-zone">
-        <span class="user-name"
-          >Ciao, <strong>{{ authStore.utente.nome }}</strong></span
+      <div 
+        v-else 
+        class="logged-user-zone position-relative"
+        @mouseenter="isMenuOpen = true"
+        @mouseleave="isMenuOpen = false"
+      >
+        
+        <button class="btn user-name-btn d-flex align-items-center gap-2">
+          
+          <img 
+            :src="authStore.utente?.fotoProfilo_URL || '/default-avatar.png'" 
+            alt="Avatar" 
+            class="rounded-circle border"
+            style="width: 28px; height: 28px; object-fit: cover; border-color: #dee2e6;"
+          >
+          
+          <span>Ciao, <strong>{{ authStore.utente.nome }}</strong></span>
+          
+        </button>
+        
+        <ul 
+          v-if="isMenuOpen" 
+          class="dropdown-menu show shadow border-0 parkly-dropdown" 
+          style="position: absolute; right: 0; top: 100%; margin-top: 0;"
         >
-        <button @click="handleLogout" class="logout-btn">Esci</button>
+          <li>
+            <RouterLink class="dropdown-item" to="/bookings" @click="isMenuOpen = false">
+              Le Tue Prenotazioni
+            </RouterLink>
+          </li>
+          <li>
+            <RouterLink class="dropdown-item" to="/profile" @click="isMenuOpen = false">
+              I Tuoi Dati
+            </RouterLink>
+          </li>
+          <li><hr class="dropdown-divider"></li>
+          <li>
+            <a class="dropdown-item text-danger fw-bold" href="#" @click.prevent="handleLogout">
+              Esci
+            </a>
+          </li>
+        </ul>
+
       </div>
-    </div>
+      </div>
   </header>
 
   <div
@@ -260,6 +299,7 @@ const handleLogout = async () => {
   transform: translateY(-2px);
 }
 
+/* --- STILI MODAL PERSONALIZZATI --- */
 .parkly-modal {
   border-radius: 24px;
   border: none;
@@ -334,31 +374,52 @@ const handleLogout = async () => {
   text-decoration: underline;
 }
 
+/* --- NUOVI STILI MENU UTENTE LOGGATO --- */
 .logged-user-zone {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
 }
 
-.user-name {
+.user-name-btn {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
   color: #2c3e50;
+  border-radius: 25px;
+  padding: 0.5rem 1.2rem;
   font-size: 0.95rem;
-}
-
-.logout-btn {
-  background: transparent;
-  border: 1px solid #dc3545;
-  color: #dc3545;
-  padding: 0.4rem 1rem;
-  border-radius: 20px;
-  font-weight: 600;
   transition: all 0.3s;
-  cursor: pointer;
 }
 
-.logout-btn:hover {
-  background-color: #dc3545;
-  color: white;
+.user-name-btn:hover, .user-name-btn:focus {
+  background-color: #e9ecef;
+  border-color: #ced4da;
+}
+
+.parkly-dropdown {
+  border-radius: 16px;
+  overflow: hidden; /* Mantiene i bordi arrotondati anche all'hover degli item */
+
+  border-top: 10px solid transparent; 
+  background-clip: padding-box; 
+  margin-top: 0 !important; /* Assicuriamoci che non ci siano margini residui */
+}
+
+.parkly-dropdown .dropdown-item {
+  padding: 0.6rem 1.5rem;
+  font-weight: 500;
+  color: #2c3e50;
+  transition: background-color 0.2s;
+}
+
+.parkly-dropdown .dropdown-item:hover {
+  background-color: #f1f5f9;
+  color: #00408A;
+}
+
+/* Stile speciale per il tasto Esci */
+.parkly-dropdown .dropdown-item.text-danger:hover {
+  background-color: #fee2e2;
+  color: #dc3545 !important;
 }
 
 .password-group {
