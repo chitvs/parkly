@@ -11,9 +11,11 @@ const props = defineProps(['id'])
 const checkIn = ref(route.query.inizio || '')
 const checkOut = ref(route.query.fine || '')
 const targa = ref('')
+const note = ref('')
 const postoSelezionato = ref(null)
 const messaggio = ref(null)
 const isMapConfirmed = ref(false)
+const isPrenotando = ref(false)
 
 onMounted(async () => {
     garageStore.clearGarageData()
@@ -30,9 +32,23 @@ watch([checkIn, checkOut], () => {
     postoSelezionato.value = null
 })
 
+const formattaTarga = () => {
+    // rimuove qualsiasi carattere che non sia lettera o numero e converte in maiuscolo
+    targa.value = targa.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
+}
+
+// la targa rispetta il formato italiano?
+const isTargaValida = computed(() => {
+    // ^[A-Z]{2} (inizia con 2 lettere) 
+    // \d{3} (3 numeri) 
+    // [A-Z]{2}$ (finisce con 2 lettere)
+    const regex = /^[A-Z]{2}\d{3}[A-Z]{2}$/
+    return regex.test(targa.value)
+})
+
 const aggiornaMappa = async () => {
     if (!checkIn.value || !checkOut.value) {
-        alert('Inserisci data di arrivo e partenza prima di controllare.')
+        messaggio.value = { tipo: 'error', testo: 'Inserisci data di arrivo e partenza prima di controllare.' }
         return
     }
 
@@ -41,25 +57,26 @@ const aggiornaMappa = async () => {
     const adesso = new Date()
 
     if (dataArrivo < adesso) {
-        alert('Non puoi prenotare per un orario passato.')
+        messaggio.value = { tipo: 'error', testo: 'Non puoi prenotare per un orario passato.' }
         return
     }
 
     if (dataPartenza <= dataArrivo) {
-        alert('L\'orario di partenza deve essere successivo a quello di arrivo.')
+        messaggio.value = { tipo: 'error', testo: 'L\'orario di partenza deve essere successivo a quello di arrivo.' }
         return
     }
-
+    
+    messaggio.value = null
     await garageStore.fetchPosti(props.id, checkIn.value, checkOut.value)
     isMapConfirmed.value = true
     postoSelezionato.value = null
-    messaggio.value = null
 }
 
 const resetSelezione = async () => {
     checkIn.value = ''
     checkOut.value = ''
     targa.value = ''
+    note.value = ''
     postoSelezionato.value = null
     messaggio.value = null
     isMapConfirmed.value = false
@@ -81,21 +98,33 @@ const durataOre = computed(() => {
 
 const gestisciPrenotazione = async () => {
     if (!postoSelezionato.value) return
+    
+    if (!isTargaValida.value) {
+        messaggio.value = { tipo: 'error', testo: 'Inserisci una targa valida prima di procedere.' }
+        return
+    }
+
+    isPrenotando.value = true;
 
     const payload = {
         id_posto: postoSelezionato.value.id_posto,
         targa: targa.value,
+        note: note.value,
         inizio: checkIn.value,
         fine: checkOut.value,
         prezzo_totale: prezzoTotale.value
     }
 
     const res = await garageStore.prenota(payload)
+
+    isPrenotando.value = false;
+
     if (res.success) {
-        messaggio.value = { tipo: 'success', testo: `Prenotazione effettuata! Codice: ${res.prenotazione.CodicePrenotazione}` }
+        await aggiornaMappa()
+        messaggio.value = { tipo: 'success', testo: `Prenotazione avvenuta con successo! Il tuo codice è: ${res.prenotazione.codiceprenotazione}` }
         postoSelezionato.value = null
         targa.value = ''
-        await aggiornaMappa()
+        note.value = ''
     } else {
         messaggio.value = { tipo: 'error', testo: res.error || 'Errore durante la prenotazione' }
     }
@@ -124,14 +153,30 @@ const gestisciPrenotazione = async () => {
                                 </svg>
                                 {{ garageStore.currentGarage.indirizzo }}
                             </div>
-                            <div class="badge">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2">
+
+                            <div class="badge" v-if="garageStore.currentGarage.is24h">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                </svg>
+                                Aperto 24h
+                            </div>
+                            
+                            <div class="badge" v-else>
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <circle cx="12" cy="12" r="10" />
                                     <polyline points="12 6 12 12 16 14" />
                                 </svg>
-                                {{ garageStore.currentGarage.orarioapertura.substring(0, 5) }} – {{
+                                {{ garageStore.currentGarage.orarioapertura.substring(0, 5) }} - {{
                                     garageStore.currentGarage.orariochiusura.substring(0,5) }}
+                            </div>
+                            <div class="badge" v-if="garageStore.currentGarage.altezzamassima">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 22V5"/>
+                                    <path d="M7 10l5-5 5 5"/>
+                                    <line x1="4" y1="2" x2="20" y2="2"/>
+                                </svg>
+                                Max {{ garageStore.currentGarage.altezzamassima }}m
                             </div>
                         </div>
                     </div>
@@ -145,7 +190,7 @@ const gestisciPrenotazione = async () => {
 
             <div v-if="messaggio" :class="['alert', messaggio.tipo]">
                 {{ messaggio.testo }}
-                <button @click="messaggio = null" class="close-btn">×</button>
+                <button @click="messaggio = null" class="close-btn">x</button>
             </div>
 
             <div class="layout-grid">
@@ -156,8 +201,10 @@ const gestisciPrenotazione = async () => {
                     <div class="card-body">
                         <PlanimetriaGarage :posti="garageStore.posti"
                             :mappaTestuale="garageStore.currentGarage.mappatestuale"
-                            :selectedId="postoSelezionato?.id_posto" :isAnteprima="!isMapConfirmed"
-                            @select="(p) => postoSelezionato = p" />
+                            :selectedId="postoSelezionato?.id_posto"
+                            :isAnteprima="!isMapConfirmed"
+                            @select="(p) => postoSelezionato = p"
+                            @error="(msg) => messaggio = { tipo: 'error', testo: msg }"/>
                     </div>
                 </div>
 
@@ -190,7 +237,21 @@ const gestisciPrenotazione = async () => {
                             <hr>
                             <div class="form-group">
                                 <label>Targa veicolo</label>
-                                <input type="text" v-model="targa" placeholder="Es. AA123BB">
+                                <input 
+                                    type="text" 
+                                    v-model="targa" 
+                                    @input="formattaTarga"
+                                    placeholder="Es. AA123BB"
+                                    maxlength="7"
+                                    required
+                                >
+                                <small v-if="targa.length > 0 && !isTargaValida" class="error-text">
+                                    Formato non valido.
+                                </small>
+                            </div>
+                            <div class="form-group">
+                                <label>Note (opzionale)</label>
+                                <input type="text" v-model="note">
                             </div>
 
                             <div class="riepilogo">
@@ -213,7 +274,7 @@ const gestisciPrenotazione = async () => {
                             </div>
                         </div>
 
-                        <button class="btn fill" :disabled="!isMapConfirmed || !postoSelezionato || !targa"
+                        <button class="btn fill" :disabled="!isMapConfirmed || !postoSelezionato || !targa || !isTargaValida""
                             @click="gestisciPrenotazione">
                             Prenota ora
                         </button>
@@ -433,7 +494,8 @@ const gestisciPrenotazione = async () => {
     color: #aaa;
 }
 
-.form-group input {
+.form-group input, 
+.form-group textarea {
     width: 100%;
     padding: 9px 11px;
     border: 0.5px solid var(--border-light);
@@ -447,7 +509,13 @@ const gestisciPrenotazione = async () => {
     transition: border-color 0.15s, background 0.15s;
 }
 
-.form-group input:focus {
+.form-group textarea {
+    resize: vertical;
+    min-height: 60px;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
     border-color: var(--primary-blue);
     background: white;
 }
@@ -556,5 +624,12 @@ const gestisciPrenotazione = async () => {
 
 .riepilogo-row.total span:last-child {
     color: var(--primary-blue);
+}
+
+.error-text {
+    color: #dc3545;
+    font-size: 0.75rem;
+    margin-top: 4px;
+    display: block;
 }
 </style>
