@@ -76,6 +76,84 @@ export const authStore = reactive({
     }
   },
 
+// chiamo API per ricevere dati:
+async getProfile() {
+  try {
+    // Assicurati che credenziali/cookie vengano inviati per leggere la sessione
+    const response = await fetch('/api/auth/profile', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      credentials: 'include' // <-- FONDAMENTALE per far funzionare le sessioni Express
+    });
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Errore fetch profilo:", error);
+    return { success: false };
+  }
+},
+
+// Funzione per salvare le modifiche al profilo
+async updateProfile(payload) {
+  try {
+    const response = await fetch('/api/auth/profile', {
+      method: 'PUT', // Usiamo PUT per l'aggiornamento
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      credentials: 'include', // FONDAMENTALE come sempre!
+      body: JSON.stringify(payload) // Inviamo i nuovi dati
+    });
+    
+    const data = await response.json();
+    
+    // Se è andato tutto bene, aggiorniamo l'utente nello store frontend
+    // Così se ha cambiato nome, il menu a tendina "Ciao, Nome" si aggiorna all'istante
+    if (data.success && data.utente) {
+      this.setUtente(data.utente);
+    }
+    
+    return data;
+  } catch (error) {
+    console.error("Errore salvataggio profilo:", error);
+    return { success: false, error: "Errore di connessione col server" };
+  }
+},
+
+// Funzione per recuperare le prenotazioni dell'utente
+async getBookings() {
+  try {
+    const response = await fetch('/api/auth/bookings', {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include' // FONDAMENTALE per i cookie di sessione
+    });
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Errore fetch prenotazioni:", error);
+    return { success: false, error: "Errore di connessione" };
+  }
+},
+
+// Funzione per annullare una prenotazione specifica
+async cancelBooking(codicePrenotazione) {
+  try {
+    const response = await fetch(`/api/auth/bookings/${codicePrenotazione}/cancel`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include'
+    });
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Errore durante l'annullamento:", error);
+    return { success: false, error: "Errore di connessione al server" };
+  }
+},
+
 // Logica Logout completa
   async logout() {
     try {

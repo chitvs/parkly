@@ -17,6 +17,8 @@ CREATE TABLE Utente (
     Telefono VARCHAR(20),
     DataRegistrazione TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     IsAttivo BOOLEAN DEFAULT TRUE
+    FotoProfilo_URL text DEFAULT NULL;
+    Saldo DECIMAL(8, 2) NOT NULL DEFAULT 0.00
 );
 
 -- 2. GARAGE  

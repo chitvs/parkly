@@ -33,3 +33,7 @@ yarn-error.log*
 logs/
 *.log
 npm-debug.log*
+
+# FILE TODO
+
+TODO.md
