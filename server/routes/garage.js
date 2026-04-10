@@ -31,7 +31,6 @@ router.get("/", async (req, res) => {
       garage,
     });
   } catch (err) {
-    console.error("Errore SQL:", err);
     res.status(500).json({
       success: false,
       error: "Errore interno",

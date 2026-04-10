@@ -7,47 +7,131 @@ const props = defineProps({
     isAnteprima: { type: Boolean, default: false }
 });
 
-const emit = defineEmits(['select']);
+const emit = defineEmits(['select', 'error']);
 
-// Parsing della stringa in matrice
-const matrice = computed(() => {
-    if (!props.mappaTestuale) return [];
-    return props.mappaTestuale.trim().split('\n').map(riga => riga.split('-'));
-});
-
-// Appiattisce la matrice per darla in pasto al v-for
-const griglia = computed(() => matrice.value.flat());
-
-const gridStyle = computed(() => {
-    if (matrice.value.length === 0) return {};
-
-    const numRighe = matrice.value.length;
-    const numColonne = matrice.value[0].length;
-
-    let colonneTemplate = [];
-    for (let c = 0; c < numColonne; c++) {
-        const colonnaHaPosto = matrice.value.some(riga => riga[c] !== 'X');
-        colonneTemplate.push(colonnaHaPosto ? '60px' : '20px');
-    }
-
-    let righeTemplate = [];
-    for (let r = 0; r < numRighe; r++) {
-        const rigaHaPosto = matrice.value[r].some(cella => cella !== 'X');
-        righeTemplate.push(rigaHaPosto ? '90px' : '30px');
-    }
-
-    return {
-        display: 'grid',
-        gridTemplateColumns: colonneTemplate.join(' '),
-        gridTemplateRows: righeTemplate.join(' '),
-        gap: '4px'
-    };
-});
-
-// Helper per recuperare i dati completi dal database tramite il codice testuale
 const getDatiPosto = (codice) => {
     return props.posti.find(p => p.codiceposto === codice);
 };
+
+/*
+ * parsing della stringa in matrice
+ * ogni token è "CODICEPOSTO:COLxROW" oppure "X" per spazio vuoto.
+ * 
+ * ad es:
+ *   PXX:1x1 moto (larga 1 unità, alta 1)
+ *   PXX:2x1 auto (larga 2 unità, alta 1)
+ *   PXX:2x2 furgone (larga 2 unità, alta 2)
+ *   X       spazio/corsia
+ *
+ * le X di "riempimento" sotto i furgoni "non contano" perchè vengono "mangiate" dallo span del furgone
+ */
+const matrice = computed(() => {
+    if (!props.mappaTestuale) return [];
+    return props.mappaTestuale.trim().split('\n').map(riga =>
+        riga.split('-').map(token => {
+            let codice = token;
+            let span = '1x1';
+
+            if (token.includes(':')) {
+                [codice, span] = token.split(':');
+            }
+
+            const [col, row] = span.split('x').map(Number);
+            return { codice, colSpan: col || 1, rowSpan: row || 1 };
+        })
+    );
+});
+
+// numero totale di unità in larghezza
+const numUnitaColonne = computed(() => {
+    if (matrice.value.length === 0) return {};
+
+    return Math.max(...matrice.value.map(riga =>
+        riga.reduce((acc, cella) => acc + cella.colSpan, 0)
+    ));
+});
+
+// costruzione delle celle nella grid
+const celle = computed(() => {
+    const risultato = [];
+    // occupate[colonnaUnita] = fino a quale riga è occupata da un rowspan
+    const occupate = {};
+
+    matrice.value.forEach((riga, r) => {
+        let unitaCorrente = 1;
+
+        riga.forEach((cella) => {
+            // salta le unità già occupate da rowspan di righe precedenti
+            while (occupate[unitaCorrente] > r + 1) {
+                unitaCorrente++;
+            }
+
+            const { codice, colSpan, rowSpan } = cella;
+
+            if (rowSpan > 1) {
+                for (let i = 0; i < colSpan; i++) {
+                    occupate[unitaCorrente + i] = r + 1 + rowSpan;
+                }
+            }
+
+            if (codice === 'X') {
+                risultato.push({
+                    tipo: 'vuota',
+                    key: `vuota-${r}-${unitaCorrente}`,
+                    gridRow: r + 1,
+                    gridColumn: unitaCorrente,
+                    rowSpan,
+                    colSpan,
+                });
+            } else {
+                risultato.push({
+                    tipo: 'posto',
+                    key: `${codice}-${r}-${unitaCorrente}`,
+                    codice,
+                    posto: getDatiPosto(codice),
+                    gridRow: r + 1,
+                    gridColumn: unitaCorrente,
+                    rowSpan,
+                    colSpan,
+                });
+            }
+
+            unitaCorrente += colSpan;
+        });
+    });
+
+    return risultato;
+});
+
+const gridStyle = computed(() => {
+    if (!matrice.value.length) return {};
+
+    // tutte le colonne sono 30px (unità moto).
+    // le auto (2x1) e furgoni (2x2) si spanneranno su 2 colonne = 60px + gap.
+    const colonneTemplate = Array(numUnitaColonne.value).fill('30px').join(' ');
+
+    // se la riga ha almeno un posto reale 90px, altrimenti 60px
+    const righeTemplate = matrice.value.map(riga => {
+        const haPostiReali = riga.some(c => c.codice !== 'X');
+        return haPostiReali ? '90px' : '60px';
+    }).join(' ');
+
+    return {
+        display: 'grid',
+        gridTemplateColumns: colonneTemplate,
+        gridTemplateRows: righeTemplate,
+        gap: '4px',
+    };
+});
+
+const getCellaStyle = (cella) => ({
+    gridRow: cella.rowSpan > 1
+        ? `${cella.gridRow} / span ${cella.rowSpan}`
+        : String(cella.gridRow),
+    gridColumn: cella.colSpan > 1
+        ? `${cella.gridColumn} / span ${cella.colSpan}`
+        : String(cella.gridColumn),
+});
 
 const getClassePosto = (codice) => {
     if (props.isAnteprima) return 'anteprima';
@@ -61,10 +145,9 @@ const getClassePosto = (codice) => {
 
 const gestisciClick = (codice) => {
     if (props.isAnteprima) {
-        alert("Seleziona prima le date!");
+        emit('error', 'Seleziona prima le date di arrivo e partenza per selezionare un posto.');
         return;
     }
-
     const posto = getDatiPosto(codice);
     if (posto && !posto.is_occupato) {
         emit('select', posto);
@@ -91,30 +174,35 @@ const gestisciClick = (codice) => {
             <div v-if="!mappaTestuale" class="no-data">Nessuna mappa testuale definita per questo garage.</div>
 
             <div v-else class="grid-vanilla" :style="gridStyle">
-                <div v-for="(cella, index) in griglia" :key="index" class="cella-griglia">
+                <template v-for="cella in celle" :key="cella.key">
 
-                    <div v-if="cella === 'X'" class="strada-vuota"></div>
+                    <div v-if="cella.tipo === 'vuota'" class="strada-vuota" :style="getCellaStyle(cella)">
+                    </div>
 
-                    <div v-else class="posto" :class="[
-                        getDatiPosto(cella)?.tipoveicolo?.toLowerCase() || 'auto',
-                        getClassePosto(cella)
-                    ]" @click="gestisciClick(cella)">
+                    <div v-else class="cella-griglia" :style="getCellaStyle(cella)">
+                        <div class="posto" :class="[
+                            cella.posto?.tipoveicolo?.toLowerCase() || 'auto',
+                            getClassePosto(cella.codice)
+                        ]" @click="gestisciClick(cella.codice)">
 
-                        <strong>{{ cella }}</strong>
-                        <small v-if="getDatiPosto(cella)">{{ getDatiPosto(cella).tipoveicolo }}</small>
+                            <strong>{{ cella.codice }}</strong>
+                            <small v-if="cella.posto">{{ cella.posto.tipoveicolo }}</small>
 
-                        <div class="indicatori" v-if="getDatiPosto(cella)">
-                            <span v-if="getDatiPosto(cella).isdisabili"><img src="../assets/handicap.svg"
-                                    class="box-legenda"></span>
-                            <span v-if="getDatiPosto(cella).iselettrica"><img src="../assets/electricity.svg"
-                                    class="box-legenda"></span>
+                            <div class="indicatori" v-if="cella.posto">
+                                <span v-if="cella.posto.isdisabili">
+                                    <img src="../assets/handicap.svg" class="box-legenda">
+                                </span>
+                                <span v-if="cella.posto.iselettrica">
+                                    <img src="../assets/electricity.svg" class="box-legenda">
+                                </span>
+                            </div>
                         </div>
                     </div>
-                </div>
+
+                </template>
             </div>
         </div>
 
-        <!-- Alert di anteprima, se non sono inserite date/orari -->
         <div v-if="isAnteprima" class="avviso-anteprima">
             Inserisci gli orari per vedere i posti liberi.
         </div>
@@ -244,17 +332,27 @@ img.box-legenda {
     object-fit: contain;
 }
 
-.camper,
-.furgone {
-    transform: scale(1.15);
-    z-index: 1;
-    border-width: 2px;
-    border-color: #888;
-}
-
 .moto,
 .bici {
-    transform: scale(0.85);
+    font-size: 0.7rem;
+    padding: 4px 2px;
+}
+
+.moto small,
+.bici small {
+    font-size: 0.5rem;
+    line-height: 1.1;
+}
+
+.moto strong,
+.bici strong {
+    font-size: 0.7rem;
+}
+
+.moto .indicatori img,
+.bici .indicatori img {
+    width: 10px;
+    height: 10px;
 }
 
 .anteprima {
