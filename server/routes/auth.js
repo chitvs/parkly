@@ -122,6 +122,44 @@ router.post('/login', async (req, res) => {
     }
 });
 
+// Cambio Password
+router.put('/change-password', async (req, res) => {
+    // Sicurezza: l'utente deve essere loggato
+    if (!req.session.utente || !req.session.utente.id) {
+        return res.status(401).json({ success: false, error: 'Non autorizzato' });
+    }
+
+    const { currentPassword, newPassword } = req.body;
+
+    try {
+        // Recupero l'hash della password attuale dal database
+        const utente = await db.oneOrNone('SELECT PasswordHash FROM Utente WHERE id_utente = $1', [req.session.utente.id]);
+
+        if (!utente) {
+            return res.status(404).json({ success: false, error: 'Utente non trovato' });
+        }
+
+        // Confronto la password inserita con l'hash nel DB
+        const passwordOk = await bcrypt.compare(currentPassword, utente.passwordhash);
+        
+        if (!passwordOk) {
+            return res.status(401).json({ success: false, error: 'La password attuale è errata' });
+        }
+
+        // Se è corretta, cripto la nuova password
+        const nuovoHash = await bcrypt.hash(newPassword, 10);
+
+        // Salvo la nuova password nel database
+        await db.none('UPDATE Utente SET PasswordHash = $1 WHERE id_utente = $2', [nuovoHash, req.session.utente.id]);
+
+        res.json({ success: true, messaggio: 'Password aggiornata con successo' });
+
+    } catch (err) {
+        console.error('Errore cambio password:', err);
+        res.status(500).json({ success: false, error: 'Errore interno del server' });
+    }
+});
+
 // Recupero dati profilo utente loggato
 router.get('/profile', async (req, res) => {
     // Controllo se l'utente ha una sessione attiva

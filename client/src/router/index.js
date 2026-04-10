@@ -20,12 +20,21 @@ const router = createRouter({
       path: '/profile',
       name: 'profile',
       component: () => import('../views/ProfileView.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true }
+      
     },
     {
       path: '/bookings',
       name: 'bookings',
       component: () => import('../views/BookingsView.vue'),
+      meta: { requiresAuth: true }
+      
+    },
+    { // link inventati 
+    path: '/:pathMatch(.*)*', 
+    redirect: '/' 
+    }
+  ]
       meta: { requiresAuth: true },
     },
     {
