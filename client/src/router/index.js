@@ -36,7 +36,7 @@ const router = createRouter({
     {
       path: '/garage/:id',
       name: 'garage-detail',
-      component: () => import('../views/GarageDetail.vue'),
+      component: () => import('../views/GarageDetailView.vue'),
       props: true, // passa l'ID dell'URL direttamente come "prop" al componente
     },
     {
