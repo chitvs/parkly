@@ -3,7 +3,6 @@ import { reactive } from 'vue'
 export const authStore = reactive({
   utente: null,
   isInitialized: false,
-
   
   // Funzione centralizzata per il SET dell'utente
   setUtente(dati) {

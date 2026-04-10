@@ -7,15 +7,17 @@ require('dotenv').config({
 });
 const db = require('./database/db'); 
 const authRoutes = require('./routes/auth'); 
+const garagesRoutes = require('./routes/garage');
+const prenotazioniRoutes = require('./routes/prenotazioni');
 const app = express();
 const port = process.env.PORT || 3000;
 
 
-// 1. MIDDLEWARE DI BASE
+// MIDDLEWARE DI BASE
 app.use(cors());
 app.use(express.json());
 
-// 2. CONFIGURAZIONE DELLA SESSIONE
+// CONFIGURAZIONE DELLA SESSIONE
 app.use(session({
     secret: process.env.SESSION_SECRET , // sicurezza, firma digitale per i cookie
     resave: false, // non salvare la sessione se non ci sono modifiche
@@ -31,8 +33,10 @@ app.use((req, res, next) => {
 // COLLEGAMENTO FRONTEND
 app.use('/client', express.static(path.join(__dirname, '../client')));
 
-// COLLEGAMENTO con auth.js
-app.use('/api/auth', authRoutes); 
+// COLLEGAMENTI API
+app.use('/api/auth', authRoutes);
+app.use('/api/garage', garagesRoutes);
+app.use('/api/prenotazioni', prenotazioniRoutes);
 
 // test 
 app.get('/test-db', (req, res) => {
@@ -51,25 +55,6 @@ app.get('/test-db', (req, res) => {
             error: 'Connessione fallita' 
         });
     });
-});
-
-// api per ritornare i garage
-app.get('/api/garage', (req, res) => {
-    db.any('SELECT * FROM Garage')
-        .then(data => {
-            res.json({ 
-                success: true, 
-                risultati: data.length, 
-                garage: data 
-            });
-        })
-        .catch(error => {
-            console.error('Errore nel recupero dei garage:', error);
-            res.status(500).json({ 
-                success: false, 
-                error: 'Errore interno' 
-            });
-        });
 });
 
 app.listen(port, () => {

@@ -36,7 +36,7 @@ CREATE TABLE Garage (
     OrarioApertura TIME NOT NULL,
     OrarioChiusura TIME NOT NULL,
     Is24h BOOLEAN DEFAULT FALSE, -- Se è TRUE ignoriamo gli orari di apertura e chiusura
-    Planimetria_URL VARCHAR(255),
+    MappaTestuale TEXT, -- Mappa ASCII
     IsAttivo BOOLEAN DEFAULT TRUE,  
     DataCreazione TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (ID_Gestore) REFERENCES Utente(ID_Utente) ON DELETE CASCADE
