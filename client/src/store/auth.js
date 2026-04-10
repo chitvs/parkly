@@ -76,6 +76,23 @@ export const authStore = reactive({
     }
   },
 
+    // Funzione per il cambio password
+  async changePassword(currentPassword, newPassword) {
+    try {
+      const response = await fetch('/api/auth/change-password', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ currentPassword, newPassword })
+      });
+      
+      return await response.json();
+    } catch (error) {
+      console.error("Errore cambio password:", error);
+      return { success: false, error: "Errore di connessione al server" };
+    }
+  },
+
 // chiamo API per ricevere dati:
 async getProfile() {
   try {
