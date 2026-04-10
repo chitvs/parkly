@@ -55,7 +55,7 @@ onMounted(async () => {
 
 // --- STATO FILTRI ---
 const filter24h = ref(false)
-const maxPrice = ref(10) // Valore massimo di default per lo slider
+const maxPrice = ref(25) // Valore massimo di default per lo slider
 const minHeight = ref(0)
 const filterCoperto = ref(false)
 const filterElettrico = ref(false)
@@ -90,7 +90,7 @@ const garagesFiltrati = computed(() => {
 // Reset aggiornato
 const resetFilters = () => {
     filter24h.value = false
-    maxPrice.value = 15
+    maxPrice.value = 25
     minHeight.value = 0
     filterCoperto.value = false
     filterElettrico.value = false
@@ -177,27 +177,23 @@ const handleSearch = () => { console.log("Ricerca eseguita") }
                     <hr class="filter-divider">
 
                     <div class="filter-group">
-                        <label>Caratteristiche</label>
+                        <label><b>Caratteristiche:</b></label>
                         <div class="checkbox-list">
                             <label class="checkbox-container">
-                                Aperto 24/7
                                 <input type="checkbox" v-model="filter24h">
-                                <span class="checkmark"></span>
+                                <span> Aperto 24/7 </span>
                             </label>
                             <label class="checkbox-container">
-                                Posti al coperto 🏠
                                 <input type="checkbox" v-model="filterCoperto">
-                                <span class="checkmark"></span>
+                                <span> Posti al coperto </span>
                             </label>
                             <label class="checkbox-container">
-                                Ricarica elettrica ⚡
                                 <input type="checkbox" v-model="filterElettrico">
-                                <span class="checkmark"></span>
+                                <span> Ricarica elettrica </span>
                             </label>
                             <label class="checkbox-container">
-                                Accesso disabili ♿
                                 <input type="checkbox" v-model="filterDisabili">
-                                <span class="checkmark"></span>
+                                <span> Accesso disabili </span>
                             </label>
                         </div>
                     </div>
@@ -208,7 +204,11 @@ const handleSearch = () => { console.log("Ricerca eseguita") }
                         <label>Altezza minima veicolo</label>
                         <select v-model.number="minHeight" class="filter-select">
                             <option :value="0">Qualsiasi altezza</option>
-                            <option :value="2.0">Oltre 2.00m</option>
+                            <option :value="1.4">Oltre 1.40m</option>
+                            <option :value="1.6">Oltre 1.60m</option>
+                            <option :value="1.9">Oltre 1.90m</option>
+                            <option :value="2.1">Oltre 2.10m</option>
+                            <option :value="2.3">Oltre 2.30m</option>
                             <option :value="2.5">Oltre 2.50m</option>
                         </select>
                     </div>
@@ -249,25 +249,29 @@ const handleSearch = () => { console.log("Ricerca eseguita") }
                                 </div>
 
                                 <div class="gcard-services">
-                                    <span class="service-item">
-                                        <i class="bi bi-clock"></i>
-                                        {{ garage.is24h ? 'Aperto 24h' : 'Orari standard' }}
+                                    <span class="service-badge info">
+                                        <img src="../assets/orologio.svg" class="icon-card" alt="Orario" /> {{
+                                            garage.is24h ? '24/7' : garage.orarioapertura.slice(0, 5) + ' - ' +
+                                        garage.orariochiusura.slice(0, 5) }}
                                     </span>
 
-                                    <span v-if="garage.altezzamassima" class="service-item">
-                                        • <i class="bi bi-arrows-expand"></i> {{ garage.altezzamassima }}m
+                                    <span v-if="garage.altezzamassima" class="service-badge info">
+                                        <img src="../assets/altezza_massima.svg" class="icon-card"
+                                            alt="AltezzaMassima" /> Max: {{ garage.altezzamassima }}m
                                     </span>
 
-                                    <span v-if="garage.hasCoperto" class="service-item positive">
-                                        • <i class="bi bi-house-check"></i> Al coperto
+                                    <span v-if="garage.hasCoperto" class="service-badge feature">
+                                        <img src="../assets/parcheggio_coperto.svg" class="icon-card" alt="Coperto" />
+                                        Coperto
                                     </span>
 
-                                    <span v-if="garage.hasElettrico" class="service-item positive">
-                                        • <i class="bi bi-lightning-charge"></i> Ricarica ⚡
+                                    <span v-if="garage.hasElettrico" class="service-badge feature">
+                                        <img src="../assets/electricity.svg" class="icon-card" alt="Elettrico" />
+                                        Ricarica
                                     </span>
 
-                                    <span v-if="garage.hasDisabili" class="service-item positive">
-                                        • <i class="bi bi-person-wheelchair"></i> Disabili ♿
+                                    <span v-if="garage.hasDisabili" class="service-badge feature">
+                                        <img src="../assets/handicap.svg" class="icon-card" alt="Disabili" /> Disabili
                                     </span>
                                 </div>
                             </div>
@@ -276,7 +280,6 @@ const handleSearch = () => { console.log("Ricerca eseguita") }
                                 <div class="gcard-price-block">
                                     <span class="price-label">TARIFFA BASE</span>
                                     <span class="price-value">€{{ Number(garage.tariffabase).toFixed(2) }}/ora</span>
-                                    <button class="gcard-btn">Dettagli</button>
                                 </div>
                             </div>
 
@@ -300,7 +303,7 @@ const handleSearch = () => { console.log("Ricerca eseguita") }
 
 /* Stile dell'area blu della ricerca */
 .search-area {
-    background-color: #00408A;
+    background-color: #002E5C;
     padding: 2.5rem 0;
 }
 
@@ -435,12 +438,7 @@ const handleSearch = () => { console.log("Ricerca eseguita") }
     display: flex;
     align-items: center;
     justify-content: center;
-
-    /* Z-INDEX MOLTO ALTO per stare sopra Leaflet */
-    z-index: 9999;
-
-    /* pointer-events: none serve a far passare il click del mouse 
-     alla mappa sottostante se non clicchi proprio il bottone */
+    z-index: 2;
     pointer-events: none;
 }
 
@@ -538,9 +536,8 @@ const handleSearch = () => { console.log("Ricerca eseguita") }
 
 .checkbox-container {
     display: flex;
-    justify-content: space-between;
-    /* Testo a sinistra, check a destra */
     align-items: center;
+    justify-content: flex-start;
     cursor: pointer;
     font-size: 0.85rem;
     color: #4b5563;
@@ -550,6 +547,11 @@ const handleSearch = () => { console.log("Ricerca eseguita") }
     width: 16px;
     height: 16px;
     accent-color: #00408A;
+}
+
+.checkbox-container input[type="checkbox"] {
+    margin: 0;          /* rimuove offset strani */
+    transform: translateY(2px); /* micro-fix visivo */
 }
 
 /* Select Altezza */
@@ -676,9 +678,46 @@ const handleSearch = () => { console.log("Ricerca eseguita") }
 }
 
 .gcard-services {
-    font-size: 0.8rem;
-    color: #008009;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    /* Spazio tra le pillole */
+    margin-top: 10px;
+}
+
+/* Stile base della pillola */
+.service-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 50px;
+    /* Rende il bordo perfettamente tondo ai lati */
+    font-size: 0.75rem;
     font-weight: 600;
+    border: 1px solid transparent;
+}
+
+/* Colore Grigio per Info (Orario/Altezza) */
+.service-badge.info {
+    background-color: #f1f5f9;
+    color: #475569;
+    border-color: #e2e8f0;
+}
+
+/* Colore Verde per Caratteristiche (Coperto/Elettrico/Disabili) */
+.service-badge.feature {
+    background-color: #e8f5e9;
+    /* Verde molto chiaro */
+    color: #0e701b;
+    /* Testo verde scuro per leggibilità */
+    border-color: #c8e6c9;
+}
+
+/* Icone all'interno delle pillole */
+.icon-card {
+    width: 14px;
+    height: 14px;
+    margin-right: 5px;
 }
 
 .gcard-right {
@@ -705,15 +744,12 @@ const handleSearch = () => { console.log("Ricerca eseguita") }
     margin-bottom: 12px;
 }
 
-.gcard-btn {
-    background: #006ce4;
-    color: #fff;
-    border: none;
-    padding: 10px;
-    border-radius: 6px;
-    font-weight: 600;
-    width: 100%;
-    cursor: pointer;
+/* Stile per le icone nei filtri */
+.icon-small {
+    width: 14px;
+    height: 14px;
+    vertical-align: middle;
+    margin-left: 4px;
 }
 
 /* Spinner */
