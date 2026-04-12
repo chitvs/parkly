@@ -144,11 +144,22 @@ const handleLogout = async () => {
   z-index: 1000;
 }
 
-.logo-link { text-decoration: none; }
+/* Modificato: Aggiunto flex: 1 per bilanciare il lato sinistro */
+.logo-link { 
+  text-decoration: none; 
+  flex: 1;
+  display: flex;
+}
 .logo { display: flex; align-items: center; }
 .logo-image { height: 45px; width: auto; display: block; }
 
-.nav-links { display: flex; gap: 2rem; }
+/* Modificato: Aggiunto justify-content: center per fissare al centro */
+.nav-links { 
+  display: flex; 
+  gap: 2rem; 
+  align-items: center; 
+  justify-content: center;
+}
 .nav-links a {
   text-decoration: none;
   color: var(--text-dark);
@@ -156,7 +167,14 @@ const handleLogout = async () => {
   transition: color 0.3s;
 }
 
-.user-actions { display: flex; align-items: center; gap: 1rem; }
+/* Modificato: Aggiunto flex: 1 e justify-content: flex-end per bilanciare il lato destro */
+.user-actions { 
+  display: flex; 
+  align-items: center; 
+  gap: 1rem; 
+  flex: 1;
+  justify-content: flex-end;
+}
 
 .login-btn, .register-btn {
   padding: 0.6rem 1.5rem;

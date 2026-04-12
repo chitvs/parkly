@@ -7,6 +7,8 @@
     "client": "npm run dev --prefix frontend",
     "server": "nodemon server/index.js",
     "client": "npm run dev --prefix client",
+    "client": "npm run dev --prefix frontend",
+    "server": "nodemon server/index.js",
     "dev": "concurrently \"npm run server\" \"npm run client\""
   },
   "type": "commonjs",
