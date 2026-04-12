@@ -17,6 +17,8 @@ CREATE TABLE Utente (
     Telefono VARCHAR(20),
     DataRegistrazione TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     IsAttivo BOOLEAN DEFAULT TRUE
+    FotoProfilo_URL text DEFAULT NULL;
+    Saldo DECIMAL(8, 2) NOT NULL DEFAULT 0.00
 );
 
 -- 2. GARAGE  
@@ -34,7 +36,7 @@ CREATE TABLE Garage (
     OrarioApertura TIME NOT NULL,
     OrarioChiusura TIME NOT NULL,
     Is24h BOOLEAN DEFAULT FALSE, -- Se è TRUE ignoriamo gli orari di apertura e chiusura
-    Planimetria_URL VARCHAR(255),
+    MappaTestuale TEXT, -- Mappa ASCII
     IsAttivo BOOLEAN DEFAULT TRUE,  
     DataCreazione TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (ID_Gestore) REFERENCES Utente(ID_Utente) ON DELETE CASCADE
@@ -45,7 +47,7 @@ CREATE TABLE PostoAuto (
     ID_Posto SERIAL PRIMARY KEY,
     ID_Garage INT NOT NULL,
     CodicePosto VARCHAR(10) NOT NULL,  
-    TipoVeicolo VARCHAR(10) CHECK (TipoVeicolo IN ('AUTO', 'MOTO', 'BICI', 'FURGONE', 'CAMPER')) DEFAULT 'AUTO',
+    TipoVeicolo VARCHAR(10) CHECK (TipoVeicolo IN ('AUTO', 'MOTO', 'FURGONE')) DEFAULT 'AUTO',
     IsDisabili BOOLEAN DEFAULT FALSE,
     IsElettrica BOOLEAN DEFAULT FALSE,  
     IsCoperto BOOLEAN DEFAULT TRUE,    
@@ -60,13 +62,11 @@ CREATE TABLE Prenotazione (
     ID_Prenotazione SERIAL PRIMARY KEY,
     ID_Utente INT NOT NULL,  
     ID_Posto INT NOT NULL,
-    CodicePrenotazione VARCHAR(10) UNIQUE,
+    CodicePrenotazione VARCHAR(11) UNIQUE,
     Targa VARCHAR(15),
     Note TEXT,
     InizioSosta TIMESTAMP NOT NULL,
     FineSosta TIMESTAMP NOT NULL,
-    InizioEffettivo TIMESTAMP DEFAULT NULL,
-    FineEffettiva TIMESTAMP DEFAULT NULL,
     PrezzoTotale DECIMAL(8, 2) NOT NULL,
     Stato VARCHAR(15) CHECK (Stato IN ('ATTIVA', 'ANNULLATA', 'CONCLUSA')) DEFAULT 'ATTIVA',
     DataCreazione TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
