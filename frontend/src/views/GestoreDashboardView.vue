@@ -103,10 +103,42 @@
         </table>
       </section>
 
+      <section v-if="vistaAttiva === 'storico'" class="vista-sezione">
+        <h2>Ultime Prenotazioni</h2>
+        <table class="tabella-garage">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Cliente</th>
+              <th>Targa</th>
+              <th>Importo</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="prenotazione in storicoPrenotazioni" :key="prenotazione.id">
+              <td>{{ prenotazione.data }}</td>
+              <td>{{ prenotazione.nome_cliente }}</td>
+              <td>{{ prenotazione.targa }}</td>
+              <td>€ {{ prenotazione.importo }}</td>
+            </tr>
+            <tr v-if="storicoPrenotazioni.length === 0">
+              <td colspan="4" style="text-align: center; color: #7f8c8d;">
+                Nessuna prenotazione trovata al momento.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
       <section v-if="vistaAttiva === 'stato'" class="vista-sezione">
         <h2>Stato Corrente in Tempo Reale</h2>
-        <div class="alert alert-warning">
-          ⚠️ <strong>Attenzione:</strong> Il "Parcheggio Milano" è attualmente al 98% della capacità!
+        
+        <div v-for="allerta in allerteStato" :key="allerta.id" :class="['alert', allerta.tipo]">
+          ⚠️ <strong>{{ allerta.titolo }}:</strong> {{ allerta.messaggio }}
+        </div>
+
+        <div v-if="allerteStato.length === 0" class="alert alert-success" style="background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb;">
+          ✅ Tutti i garage operano entro i limiti normali. Nessuna allerta al momento.
         </div>
       </section>
 
@@ -119,38 +151,22 @@
         </div>
       </section>
 
-      <section v-if="vistaAttiva === 'storico'" class="vista-sezione">
-        <h2>Ultime Prenotazioni</h2>
-        <table class="tabella-garage">
-          <thead>
-            <tr>
-              <th>Data</th><th>Cliente</th><th>Targa</th><th>Importo</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td>09/04/2026</td><td>Mario Rossi</td><td>AB123CD</td><td>€ 15.00</td></tr>
-            <tr><td>09/04/2026</td><td>Giulia Bianchi</td><td>EF456GH</td><td>€ 22.50</td></tr>
-            <tr><td>08/04/2026</td><td>Luca Verdi</td><td>ZA999ZZ</td><td>€ 10.00</td></tr>
-          </tbody>
-        </table>
-      </section>
-
     </main>
   </div>
 </template>
 
 
 <script setup>
+// Gli import DEVONO essere sempre la prima cosa scritta nel blocco script!
 import { ref, onMounted } from 'vue'
 
 // ==========================================
 // [ 1. STATE MANAGEMENT (Data Layer) ]
-// Utilizzo della Composition API. Manteniamo lo stato reattivo ben separato in domini logici.
 // ==========================================
 
 // --- UI State ---
-const vistaAttiva = ref('statistiche') // Traccia la tab corrente
-const staSalvando = ref(false)         // Mutex per prevenire double-submissions (UI Loading State)
+const vistaAttiva = ref('statistiche') 
+const staSalvando = ref(false)         
 
 // --- Domain State (Dati dal Backend) ---
 const mieiGarage = ref([])
@@ -158,6 +174,12 @@ const statistiche = ref({
   totaleGarage: 0,
   guadagnoMese: 0
 })
+
+// Variabile che conterrà l'array delle prenotazioni dal database
+const storicoPrenotazioni = ref([]) 
+
+// Variabile che conterrà l'array delle allerte di stato dal database
+const allerteStato = ref([]) 
 
 // --- Form State (Payload Data) ---
 const nuovoGarage = ref({
@@ -173,53 +195,72 @@ const nuovoGarage = ref({
 // ==========================================
 
 /**
- * FETCH SERVICE: Recupera lo stato globale della dashboard.
- * Implementa try/catch per l'error handling delle chiamate asincrone.
+ * FETCH SERVICE: Recupera la lista dei garage del gestore.
  */
 const caricaDatiDalDatabase = async () => {
   try {
     const risposta = await fetch('http://localhost:3000/api/garages-gestore')
-    
-    // Controlla lo status code HTTP (es. 200 OK) prima di parsare il JSON
     if (risposta.ok) {
       const dati = await risposta.json()
-      // Aggiornamento dello stato reattivo (triggera il re-render del DOM)
       mieiGarage.value = dati.listaGarages
       statistiche.value = dati.stats
     } else {
-      console.warn(`Server ha risposto con codice: ${risposta.status}`);
+      console.warn(`Errore Server Garage: ${risposta.status}`);
     }
   } catch (error) {
-    // Graceful degradation: in un'app reale qui invieremmo l'errore a un sistema di log (es. Sentry)
-    console.error("Errore di rete durante il fetch iniziale:", error)
+    console.error("Errore di rete al fetch dei garage:", error)
   }
 }
 
 /**
- * MUTATION SERVICE: Invia il payload JSON al backend per la creazione di una nuova risorsa.
+ * FETCH SERVICE: Recupera lo storico delle prenotazioni dal database.
+ */
+const caricaStoricoPrenotazioni = async () => {
+  try {
+    const risposta = await fetch('http://localhost:3000/api/prenotazioni-gestore')
+    if (risposta.ok) {
+      storicoPrenotazioni.value = await risposta.json()
+    } else {
+      console.warn(`Errore Server Prenotazioni: ${risposta.status}`);
+    }
+  } catch (error) {
+    console.error("Errore di rete al fetch dello storico:", error)
+  }
+}
+
+/**
+ * FETCH SERVICE: Recupera lo stato e le allerte dei garage dal database.
+ */
+const caricaStatoCorrente = async () => {
+  try {
+    const risposta = await fetch('http://localhost:3000/api/stato-garages-gestore')
+    if (risposta.ok) {
+      allerteStato.value = await risposta.json()
+    } else {
+      console.warn(`Errore Server Stato: ${risposta.status}`);
+    }
+  } catch (error) {
+    console.error("Errore di rete al fetch dello stato:", error)
+  }
+}
+
+/**
+ * MUTATION SERVICE: Invia il nuovo garage al backend.
  */
 const salvaNuovoGarage = async () => {
-  staSalvando.value = true; // Set lock
+  staSalvando.value = true;
   
   try {
     const risposta = await fetch('http://localhost:3000/api/garages-gestore', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json' // Definizione esplicita del MIME type del payload
-      },
-      body: JSON.stringify(nuovoGarage.value) // Serializzazione dell'oggetto reattivo
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(nuovoGarage.value)
     });
 
     if (risposta.ok) {
-      alert("Garage pubblicato con successo!"); // TODO: Sostituire con un Toast component (es. Vue-Toastification)
-      
-      // 1. Reset dello stato del form
+      alert("Garage pubblicato con successo!");
       nuovoGarage.value = { nome: '', indirizzo: '', capienza: null, prezzo: null };
-      
-      // 2. Redirect logico dell'utente
       vistaAttiva.value = 'statistiche';
-      
-      // 3. Data Invalidation & Refetch: Assicuriamo che la UI rifletta la source-of-truth del server
       caricaDatiDalDatabase(); 
     } else {
       alert("Errore durante il salvataggio.");
@@ -227,17 +268,19 @@ const salvaNuovoGarage = async () => {
   } catch (error) {
     console.error("Errore di rete durante la POST:", error);
   } finally {
-    staSalvando.value = false; // Release lock in ogni caso (sia successo che eccezione)
+    staSalvando.value = false;
   }
 }
 
 
 // ==========================================
 // [ 3. LIFECYCLE HOOKS ]
+// Deve esistere un solo onMounted che lancia tutte le funzioni di avvio!
 // ==========================================
 onMounted(() => {
-  // Bootstrap data fetch non appena il componente viene montato nel DOM
-  caricaDatiDalDatabase()
+  caricaDatiDalDatabase()       // Scarica i garage
+  caricaStoricoPrenotazioni()   // Scarica le prenotazioni
+  caricaStatoCorrente()         // Scarica le allerte di stato
 })
 </script>
 
@@ -245,30 +288,24 @@ onMounted(() => {
 <style scoped>
 /* ==========================================
    [ STYLESHEET ARCHITECTURE ]
-   Utilizzo di attributo 'scoped' per incapsulare il CSS ed evitare la collisione globale.
-   Adottiamo pattern moderni (CSS Grid, Flexbox, box-sizing coerente).
    ========================================== */
 
-/* --- 1. RESET E LAYOUT GLOBALE --- */
-* {
-  box-sizing: border-box; /* Previene la dilatazione del layout a causa di padding/border */
-}
+* { box-sizing: border-box; }
 
 .dashboard-layout {
   display: flex;
   min-height: 100vh;
   background-color: #f4f7f6;
   font-family: 'Inter', sans-serif;
-  margin: -8px; /* Override margini di default del body se non è presente un reset globale (es. normalize.css) */
+  margin: -8px; 
 }
 
-/* --- 2. SIDEBAR DI NAVIGAZIONE --- */
 .sidebar {
   width: 250px;
   background-color: #002e5c;
   color: white;
   padding: 2rem 1rem;
-  box-shadow: 4px 0 10px rgba(0,0,0,0.1); /* Z-index implicito per profondità */
+  box-shadow: 4px 0 10px rgba(0,0,0,0.1); 
 }
 
 .sidebar h2 {
@@ -286,7 +323,7 @@ onMounted(() => {
   border-radius: 8px;
   margin-bottom: 8px;
   font-weight: 500;
-  transition: all 0.3s ease; /* Micro-interazioni per migliorare la UX percettiva */
+  transition: all 0.3s ease; 
 }
 
 .sidebar nav a:hover {
@@ -300,7 +337,6 @@ onMounted(() => {
   font-weight: bold;
 }
 
-/* --- 3. CONTENITORE PRINCIPALE E HEADER --- */
 .dashboard-content {
   flex: 1;
   padding: 2rem 3rem;
@@ -316,7 +352,6 @@ onMounted(() => {
 .top-header h1 { margin: 0 0 5px 0; color: #333; }
 .top-header p { margin: 0; color: #666; }
 
-/* --- 4. COMPONENTI UI: STATISTICHE E KPI --- */
 .stats-cards {
   display: flex;
   gap: 20px;
@@ -335,7 +370,6 @@ onMounted(() => {
 .card h3 { margin: 0; color: #7f8c8d; font-size: 1.1rem; }
 .numero-grande { font-size: 2.5rem; font-weight: bold; color: #002e5c; margin: 10px 0 0 0; }
 
-/* --- 5. COMPONENTI UI: TABELLE DATI --- */
 .tabella-garage {
   width: 100%;
   border-collapse: collapse;
@@ -353,7 +387,6 @@ onMounted(() => {
 
 .tabella-garage th { background-color: #002e5c; color: white; font-weight: 600; }
 
-/* --- 6. UTILITY CLASSES (Badges e Allarmi) --- */
 .badge-stato {
   padding: 5px 10px;
   border-radius: 20px;
@@ -361,17 +394,14 @@ onMounted(() => {
   font-weight: bold;
 }
 
-/* Mappatura classi dinamiche iniettate dal template Vue */
 .badge-stato.attivo { background-color: #d4edda; color: #155724; }
 .badge-stato.pieno { background-color: #f8d7da; color: #721c24; }
 
 .alert { padding: 15px; border-radius: 8px; margin-bottom: 20px; }
 .alert-warning { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
 
-/* --- 7. MODULO UI: CSS GRID (Mappa Posti) --- */
 .grid-posti {
   display: grid;
-  /* Auto-fill per layout responsivo automatico senza media queries esplicite */
   grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
   gap: 10px;
   margin-top: 20px;
@@ -385,12 +415,11 @@ onMounted(() => {
   border-radius: 8px;
   font-weight: bold;
   color: white;
-  box-shadow: inset 0 -3px 0 rgba(0,0,0,0.2); /* Skeumorfismo leggero per i bottoni/posti */
+  box-shadow: inset 0 -3px 0 rgba(0,0,0,0.2); 
 }
 .posto.libero { background-color: #2ecc71; }
 .posto.occupato { background-color: #e74c3c; }
 
-/* --- 8. COMPONENTI UI: FORMS --- */
 .form-aggiunta {
   background: white;
   padding: 30px;
@@ -401,7 +430,6 @@ onMounted(() => {
 }
 
 .form-group { margin-bottom: 20px; }
-
 .form-row { display: flex; gap: 20px; }
 .form-row .form-group { flex: 1; }
 
@@ -431,12 +459,8 @@ input[type="text"], input[type="number"], input[type="file"] {
 .btn-submit:hover { background-color: #27ae60; }
 .btn-submit:disabled { background-color: #95a5a6; cursor: not-allowed; }
 
-/* --- 9. ANIMAZIONI DI TRANSIZIONE (Component Lifecycle) --- */
-.vista-sezione {
-  animation: fadeIn 0.4s ease-in-out;
-}
+.vista-sezione { animation: fadeIn 0.4s ease-in-out; }
 
-/* Animazione in-mounting per dare fluidità allo switch tra le tab */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
