@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
-import GestoreDashboardView from '../views/GestoreDashboardView.vue'
+import GestoreDashboardView from '../../../client/GestoreDashboardView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -18,7 +18,7 @@ const router = createRouter({
     {
       path: '/dashboard-gestore',
       name: 'dashboard-gestore',
-      component: () => import('../views/GestoreDashboardView.vue')
+      component: () => import('../../../client/GestoreDashboardView.vue')
     }
   ]
 })
