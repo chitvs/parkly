@@ -20,21 +20,12 @@ const router = createRouter({
       path: '/profile',
       name: 'profile',
       component: () => import('../views/ProfileView.vue'),
-      meta: { requiresAuth: true }
-      
+      meta: { requiresAuth: true },
     },
     {
       path: '/bookings',
       name: 'bookings',
       component: () => import('../views/BookingsView.vue'),
-      meta: { requiresAuth: true }
-      
-    },
-    { // link inventati 
-    path: '/:pathMatch(.*)*', 
-    redirect: '/' 
-    }
-  ]
       meta: { requiresAuth: true },
     },
     {
@@ -47,6 +38,11 @@ const router = createRouter({
       name: 'garage-detail',
       component: () => import('../views/GarageDetailView.vue'),
       props: true, // passa l'ID dell'URL direttamente come "prop" al componente
+    },
+    {
+      path: '/dashboard-gestore',
+      name: 'dashboard-gestore',
+      component: () => import('../views/GestoreDashboardView.vue')
     },
     {
       // link inventati
