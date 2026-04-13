@@ -3,20 +3,23 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
+import GarageFilters from '../components/GarageFilters.vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
 const router = useRouter()
 
 // --- STATO UI E RICERCA ---
-const isLoading = ref(true) // Parte su true per il caricamento
+const isLoading = ref(true) 
 const searchLocation = ref('')
 const checkIn = ref('')
 const checkOut = ref('')
 
 const garages = ref([])
-const mapContainer = ref(null)
-let mapInstance = null
+const mapContainer = ref(null)      
+const fullMapContainer = ref(null)  
+let mapInstance = null              
+let fullMapInstance = null         
 
 // --- RECUPERO DATI REALI ---
 const fetchGarages = async () => {
@@ -56,14 +59,14 @@ onMounted(async () => {
 
 // --- STATO FILTRI ---
 const filter24h = ref(false)
-const maxPrice = ref(25) // Valore massimo di default per lo slider
+const maxPrice = ref(25) 
 const minHeight = ref(0)
 const filterCoperto = ref(false)
 const filterElettrico = ref(false)
 const filterDisabili = ref(false)
 const filterTipoVeicolo = ref('ALL')
 
-// --- FILTRO DINAMICO AGGIORNATO ---
+// --- FILTRO DINAMICO ---
 const garagesFiltrati = computed(() => {
     const query = searchLocation.value.toLowerCase().trim()
 
@@ -75,11 +78,9 @@ const garagesFiltrati = computed(() => {
         const matches24h = !filter24h.value || g.is24h
         const matchesPrice = Number(g.tariffabase) <= maxPrice.value
         const matchesHeight = !minHeight.value || (g.altezzamassima && Number(g.altezzamassima) >= minHeight.value)
-        // Nuovi Filtri (Assumendo che l'API restituisca questi campi aggregati dal database)
         const matchesCoperto = !filterCoperto.value || g.hasCoperto
         const matchesElettrico = !filterElettrico.value || g.hasElettrico
         const matchesDisabili = !filterDisabili.value || g.hasDisabili
-        // Filtro Tipo Veicolo (Controlla se il garage ha posti per quel tipo)
         const matchesTipo = filterTipoVeicolo.value === 'ALL' || (g.tipiDisponibili && g.tipiDisponibili.includes(filterTipoVeicolo.value))
 
         return matchesSearch && matches24h && matchesPrice && matchesHeight &&
@@ -88,7 +89,6 @@ const garagesFiltrati = computed(() => {
 })
 
 // Funzione per resettare tutto
-// Reset aggiornato
 const resetFilters = () => {
     filter24h.value = false
     maxPrice.value = 25
@@ -105,6 +105,56 @@ const goToDetail = (garage) => {
 }
 
 const handleSearch = () => { console.log("Ricerca eseguita") }
+
+// Stato per la visibilità del fullscreen
+const isMapFullscreen = ref(false)
+
+const openMapFullscreen = async () => {
+    isMapFullscreen.value = true
+    document.body.style.overflow = 'hidden'
+    await nextTick()
+
+    if (fullMapContainer.value && !fullMapInstance) {
+        fullMapInstance = L.map(fullMapContainer.value, {
+            center: [41.9028, 12.4964],
+            zoom: 13,
+            zoomControl: false,
+            attributionControl: false
+        })
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(fullMapInstance)
+
+        // Aggiungiamo i marker
+        garages.value.forEach(g => {
+            if (g.latitudine && g.longitudine) {
+                const marker = L.circleMarker([g.latitudine, g.longitudine], {
+                    radius: 10,
+                    fillColor: '#00408A',
+                    color: '#fff',
+                    weight: 2,
+                    fillOpacity: 0.9
+                }).addTo(fullMapInstance)
+                marker.bindPopup(`<strong>${g.nome}</strong><br>${g.indirizzo}`)
+            }
+        })
+    }
+
+    // Fix per caricamento corretto dei tasselli della mappa
+    setTimeout(() => {
+        if (fullMapInstance) fullMapInstance.invalidateSize()
+    }, 400)
+}
+
+const closeMapFullscreen = () => {
+    isMapFullscreen.value = false
+    document.body.style.overflow = ''
+    // Distruggi l'istanza della mappa se esiste
+    if (fullMapInstance) {
+        fullMapInstance.remove() 
+        fullMapInstance = null   
+    }
+}
+
+
 </script>
 
 <template>
@@ -145,74 +195,89 @@ const handleSearch = () => { console.log("Ricerca eseguita") }
                 <div class="zone-map">
                     <div ref="mapContainer" class="leaflet-map-canvas"></div>
                     <div class="map-overlay">
-                        <button class="map-view-btn">
+                        <button class="map-view-btn" @click="openMapFullscreen">
                             <span class="pin-emoji">📍</span>
                             Vedi su mappa
                         </button>
+                        <Teleport to="body">
+                            <Transition name="fs-fade">
+                                <div v-if="isMapFullscreen" class="fs-overlay">
+                                    <div class="fs-body">
+
+                                        <div class="fs-left-half">
+
+                                            <div class="fs-col-filters">
+                                                <div class="fs-panel-header">
+                                                    <h3
+                                                        style="display: flex; justify-content: space-between; width: 100%;">
+                                                        Filtri
+                                                        <button @click="resetFilters" class="reset-btn"
+                                                            style="color: white;">Reset</button>
+                                                    </h3>
+                                                </div>
+                                                <div class="fs-scroll-content">
+                                                    <GarageFilters v-model:filterTipoVeicolo="filterTipoVeicolo"
+                                                        v-model:maxPrice="maxPrice" v-model:filter24h="filter24h"
+                                                        v-model:filterCoperto="filterCoperto"
+                                                        v-model:filterElettrico="filterElettrico"
+                                                        v-model:filterDisabili="filterDisabili"
+                                                        v-model:minHeight="minHeight" />
+                                                </div>
+                                            </div>
+
+                                            <div class="fs-col-cards">
+                                                <div class="fs-panel-header">
+                                                    <h3>{{ garagesFiltrati.length }} Risultati</h3>
+                                                </div>
+                                                <div class="fs-scroll-content">
+                                                    <div v-for="garage in garagesFiltrati"
+                                                        :key="'fs-' + garage.id_garage" class="fs-mini-card"
+                                                        @click="goToDetail(garage)">
+                                                        <div class="mini-thumb">
+                                                            <div class="gcard-letter-box">{{ garage.nome.charAt(0) }}
+                                                            </div>
+                                                        </div>
+                                                        <div class="mini-details">
+                                                            <h4>{{ garage.nome }}</h4>
+                                                            <p>{{ garage.indirizzo.slice(0, 30) }}...</p>
+                                                            <span class="mini-price">€{{
+                                                                Number(garage.tariffabase).toFixed(2) }}/ora</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="fs-right-half">
+                                            <div ref="fullMapContainer" class="fs-map-canvas"></div>
+
+                                            <div class="fs-map-controls">
+                                                <div class="fs-floating-search">
+                                                    <span>🔍</span>
+                                                    <input type="text" v-model="searchLocation"
+                                                        placeholder="Cerca sulla mappa..." />
+                                                </div>
+                                                <button class="fs-close-circle" @click="closeMapFullscreen">✕</button>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </Transition>
+                        </Teleport>
                     </div>
                 </div>
                 <!-- ZONE FILTERS -->
                 <div class="zone-filters">
                     <div class="filter-header">
-                        <h3>Filtra per:</h3>
+                        <h3>Filtri</h3>
                         <button @click="resetFilters" class="reset-btn">Reset</button>
                     </div>
 
-                    <div class="filter-group">
-                        <label>Tipo di veicolo</label>
-                        <select v-model="filterTipoVeicolo" class="filter-select">
-                            <option value="ALL">Tutti</option>
-                            <option value="AUTO">🚗 Auto</option>
-                            <option value="MOTO">🏍️ Moto</option>
-                            <option value="FURGONE">🚐 Furgone</option>
-                        </select>
-                    </div>
-
-                    <hr class="filter-divider">
-
-                    <div class="filter-group">
-                        <label>Prezzo massimo: <strong>€ {{ maxPrice.toFixed(2) }}</strong></label>
-                        <input type="range" v-model.number="maxPrice" min="1" max="25" step="0.5" class="slider">
-                    </div>
-
-                    <hr class="filter-divider">
-
-                    <div class="filter-group">
-                        <label><b>Caratteristiche:</b></label>
-                        <div class="checkbox-list">
-                            <label class="checkbox-container">
-                                <input type="checkbox" v-model="filter24h">
-                                <span> Aperto 24/7 </span>
-                            </label>
-                            <label class="checkbox-container">
-                                <input type="checkbox" v-model="filterCoperto">
-                                <span> Posti al coperto </span>
-                            </label>
-                            <label class="checkbox-container">
-                                <input type="checkbox" v-model="filterElettrico">
-                                <span> Ricarica elettrica </span>
-                            </label>
-                            <label class="checkbox-container">
-                                <input type="checkbox" v-model="filterDisabili">
-                                <span> Accesso disabili </span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <hr class="filter-divider">
-
-                    <div class="filter-group">
-                        <label>Altezza minima veicolo</label>
-                        <select v-model.number="minHeight" class="filter-select">
-                            <option :value="0">Qualsiasi altezza</option>
-                            <option :value="1.4">Oltre 1.40m</option>
-                            <option :value="1.6">Oltre 1.60m</option>
-                            <option :value="1.9">Oltre 1.90m</option>
-                            <option :value="2.1">Oltre 2.10m</option>
-                            <option :value="2.3">Oltre 2.30m</option>
-                            <option :value="2.5">Oltre 2.50m</option>
-                        </select>
-                    </div>
+                    <GarageFilters v-model:filterTipoVeicolo="filterTipoVeicolo" v-model:maxPrice="maxPrice"
+                        v-model:filter24h="filter24h" v-model:filterCoperto="filterCoperto"
+                        v-model:filterElettrico="filterElettrico" v-model:filterDisabili="filterDisabili"
+                        v-model:minHeight="minHeight" />
                 </div>
             </aside>
             <!-- ZONE RESULTS -->
@@ -494,85 +559,6 @@ const handleSearch = () => { console.log("Ricerca eseguita") }
     padding: 0;
 }
 
-.filter-group {
-    margin-bottom: 1rem;
-}
-
-.filter-group label {
-    display: block;
-    font-size: 0.9rem;
-    color: #4b5563;
-    margin-bottom: 10px;
-}
-
-.filter-divider {
-    border: 0;
-    border-top: 1px solid #e2e8f0;
-    margin: 1rem 0;
-}
-
-/* Slider Prezzo */
-.slider {
-    width: 100%;
-    accent-color: #00408A;
-    cursor: pointer;
-}
-
-.range-labels {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.75rem;
-    color: #94a3b8;
-    margin-top: 5px;
-}
-
-/* Custom Checkbox */
-.checkbox-group {
-    margin-bottom: 1rem;
-}
-
-.checkbox-list {
-    display: flex;
-    flex-direction: column;
-}
-
-.checkbox-container {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    cursor: pointer;
-    font-size: 0.85rem;
-    color: #4b5563;
-}
-
-.checkbox-container input {
-    width: 16px;
-    height: 16px;
-    accent-color: #00408A;
-}
-
-.checkbox-container input[type="checkbox"] {
-    margin: 0;
-    /* rimuove offset strani */
-    transform: translateY(2px);
-    /* micro-fix visivo */
-}
-
-/* Select Altezza */
-.filter-select {
-    width: 100%;
-    padding: 8px;
-    border-radius: 6px;
-    border: 1px solid #cbd5e1;
-    background-color: #f8fafc;
-    font-size: 0.9rem;
-    outline: none;
-}
-
-.filter-select:focus {
-    border-color: #00408A;
-}
-
 /* ZONA 3: Area principale per i risultati */
 /* Header Risultati */
 .results-header {
@@ -591,15 +577,6 @@ const handleSearch = () => { console.log("Ricerca eseguita") }
     color: #64748b;
     font-weight: 400;
     font-size: 1rem;
-}
-
-.sort-btn {
-    background: white;
-    border: 1px solid #cbd5e1;
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    cursor: pointer;
 }
 
 /* Container Lista */
@@ -748,14 +725,6 @@ const handleSearch = () => { console.log("Ricerca eseguita") }
     margin-bottom: 12px;
 }
 
-/* Stile per le icone nei filtri */
-.icon-small {
-    width: 14px;
-    height: 14px;
-    vertical-align: middle;
-    margin-left: 4px;
-}
-
 /* Spinner */
 .spinner {
     width: 30px;
@@ -775,5 +744,176 @@ const handleSearch = () => { console.log("Ricerca eseguita") }
     100% {
         transform: rotate(360deg);
     }
+}
+
+/* FULLSCREEN */
+
+/* --- LAYOUT 25/25/50 --- */
+.fs-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    background: white;
+}
+
+.fs-body {
+    display: flex;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* Sinistra (50%) */
+.fs-left-half {
+    width: 50%;
+    display: flex;
+    height: 100%;
+    border-right: 1px solid #e2e8f0;
+}
+
+/* Sotto-colonne (25% + 25%) */
+.fs-col-filters,
+.fs-col-cards {
+    width: 50%;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.fs-col-filters {
+    border-right: 1px solid #f1f5f9;
+    background: #fff;
+}
+
+.fs-col-cards {
+    background: #f8fafc;
+}
+
+/* Destra (50%) */
+.fs-right-half {
+    width: 50%;
+    height: 100%;
+    position: relative;
+}
+
+.fs-map-canvas {
+    width: 100%;
+    height: 100%;
+}
+
+/* --- CONTROLLI FLUTTUANTI --- */
+.fs-map-controls {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    display: flex;
+    justify-content: space-between;
+    z-index: 1000;
+    pointer-events: none;
+    /* Fondamentale per muovere la mappa sotto */
+}
+
+.fs-floating-search {
+    pointer-events: auto;
+    background: white;
+    padding: 10px 20px;
+    border-radius: 50px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 320px;
+}
+
+.fs-floating-search input {
+    border: none;
+    outline: none;
+    width: 100%;
+    font-weight: 500;
+}
+
+.fs-close-circle {
+    pointer-events: auto;
+    background: white;
+    border: none;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    cursor: pointer;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* --- DETTAGLI CARD E PANNELLI --- */
+.fs-panel-header {
+    padding: 20px;
+    border-bottom: 1px solid #f1f5f9;
+    background: #00408A;
+}
+
+.fs-panel-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: white;
+}
+
+.fs-scroll-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 15px;
+}
+
+.fs-mini-card {
+    background: white;
+    border: 1px solid #c5d4eb;
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 12px;
+    display: flex;
+    gap: 12px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.fs-mini-card:hover {
+    border-color: #006ce4;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.mini-thumb {
+    width: 60px;
+    height: 60px;
+    background: #003580;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.mini-thumb .gcard-letter-box {
+    font-size: 1.5rem;
+}
+
+.mini-details h4 {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #006ce4;
+}
+
+.mini-details p {
+    margin: 2px 0;
+    font-size: 0.75rem;
+    color: #64748b;
+}
+
+.mini-price {
+    font-weight: bold;
+    font-size: 0.85rem;
+    color: #1e293b;
 }
 </style>
