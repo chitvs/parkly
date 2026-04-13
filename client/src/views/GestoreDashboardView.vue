@@ -55,9 +55,9 @@
           </div>
 
           <div class="form-group">
-            <label>Planimetria (Opzionale)</label>
-            <input type="file" accept="image/*, .pdf">
-            <small>Carica un'immagine (JPG/PNG) o un PDF della mappa.</small>
+            <label>Planimetria </label>
+            <input type ="file" accept=".txt">
+            <small>Carica la planimetria del garage in formato .txt.</small>
           </div>
 
           <button type="submit" class="btn-submit" :disabled="staSalvando">
