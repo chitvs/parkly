@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import Header from '../components/Header.vue'
+import Footer from '../components/Footer.vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
@@ -107,8 +108,8 @@ const handleSearch = () => { console.log("Ricerca eseguita") }
 </script>
 
 <template>
+    <Header />
     <div class="garage-wrapper">
-        <Header />
 
         <section class="search-area">
             <div class="search-container">
@@ -245,14 +246,15 @@ const handleSearch = () => { console.log("Ricerca eseguita") }
                             <div class="gcard-main">
                                 <h3 class="gcard-title">{{ garage.nome }}</h3>
                                 <div class="gcard-location">
-                                    <span>📍 {{ garage.indirizzo }}</span>
+                                    <span><img src="../assets/pin.svg" class="icon-card" alt="Pin"
+                                            style="transform: translateY(-3px)" />{{ garage.indirizzo }}</span>
                                 </div>
 
                                 <div class="gcard-services">
                                     <span class="service-badge info">
                                         <img src="../assets/orologio.svg" class="icon-card" alt="Orario" /> {{
                                             garage.is24h ? '24/7' : garage.orarioapertura.slice(0, 5) + ' - ' +
-                                        garage.orariochiusura.slice(0, 5) }}
+                                                garage.orariochiusura.slice(0, 5) }}
                                     </span>
 
                                     <span v-if="garage.altezzamassima" class="service-badge info">
@@ -288,8 +290,8 @@ const handleSearch = () => { console.log("Ricerca eseguita") }
                 </template>
             </main>
         </div>
-
     </div>
+    <Footer />
 </template>
 
 <style scoped>
@@ -550,8 +552,10 @@ const handleSearch = () => { console.log("Ricerca eseguita") }
 }
 
 .checkbox-container input[type="checkbox"] {
-    margin: 0;          /* rimuove offset strani */
-    transform: translateY(2px); /* micro-fix visivo */
+    margin: 0;
+    /* rimuove offset strani */
+    transform: translateY(2px);
+    /* micro-fix visivo */
 }
 
 /* Select Altezza */
