@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
@@ -9,27 +9,45 @@ import 'leaflet/dist/leaflet.css'
 
 const router = useRouter()
 
-// --- STATO UI E RICERCA ---
-const isLoading = ref(true) 
+// --- COSTANTI ---
+const MAP_CENTER = [41.9028, 12.4964]
+const TILE_LAYER = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+
+// --- STATO UI E DATI ---
+const isLoading = ref(true)
+const garages = ref([])
+const isMapFullscreen = ref(false)
+
+// --- RICERCA E FILTRI ---
 const searchLocation = ref('')
 const checkIn = ref('')
 const checkOut = ref('')
 
-const garages = ref([])
-const mapContainer = ref(null)      
-const fullMapContainer = ref(null)  
-let mapInstance = null              
-let fullMapInstance = null         
+const filter24h = ref(false)
+const maxPrice = ref(25)
+const minHeight = ref(0)
+const filterCoperto = ref(false)
+const filterElettrico = ref(false)
+const filterDisabili = ref(false)
+const filterTipoVeicolo = ref('ALL')
 
-// --- RECUPERO DATI REALI ---
+// --- STATO MAPPE ---
+const mapContainer = ref(null)
+const fullMapContainer = ref(null)
+let mapInstance = null
+let fullMapInstance = null
+
+const markersRefs = {}
+let hoverTimer = null
+let activeMarkerId = null
+
+// --- LOGICA DATI ---
 const fetchGarages = async () => {
     isLoading.value = true
     try {
         const response = await fetch('/api/garage')
         const result = await response.json()
-        if (result.success) {
-            garages.value = result.garage
-        }
+        if (result.success) garages.value = result.garage
     } catch (error) {
         console.error("Errore nel caricamento dei garage:", error)
     } finally {
@@ -39,76 +57,89 @@ const fetchGarages = async () => {
 
 onMounted(async () => {
     await fetchGarages()
-    try {
-        await nextTick()
-        if (mapContainer.value) {
-            mapInstance = L.map(mapContainer.value, {
-                center: [41.9028, 12.4964],
-                zoom: 13,
-                dragging: false, touchZoom: false, scrollWheelZoom: false,
-                doubleClickZoom: false, boxZoom: false, keyboard: false,
-                zoomControl: false, attributionControl: false
-            })
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapInstance)
-            setTimeout(() => { mapInstance.invalidateSize() }, 400)
-        }
-    } catch (error) {
-        console.error("Errore mappa:", error)
+    await nextTick()
+    
+    if (mapContainer.value) {
+        mapInstance = L.map(mapContainer.value, {
+            center: MAP_CENTER,
+            zoom: 13,
+            dragging: false, touchZoom: false, scrollWheelZoom: false,
+            doubleClickZoom: false, boxZoom: false, keyboard: false,
+            zoomControl: false, attributionControl: false
+        })
+        L.tileLayer(TILE_LAYER).addTo(mapInstance)
+        setTimeout(() => mapInstance.invalidateSize(), 400)
     }
 })
 
-// --- STATO FILTRI ---
-const filter24h = ref(false)
-const maxPrice = ref(25) 
-const minHeight = ref(0)
-const filterCoperto = ref(false)
-const filterElettrico = ref(false)
-const filterDisabili = ref(false)
-const filterTipoVeicolo = ref('ALL')
-
-// --- FILTRO DINAMICO ---
+// --- FILTRI DINAMICI ---
 const garagesFiltrati = computed(() => {
     const query = searchLocation.value.toLowerCase().trim()
 
     return garages.value.filter(g => {
-        // Filtro Testuale
-        const matchesSearch = g.nome.toLowerCase().includes(query) ||
-            g.indirizzo.toLowerCase().includes(query)
-        // Filtri Base
+        const matchesSearch = g.nome.toLowerCase().includes(query) || g.indirizzo.toLowerCase().includes(query)
         const matches24h = !filter24h.value || g.is24h
         const matchesPrice = Number(g.tariffabase) <= maxPrice.value
         const matchesHeight = !minHeight.value || (g.altezzamassima && Number(g.altezzamassima) >= minHeight.value)
         const matchesCoperto = !filterCoperto.value || g.hasCoperto
         const matchesElettrico = !filterElettrico.value || g.hasElettrico
         const matchesDisabili = !filterDisabili.value || g.hasDisabili
-        const matchesTipo = filterTipoVeicolo.value === 'ALL' || (g.tipiDisponibili && g.tipiDisponibili.includes(filterTipoVeicolo.value))
+        const matchesTipo = filterTipoVeicolo.value === 'ALL' || (g.tipiDisponibili?.includes(filterTipoVeicolo.value))
 
         return matchesSearch && matches24h && matchesPrice && matchesHeight &&
-            matchesCoperto && matchesElettrico && matchesDisabili && matchesTipo
+               matchesCoperto && matchesElettrico && matchesDisabili && matchesTipo
     })
 })
 
-// Funzione per resettare tutto
 const resetFilters = () => {
-    filter24h.value = false
+    filter24h.value = filterCoperto.value = filterElettrico.value = filterDisabili.value = false
     maxPrice.value = 25
     minHeight.value = 0
-    filterCoperto.value = false
-    filterElettrico.value = false
-    filterDisabili.value = false
     filterTipoVeicolo.value = 'ALL'
     searchLocation.value = ''
 }
 
-const goToDetail = (garage) => {
-    router.push({ name: 'garage-detail', params: { id: garage.id_garage } })
+// --- LOGICA INTERAZIONE MAPPA ---
+const highlightMarker = (garage) => {
+    if (hoverTimer) clearTimeout(hoverTimer)
+    if (!fullMapInstance) return
+
+    // Reset marker precedente
+    if (activeMarkerId && markersRefs[activeMarkerId]) {
+        markersRefs[activeMarkerId].getElement()?.classList.remove('is-active')
+    }
+
+    // Attiva nuovo marker
+    const currentMarker = markersRefs[garage.id_garage]
+    if (currentMarker) {
+        currentMarker.getElement()?.classList.add('is-active')
+        activeMarkerId = garage.id_garage
+    }
 }
 
-const handleSearch = () => { console.log("Ricerca eseguita") }
+const selectGarage = (garage) => {
+    if (hoverTimer) clearTimeout(hoverTimer)
+    if (!fullMapInstance || !garage.latitudine) return
 
-// Stato per la visibilità del fullscreen
-const isMapFullscreen = ref(false)
+    fullMapInstance.flyTo([garage.latitudine, garage.longitudine], 15, { duration: 1.2 })
+    markersRefs[garage.id_garage]?.openPopup()
+    highlightMarker(garage)
+}
 
+const resetMapView = () => {
+    if (hoverTimer) clearTimeout(hoverTimer)
+    if (!fullMapInstance) return
+
+    fullMapInstance.closePopup()
+    fullMapInstance.flyTo(MAP_CENTER, 11, { duration: 1.0 })
+
+    if (activeMarkerId && markersRefs[activeMarkerId]) {
+        markersRefs[activeMarkerId].getElement()?.classList.remove('is-active')
+        activeMarkerId = null
+    }
+}
+
+// --- GESTIONE FULLSCREEN ---
 const openMapFullscreen = async () => {
     isMapFullscreen.value = true
     document.body.style.overflow = 'hidden'
@@ -116,45 +147,64 @@ const openMapFullscreen = async () => {
 
     if (fullMapContainer.value && !fullMapInstance) {
         fullMapInstance = L.map(fullMapContainer.value, {
-            center: [41.9028, 12.4964],
-            zoom: 13,
+            center: MAP_CENTER,
+            zoom: 11,
             zoomControl: false,
             attributionControl: false
         })
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(fullMapInstance)
+        L.tileLayer(TILE_LAYER).addTo(fullMapInstance)
 
-        // Aggiungiamo i marker
+        const activeIds = garagesFiltrati.value.map(g => g.id_garage)
+
         garages.value.forEach(g => {
             if (g.latitudine && g.longitudine) {
-                const marker = L.circleMarker([g.latitudine, g.longitudine], {
-                    radius: 10,
-                    fillColor: '#00408A',
-                    color: '#fff',
-                    weight: 2,
-                    fillOpacity: 0.9
-                }).addTo(fullMapInstance)
-                marker.bindPopup(`<strong>${g.nome}</strong><br>${g.indirizzo}`)
+                const customIcon = L.divIcon({
+                    className: 'custom-garage-marker',
+                    html: '<div class="marker-pin"></div>',
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10]
+                })
+
+                const marker = L.marker([g.latitudine, g.longitudine], { icon: customIcon })
+                
+                marker.bindPopup(`
+                    <div class="map-popup-content">
+                        <strong>${g.nome}</strong><br>${g.indirizzo}<br>
+                        <a href="/garage/${g.id_garage}" class="popup-detail-link">Vedi dettagli →</a>
+                    </div>
+                `)
+
+                markersRefs[g.id_garage] = marker
+                if (activeIds.includes(g.id_garage)) marker.addTo(fullMapInstance)
             }
         })
     }
-
-    // Fix per caricamento corretto dei tasselli della mappa
-    setTimeout(() => {
-        if (fullMapInstance) fullMapInstance.invalidateSize()
-    }, 400)
 }
 
 const closeMapFullscreen = () => {
     isMapFullscreen.value = false
     document.body.style.overflow = ''
-    // Distruggi l'istanza della mappa se esiste
+    if (hoverTimer) clearTimeout(hoverTimer)
     if (fullMapInstance) {
-        fullMapInstance.remove() 
-        fullMapInstance = null   
+        fullMapInstance.remove()
+        fullMapInstance = null
     }
+    Object.keys(markersRefs).forEach(key => delete markersRefs[key])
 }
 
+// Sincronizzazione marker con filtri
+watch(garagesFiltrati, (newGarages) => {
+    if (!fullMapInstance) return
+    const activeIds = newGarages.map(g => g.id_garage)
 
+    Object.keys(markersRefs).forEach(id => {
+        const marker = markersRefs[id]
+        activeIds.includes(Number(id)) ? marker.addTo(fullMapInstance) : marker.remove()
+    })
+}, { deep: true })
+
+const goToDetail = (garage) => router.push({ name: 'garage-detail', params: { id: garage.id_garage } })
+const handleSearch = () => console.log("Ricerca eseguita")
 </script>
 
 <template>
@@ -232,7 +282,7 @@ const closeMapFullscreen = () => {
                                                 <div class="fs-scroll-content">
                                                     <div v-for="garage in garagesFiltrati"
                                                         :key="'fs-' + garage.id_garage" class="fs-mini-card"
-                                                        @click="goToDetail(garage)">
+                                                        @mouseenter="highlightMarker(garage)" @click="selectGarage(garage)">
                                                         <div class="mini-thumb">
                                                             <div class="gcard-letter-box">{{ garage.nome.charAt(0) }}
                                                             </div>
@@ -257,6 +307,10 @@ const closeMapFullscreen = () => {
                                                     <input type="text" v-model="searchLocation"
                                                         placeholder="Cerca sulla mappa..." />
                                                 </div>
+                                                <button class="fs-reset-view" @click="resetMapView"
+                                                    title="Ripristina visuale">
+                                                    <span style="font-size: 1.2rem;">🔄</span>
+                                                </button>
                                                 <button class="fs-close-circle" @click="closeMapFullscreen">✕</button>
                                             </div>
                                         </div>
@@ -915,5 +969,82 @@ const closeMapFullscreen = () => {
     font-weight: bold;
     font-size: 0.85rem;
     color: #1e293b;
+}
+
+/* Stile per il marker divIcon */
+:deep(.custom-garage-marker) {
+    background: none;
+    border: none;
+}
+
+/* Stile base del pin (già presente, assicurati sia così) */
+:deep(.marker-pin) {
+    width: 18px;
+    height: 18px;
+    background-color: #00408A;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+    /* Animazione fluida per il bagliore */
+}
+
+/* EFFETTO ILLUMINAZIONE */
+:deep(.custom-garage-marker.is-active .marker-pin) {
+    background-color: #006ce4 !important;
+    transform: scale(1.4);
+    border-color: #fff;
+    box-shadow: 0 0 20px #006ce4, 0 0 10px rgba(255, 204, 0, 0.6);
+    z-index: 1000 !important;
+}
+
+:deep(.custom-garage-marker:hover .marker-pin) {
+    transform: scale(1.2);
+    background-color: #006ce4;
+}
+
+:deep(.map-popup-content) {
+    font-family: 'Inter', sans-serif;
+    padding: 5px;
+}
+
+:deep(.popup-detail-link) {
+    display: inline-block;
+    margin-top: 8px;
+    color: #006ce4;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
+:deep(.popup-detail-link:hover) {
+    text-decoration: underline;
+}
+
+/* tasto per la reset view */
+.fs-reset-view {
+    pointer-events: auto;
+    background: white;
+    border: none;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 10px;
+    transition: transform 0.2s;
+}
+
+.fs-reset-view:hover {
+    transform: scale(1.1);
+    background-color: #f8fafc;
+}
+
+
+.fs-floating-search {
+    margin-right: auto;
 }
 </style>
