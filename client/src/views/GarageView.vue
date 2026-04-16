@@ -38,8 +38,7 @@ let mapInstance = null
 let fullMapInstance = null
 
 const markersRefs = {}
-let hoverTimer = null
-let activeMarkerId = null
+const hoveredGarageId = ref(null);
 
 // --- LOGICA DATI ---
 const fetchGarages = async () => {
@@ -58,7 +57,7 @@ const fetchGarages = async () => {
 onMounted(async () => {
     await fetchGarages()
     await nextTick()
-    
+
     if (mapContainer.value) {
         mapInstance = L.map(mapContainer.value, {
             center: MAP_CENTER,
@@ -87,7 +86,7 @@ const garagesFiltrati = computed(() => {
         const matchesTipo = filterTipoVeicolo.value === 'ALL' || (g.tipiDisponibili?.includes(filterTipoVeicolo.value))
 
         return matchesSearch && matches24h && matchesPrice && matchesHeight &&
-               matchesCoperto && matchesElettrico && matchesDisabili && matchesTipo
+            matchesCoperto && matchesElettrico && matchesDisabili && matchesTipo
     })
 })
 
@@ -100,43 +99,39 @@ const resetFilters = () => {
 }
 
 // --- LOGICA INTERAZIONE MAPPA ---
-const highlightMarker = (garage) => {
-    if (hoverTimer) clearTimeout(hoverTimer)
-    if (!fullMapInstance) return
+const setHover = (garage, active) => {
+    Object.values(markersRefs).forEach(m => {
+        m.getElement()?.classList.remove('is-active');
+        m.setZIndexOffset(0);
+    });
 
-    // Reset marker precedente
-    if (activeMarkerId && markersRefs[activeMarkerId]) {
-        markersRefs[activeMarkerId].getElement()?.classList.remove('is-active')
+    if (active) {
+        hoveredGarageId.value = garage.id_garage;
+        const currentMarker = markersRefs[garage.id_garage];
+        if (currentMarker) {
+            currentMarker.getElement()?.classList.add('is-active');
+            currentMarker.setZIndexOffset(9000);
+        }
+    } else {
+        hoveredGarageId.value = null;
     }
-
-    // Attiva nuovo marker
-    const currentMarker = markersRefs[garage.id_garage]
-    if (currentMarker) {
-        currentMarker.getElement()?.classList.add('is-active')
-        activeMarkerId = garage.id_garage
-    }
-}
+};
 
 const selectGarage = (garage) => {
-    if (hoverTimer) clearTimeout(hoverTimer)
     if (!fullMapInstance || !garage.latitudine) return
 
     fullMapInstance.flyTo([garage.latitudine, garage.longitudine], 15, { duration: 1.2 })
     markersRefs[garage.id_garage]?.openPopup()
-    highlightMarker(garage)
+    setHover(garage, true)
 }
 
 const resetMapView = () => {
-    if (hoverTimer) clearTimeout(hoverTimer)
     if (!fullMapInstance) return
 
+    setHover(null,false)
     fullMapInstance.closePopup()
     fullMapInstance.flyTo(MAP_CENTER, 11, { duration: 1.0 })
 
-    if (activeMarkerId && markersRefs[activeMarkerId]) {
-        markersRefs[activeMarkerId].getElement()?.classList.remove('is-active')
-        activeMarkerId = null
-    }
 }
 
 // --- GESTIONE FULLSCREEN ---
@@ -166,7 +161,7 @@ const openMapFullscreen = async () => {
                 })
 
                 const marker = L.marker([g.latitudine, g.longitudine], { icon: customIcon })
-                
+
                 marker.bindPopup(`
                     <div class="map-popup-content">
                         <strong>${g.nome}</strong><br>${g.indirizzo}<br>
@@ -176,6 +171,9 @@ const openMapFullscreen = async () => {
 
                 markersRefs[g.id_garage] = marker
                 if (activeIds.includes(g.id_garage)) marker.addTo(fullMapInstance)
+
+                marker.on('mouseover', () => setHover(g, true));
+                marker.on('mouseout', () => setHover(g, false));
             }
         })
     }
@@ -184,7 +182,6 @@ const openMapFullscreen = async () => {
 const closeMapFullscreen = () => {
     isMapFullscreen.value = false
     document.body.style.overflow = ''
-    if (hoverTimer) clearTimeout(hoverTimer)
     if (fullMapInstance) {
         fullMapInstance.remove()
         fullMapInstance = null
@@ -282,7 +279,8 @@ const handleSearch = () => console.log("Ricerca eseguita")
                                                 <div class="fs-scroll-content">
                                                     <div v-for="garage in garagesFiltrati"
                                                         :key="'fs-' + garage.id_garage" class="fs-mini-card"
-                                                        @mouseenter="highlightMarker(garage)" @click="selectGarage(garage)">
+                                                        @mouseenter="setHover(garage, true)"
+                                                        @click="selectGarage(garage)">
                                                         <div class="mini-thumb">
                                                             <div class="gcard-letter-box">{{ garage.nome.charAt(0) }}
                                                             </div>
@@ -513,7 +511,6 @@ const handleSearch = () => console.log("Ricerca eseguita")
 .page-body {
     display: flex;
     max-width: 90% !important;
-    width: 100%;
     margin: 2rem auto;
     padding: 0 0.5rem;
     gap: 1.5rem;
@@ -933,11 +930,6 @@ const handleSearch = () => console.log("Ricerca eseguita")
     transition: 0.2s;
 }
 
-.fs-mini-card:hover {
-    border-color: #006ce4;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
-
 .mini-thumb {
     width: 60px;
     height: 60px;
@@ -992,15 +984,14 @@ const handleSearch = () => console.log("Ricerca eseguita")
 /* EFFETTO ILLUMINAZIONE */
 :deep(.custom-garage-marker.is-active .marker-pin) {
     background-color: #006ce4 !important;
-    transform: scale(1.4);
-    border-color: #fff;
-    box-shadow: 0 0 20px #006ce4, 0 0 10px rgba(255, 204, 0, 0.6);
-    z-index: 1000 !important;
+    transform: scale(1.3);
+    box-shadow: 0 0 20px rgba(0, 108, 228, 0.6);
 }
 
 :deep(.custom-garage-marker:hover .marker-pin) {
-    transform: scale(1.2);
-    background-color: #006ce4;
+    background-color: #006ce4 !important;
+    transform: scale(1.3);
+    box-shadow: 0 0 20px rgba(0, 108, 228, 0.6);
 }
 
 :deep(.map-popup-content) {
@@ -1044,7 +1035,11 @@ const handleSearch = () => console.log("Ricerca eseguita")
 }
 
 
-.fs-floating-search {
-    margin-right: auto;
+/* La card quando è "hoverata" (sia da mouse che da mappa) */
+.fs-mini-card:hover {
+    border-color: #006ce4;
+    background-color: #ffffff;
+    box-shadow: 0 4px 15px rgba(0, 108, 228, 0.2);
+    transform: translateY(-2px);
 }
 </style>
