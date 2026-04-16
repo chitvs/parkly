@@ -6,23 +6,23 @@ import Footer from '../components/Footer.vue'
 import GarageFilters from '../components/GarageFilters.vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import { calculateDistance } from '../utils/distance.js'
+import { strategic_places } from '../constants/places.js'
 
 const router = useRouter()
 
-// --- COSTANTI ---
 const MAP_CENTER = [41.9028, 12.4964]
 const TILE_LAYER = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
 
-// --- STATO UI E DATI ---
 const isLoading = ref(true)
 const garages = ref([])
 const isMapFullscreen = ref(false)
+const hoveredGarageId = ref(null)
+const showExtendedResults = ref(false)
 
-// --- RICERCA E FILTRI ---
 const searchLocation = ref('')
 const checkIn = ref('')
 const checkOut = ref('')
-
 const filter24h = ref(false)
 const maxPrice = ref(25)
 const minHeight = ref(0)
@@ -31,16 +31,25 @@ const filterElettrico = ref(false)
 const filterDisabili = ref(false)
 const filterTipoVeicolo = ref('ALL')
 
-// --- STATO MAPPE ---
 const mapContainer = ref(null)
 const fullMapContainer = ref(null)
 let mapInstance = null
 let fullMapInstance = null
 
 const markersRefs = {}
-const hoveredGarageId = ref(null);
 
-// --- LOGICA DATI ---
+watch(searchLocation, () => {
+    showExtendedResults.value = false
+})
+
+const resetFilters = () => {
+    filter24h.value = filterCoperto.value = filterElettrico.value = filterDisabili.value = false
+    maxPrice.value = 25
+    minHeight.value = 0
+    filterTipoVeicolo.value = 'ALL'
+    searchLocation.value = ''
+}
+
 const fetchGarages = async () => {
     isLoading.value = true
     try {
@@ -71,55 +80,104 @@ onMounted(async () => {
     }
 })
 
-// --- FILTRI DINAMICI ---
+const matchedPOI = computed(() => {
+    const query = searchLocation.value.toLowerCase().trim()
+    return query.length > 2
+        ? strategic_places.find(p =>
+            p.name.toLowerCase().includes(query) ||
+            p.synonyms.some(s => s.toLowerCase().includes(query))
+          )
+        : null
+})
+
+const passaFiltriTecnici = (g) => {
+    return (!filter24h.value || g.is24h) &&
+        Number(g.tariffabase) <= maxPrice.value &&
+        (!minHeight.value || (g.altezzamassima && Number(g.altezzamassima) >= minHeight.value)) &&
+        (!filterCoperto.value || g.hasCoperto) &&
+        (!filterElettrico.value || g.hasElettrico) &&
+        (!filterDisabili.value || g.hasDisabili) &&
+        (filterTipoVeicolo.value === 'ALL' || g.tipiDisponibili?.includes(filterTipoVeicolo.value))
+}
+
 const garagesFiltrati = computed(() => {
     const query = searchLocation.value.toLowerCase().trim()
+    const poi = matchedPOI.value
 
-    return garages.value.filter(g => {
+    const allProcessed = garages.value.map(g => {
+        let referencePOI = null
+        let distance = 0
+
+        if (poi) {
+            referencePOI = poi
+            distance = calculateDistance(poi.coords.lat, poi.coords.lng, g.latitudine, g.longitudine)
+        } else {
+            let minDist = Infinity
+            strategic_places.forEach(p => {
+                const d = calculateDistance(p.coords.lat, p.coords.lng, g.latitudine, g.longitudine)
+                if (d < minDist) { minDist = d; referencePOI = p }
+            })
+            distance = minDist
+        }
+
+        return {
+            ...g,
+            displayPOIName: referencePOI ? referencePOI.name : '',
+            displayDistanceKM: distance,
+            displayDistanceLabel: distance < 1 ? `${Math.round(distance * 1000)}m` : `${distance.toFixed(1)}km`
+        }
+    })
+
+    if (poi) {
+        const near = allProcessed.filter(g => passaFiltriTecnici(g) && g.displayDistanceKM <= 1.5)
+        const far = allProcessed.filter(g => passaFiltriTecnici(g) && g.displayDistanceKM > 1.5 && g.displayDistanceKM <= 5)
+        const results = near.length > 0
+            ? (showExtendedResults.value ? [...near, ...far] : near)
+            : far
+        return results.sort((a, b) => a.displayDistanceKM - b.displayDistanceKM)
+    }
+
+    return allProcessed.filter(g => {
         const matchesSearch = g.nome.toLowerCase().includes(query) || g.indirizzo.toLowerCase().includes(query)
-        const matches24h = !filter24h.value || g.is24h
-        const matchesPrice = Number(g.tariffabase) <= maxPrice.value
-        const matchesHeight = !minHeight.value || (g.altezzamassima && Number(g.altezzamassima) >= minHeight.value)
-        const matchesCoperto = !filterCoperto.value || g.hasCoperto
-        const matchesElettrico = !filterElettrico.value || g.hasElettrico
-        const matchesDisabili = !filterDisabili.value || g.hasDisabili
-        const matchesTipo = filterTipoVeicolo.value === 'ALL' || (g.tipiDisponibili?.includes(filterTipoVeicolo.value))
-
-        return matchesSearch && matches24h && matchesPrice && matchesHeight &&
-            matchesCoperto && matchesElettrico && matchesDisabili && matchesTipo
+        return matchesSearch && passaFiltriTecnici(g)
     })
 })
 
-const resetFilters = () => {
-    filter24h.value = filterCoperto.value = filterElettrico.value = filterDisabili.value = false
-    maxPrice.value = 25
-    minHeight.value = 0
-    filterTipoVeicolo.value = 'ALL'
-    searchLocation.value = ''
-}
+const hasMoreResults = computed(() => {
+    const poi = matchedPOI.value
+    if (!poi || showExtendedResults.value) return false
 
-// --- LOGICA INTERAZIONE MAPPA ---
+    const near = garages.value.filter(g => {
+        const d = calculateDistance(poi.coords.lat, poi.coords.lng, g.latitudine, g.longitudine)
+        return d <= 1.5 && passaFiltriTecnici(g)
+    })
+    const far = garages.value.filter(g => {
+        const d = calculateDistance(poi.coords.lat, poi.coords.lng, g.latitudine, g.longitudine)
+        return d > 1.5 && d <= 5 && passaFiltriTecnici(g)
+    })
+    return near.length > 0 && far.length > 0
+})
+
 const setHover = (garage, active) => {
     Object.values(markersRefs).forEach(m => {
-        m.getElement()?.classList.remove('is-active');
-        m.setZIndexOffset(0);
-    });
+        m.getElement()?.classList.remove('is-active')
+        m.setZIndexOffset(0)
+    })
 
     if (active) {
-        hoveredGarageId.value = garage.id_garage;
-        const currentMarker = markersRefs[garage.id_garage];
+        hoveredGarageId.value = garage.id_garage
+        const currentMarker = markersRefs[garage.id_garage]
         if (currentMarker) {
-            currentMarker.getElement()?.classList.add('is-active');
-            currentMarker.setZIndexOffset(9000);
+            currentMarker.getElement()?.classList.add('is-active')
+            currentMarker.setZIndexOffset(9000)
         }
     } else {
-        hoveredGarageId.value = null;
+        hoveredGarageId.value = null
     }
-};
+}
 
 const selectGarage = (garage) => {
     if (!fullMapInstance || !garage.latitudine) return
-
     fullMapInstance.flyTo([garage.latitudine, garage.longitudine], 15, { duration: 1.2 })
     markersRefs[garage.id_garage]?.openPopup()
     setHover(garage, true)
@@ -127,14 +185,11 @@ const selectGarage = (garage) => {
 
 const resetMapView = () => {
     if (!fullMapInstance) return
-
-    setHover(null,false)
+    setHover(null, false)
     fullMapInstance.closePopup()
     fullMapInstance.flyTo(MAP_CENTER, 11, { duration: 1.0 })
-
 }
 
-// --- GESTIONE FULLSCREEN ---
 const openMapFullscreen = async () => {
     isMapFullscreen.value = true
     document.body.style.overflow = 'hidden'
@@ -172,8 +227,8 @@ const openMapFullscreen = async () => {
                 markersRefs[g.id_garage] = marker
                 if (activeIds.includes(g.id_garage)) marker.addTo(fullMapInstance)
 
-                marker.on('mouseover', () => setHover(g, true));
-                marker.on('mouseout', () => setHover(g, false));
+                marker.on('mouseover', () => setHover(g, true))
+                marker.on('mouseout', () => setHover(g, false))
             }
         })
     }
@@ -189,11 +244,9 @@ const closeMapFullscreen = () => {
     Object.keys(markersRefs).forEach(key => delete markersRefs[key])
 }
 
-// Sincronizzazione marker con filtri
 watch(garagesFiltrati, (newGarages) => {
     if (!fullMapInstance) return
     const activeIds = newGarages.map(g => g.id_garage)
-
     Object.keys(markersRefs).forEach(id => {
         const marker = markersRefs[id]
         activeIds.includes(Number(id)) ? marker.addTo(fullMapInstance) : marker.remove()
@@ -201,7 +254,6 @@ watch(garagesFiltrati, (newGarages) => {
 }, { deep: true })
 
 const goToDetail = (garage) => router.push({ name: 'garage-detail', params: { id: garage.id_garage } })
-const handleSearch = () => console.log("Ricerca eseguita")
 </script>
 
 <template>
@@ -210,35 +262,31 @@ const handleSearch = () => console.log("Ricerca eseguita")
 
         <section class="search-area">
             <div class="search-container">
-                <form @submit.prevent="handleSearch" class="search-box">
-
+                <div class="search-box">
                     <div class="input-group location-group">
-                        <div class="icon">📍</div>
+                        <div class="icon">🔍</div>
                         <div class="fields">
                             <label>Dove vuoi parcheggiare?</label>
-                            <input type="text" v-model="searchLocation" placeholder="Città, indirizzo o stazione..."
-                                required>
+                            <input type="text" v-model="searchLocation"
+                                placeholder="Inizia a scrivere una città o stazione...">
                         </div>
                     </div>
 
                     <div class="input-group">
                         <label>Check-in</label>
-                        <input type="datetime-local" v-model="checkIn" required>
+                        <input type="datetime-local" v-model="checkIn">
                     </div>
 
                     <div class="input-group">
                         <label>Check-out</label>
-                        <input type="datetime-local" v-model="checkOut" required>
+                        <input type="datetime-local" v-model="checkOut">
                     </div>
-
-                    <button type="submit" class="search-btn">Cerca</button>
-                </form>
+                </div>
             </div>
         </section>
 
         <div class="page-body">
             <aside class="sidebar">
-                <!-- ZONE MAP -->
                 <div class="zone-map">
                     <div ref="mapContainer" class="leaflet-map-canvas"></div>
                     <div class="map-overlay">
@@ -255,8 +303,7 @@ const handleSearch = () => console.log("Ricerca eseguita")
 
                                             <div class="fs-col-filters">
                                                 <div class="fs-panel-header">
-                                                    <h3
-                                                        style="display: flex; justify-content: space-between; width: 100%;">
+                                                    <h3 style="display: flex; justify-content: space-between; width: 100%;">
                                                         Filtri
                                                         <button @click="resetFilters" class="reset-btn"
                                                             style="color: white;">Reset</button>
@@ -282,15 +329,24 @@ const handleSearch = () => console.log("Ricerca eseguita")
                                                         @mouseenter="setHover(garage, true)"
                                                         @click="selectGarage(garage)">
                                                         <div class="mini-thumb">
-                                                            <div class="gcard-letter-box">{{ garage.nome.charAt(0) }}
-                                                            </div>
+                                                            <div class="gcard-letter-box">{{ garage.nome.charAt(0) }}</div>
                                                         </div>
                                                         <div class="mini-details">
                                                             <h4>{{ garage.nome }}</h4>
                                                             <p>{{ garage.indirizzo.slice(0, 30) }}...</p>
-                                                            <span class="mini-price">€{{
-                                                                Number(garage.tariffabase).toFixed(2) }}/ora</span>
+                                                            <p v-if="garage.displayPOIName">
+                                                                a {{ garage.displayDistanceLabel }} da {{ garage.displayPOIName }}
+                                                            </p>
+                                                            <span class="mini-price">€{{ Number(garage.tariffabase).toFixed(2) }}/ora</span>
                                                         </div>
+                                                    </div>
+
+                                                    <div v-if="hasMoreResults" class="fs-extended-results-mini">
+                                                        <p>Ci sono altri parcheggi entro 5km</p>
+                                                        <button @click.stop="showExtendedResults = true"
+                                                            class="btn-show-more-mini">
+                                                            Mostra altri
+                                                        </button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -319,7 +375,7 @@ const handleSearch = () => console.log("Ricerca eseguita")
                         </Teleport>
                     </div>
                 </div>
-                <!-- ZONE FILTERS -->
+
                 <div class="zone-filters">
                     <div class="filter-header">
                         <h3>Filtri</h3>
@@ -332,22 +388,21 @@ const handleSearch = () => console.log("Ricerca eseguita")
                         v-model:minHeight="minHeight" />
                 </div>
             </aside>
-            <!-- ZONE RESULTS -->
+
             <main class="zone-results">
                 <div v-if="isLoading" class="loading-state text-center py-5">
                     <div class="spinner"></div>
                     <p>Caricamento parcheggi...</p>
                 </div>
 
-                <div v-else-if="garagesFiltrati.length === 0" class="empty-state">
+                <div v-else-if="garagesFiltrati.length === 0 && !hasMoreResults" class="empty-state">
                     <p>Nessun garage trovato a {{ searchLocation || 'destinazione' }}.</p>
                 </div>
 
                 <template v-else>
-                    <div class="results-header">
+                    <div class="results-header" v-if="garagesFiltrati.length > 0">
                         <h2 class="results-count">
-                            {{ searchLocation || 'Risultati' }}: <span>{{ garagesFiltrati.length }} parcheggi
-                                trovati</span>
+                            {{ searchLocation || 'Risultati' }}: <span>{{ garagesFiltrati.length }} parcheggi trovati</span>
                         </h2>
                     </div>
 
@@ -363,34 +418,37 @@ const handleSearch = () => console.log("Ricerca eseguita")
                             <div class="gcard-main">
                                 <h3 class="gcard-title">{{ garage.nome }}</h3>
                                 <div class="gcard-location">
-                                    <span><img src="../assets/pin.svg" class="icon-card" alt="Pin"
-                                            style="transform: translateY(-3px)" />{{ garage.indirizzo }}</span>
+                                    <span>
+                                        <img src="../assets/pin.svg" class="icon-card" alt="Pin"
+                                            style="transform: translateY(-3px)" />{{ garage.indirizzo }}
+                                    </span>
+                                    <div v-if="garage.displayPOIName" class="distance-tag">
+                                        <img src="../assets/distance.svg" class="icon-card" alt="Distanza"
+                                            style="transform: translateY(-3px) scale(1.5)" />
+                                        a {{ garage.displayDistanceLabel }} da {{ garage.displayPOIName }}
+                                    </div>
                                 </div>
 
                                 <div class="gcard-services">
                                     <span class="service-badge info">
-                                        <img src="../assets/orologio.svg" class="icon-card" alt="Orario" /> {{
-                                            garage.is24h ? '24/7' : garage.orarioapertura.slice(0, 5) + ' - ' +
-                                                garage.orariochiusura.slice(0, 5) }}
+                                        <img src="../assets/orologio.svg" class="icon-card" alt="Orario" />
+                                        {{ garage.is24h ? '24/7' : garage.orarioapertura.slice(0, 5) + ' - ' + garage.orariochiusura.slice(0, 5) }}
                                     </span>
-
                                     <span v-if="garage.altezzamassima" class="service-badge info">
-                                        <img src="../assets/altezza_massima.svg" class="icon-card"
-                                            alt="AltezzaMassima" /> Max: {{ garage.altezzamassima }}m
+                                        <img src="../assets/altezza_massima.svg" class="icon-card" alt="Altezza massima" />
+                                        Max: {{ garage.altezzamassima }}m
                                     </span>
-
                                     <span v-if="garage.hasCoperto" class="service-badge feature">
                                         <img src="../assets/parcheggio_coperto.svg" class="icon-card" alt="Coperto" />
                                         Coperto
                                     </span>
-
                                     <span v-if="garage.hasElettrico" class="service-badge feature">
-                                        <img src="../assets/electricity.svg" class="icon-card" alt="Elettrico" />
+                                        <img src="../assets/electricity.svg" class="icon-card" alt="Ricarica elettrica" />
                                         Ricarica
                                     </span>
-
                                     <span v-if="garage.hasDisabili" class="service-badge feature">
-                                        <img src="../assets/handicap.svg" class="icon-card" alt="Disabili" /> Disabili
+                                        <img src="../assets/handicap.svg" class="icon-card" alt="Accessibile disabili" />
+                                        Disabili
                                     </span>
                                 </div>
                             </div>
@@ -401,7 +459,13 @@ const handleSearch = () => console.log("Ricerca eseguita")
                                     <span class="price-value">€{{ Number(garage.tariffabase).toFixed(2) }}/ora</span>
                                 </div>
                             </div>
+                        </div>
 
+                        <div v-if="hasMoreResults" class="extended-results-container">
+                            <p class="extended-info">Ci sono altri parcheggi un po' più distanti...</p>
+                            <button @click.stop="showExtendedResults = true" class="btn-show-more">
+                                Visualizza altri parcheggi (entro 5km)
+                            </button>
                         </div>
                     </div>
                 </template>
@@ -412,7 +476,6 @@ const handleSearch = () => console.log("Ricerca eseguita")
 </template>
 
 <style scoped>
-/* Contenitore principale */
 .garage-wrapper {
     display: flex;
     flex-direction: column;
@@ -420,7 +483,6 @@ const handleSearch = () => console.log("Ricerca eseguita")
     background-color: #f8fafc;
 }
 
-/* Stile dell'area blu della ricerca */
 .search-area {
     background-color: #002E5C;
     padding: 2.5rem 0;
@@ -432,17 +494,17 @@ const handleSearch = () => console.log("Ricerca eseguita")
     padding: 0 1.5rem;
 }
 
-/* La scatola bianca che contiene gli input */
 .search-box {
     display: flex;
+    max-width: 90%;
     background: #ffffff;
     padding: 0.8rem;
     border-radius: 12px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
     gap: 12px;
+    margin: 0 auto;
 }
 
-/* Gruppi di input singoli */
 .input-group {
     flex: 1;
     display: flex;
@@ -459,7 +521,6 @@ const handleSearch = () => console.log("Ricerca eseguita")
     box-shadow: 0 0 0 3px rgba(0, 64, 138, 0.1);
 }
 
-/* Variante specifica per la località (con icona) */
 .location-group {
     flex: 1.8;
     flex-direction: row;
@@ -489,54 +550,33 @@ const handleSearch = () => console.log("Ricerca eseguita")
     color: #1e293b;
 }
 
-/* Pulsante Cerca */
-.search-btn {
-    background-color: #00408A;
-    color: #ffffff;
-    border: none;
-    font-size: 1.1rem;
-    font-weight: 700;
-    padding: 0 2.5rem;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-
-.search-btn:hover {
-    background-color: #00336e;
-    transform: translateY(-2px);
-}
-
-/* Contenitore principale sotto la barra di ricerca */
 .page-body {
     display: flex;
+    width: 100%;
     max-width: 90% !important;
     margin: 2rem auto;
     padding: 0 0.5rem;
     gap: 1.5rem;
-    /* Spazio tra sidebar e risultati */
+    align-items: flex-start;
 }
 
-/* Sidebar: contiene Mappa (Sopra) e Filtri (Sotto) */
 .sidebar {
     width: 300px;
-    /* Larghezza fissa per la colonna sinistra */
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
-    /* Spazio tra mappa e filtri */
+    position: sticky;
+    top: 20px;
+    height: fit-content;
 }
 
-/* ZONA 1: Stile base per il box mappa */
-/* Sovrascrivi o aggiorna .zone-map */
 .zone-map {
     width: 100%;
     height: 180px;
     border-radius: 20px;
     overflow: hidden;
     position: relative;
-    /* Fondamentale per posizionare l'overlay */
     border: 1px solid #cbd5e1;
 }
 
@@ -544,7 +584,6 @@ const handleSearch = () => console.log("Ricerca eseguita")
     width: 100%;
     height: 100%;
     z-index: 1;
-    /* Livello basso */
 }
 
 .map-overlay {
@@ -561,9 +600,7 @@ const handleSearch = () => console.log("Ricerca eseguita")
 }
 
 .map-view-btn {
-    /* Riattiva il click solo sul bottone */
     pointer-events: auto;
-
     background-color: #00408A;
     color: #ffffff;
     border: none;
@@ -578,7 +615,6 @@ const handleSearch = () => console.log("Ricerca eseguita")
     cursor: pointer;
 }
 
-/* ZONA 2: Stile base per il box filtri */
 .zone-filters {
     background-color: #ffffff;
     border-radius: 12px;
@@ -586,7 +622,6 @@ const handleSearch = () => console.log("Ricerca eseguita")
     padding: 1.5rem;
 }
 
-/* --- FILTRI SIDEBAR --- */
 .filter-header {
     display: flex;
     justify-content: space-between;
@@ -610,8 +645,6 @@ const handleSearch = () => console.log("Ricerca eseguita")
     padding: 0;
 }
 
-/* ZONA 3: Area principale per i risultati */
-/* Header Risultati */
 .results-header {
     display: flex;
     justify-content: space-between;
@@ -630,7 +663,6 @@ const handleSearch = () => console.log("Ricerca eseguita")
     font-size: 1rem;
 }
 
-/* Container Lista */
 .zone-results {
     flex: 1;
 }
@@ -640,7 +672,6 @@ const handleSearch = () => console.log("Ricerca eseguita")
     flex-direction: column;
 }
 
-/* --- STILE CARD --- */
 .garage-card {
     display: flex;
     background: white;
@@ -648,8 +679,7 @@ const handleSearch = () => console.log("Ricerca eseguita")
     border-radius: 8px;
     margin-bottom: 16px;
     overflow: hidden;
-    height: 160px;
-    /* Ridotta l'altezza dato che c'è meno testo */
+    height: 180px;
     transition: box-shadow 0.2s;
     cursor: pointer;
 }
@@ -713,39 +743,31 @@ const handleSearch = () => console.log("Ricerca eseguita")
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
-    /* Spazio tra le pillole */
     margin-top: 10px;
 }
 
-/* Stile base della pillola */
 .service-badge {
     display: inline-flex;
     align-items: center;
     padding: 4px 12px;
     border-radius: 50px;
-    /* Rende il bordo perfettamente tondo ai lati */
     font-size: 0.75rem;
     font-weight: 600;
     border: 1px solid transparent;
 }
 
-/* Colore Grigio per Info (Orario/Altezza) */
 .service-badge.info {
     background-color: #f1f5f9;
     color: #475569;
     border-color: #e2e8f0;
 }
 
-/* Colore Verde per Caratteristiche (Coperto/Elettrico/Disabili) */
 .service-badge.feature {
     background-color: #e8f5e9;
-    /* Verde molto chiaro */
     color: #0e701b;
-    /* Testo verde scuro per leggibilità */
     border-color: #c8e6c9;
 }
 
-/* Icone all'interno delle pillole */
 .icon-card {
     width: 14px;
     height: 14px;
@@ -758,7 +780,7 @@ const handleSearch = () => console.log("Ricerca eseguita")
     display: flex;
     flex-direction: column;
     justify-content: center;
-    border-left: 1px solid #f1f5f9;
+    border-left: 1px solid #ffffff;
     text-align: right;
 }
 
@@ -776,7 +798,6 @@ const handleSearch = () => console.log("Ricerca eseguita")
     margin-bottom: 12px;
 }
 
-/* Spinner */
 .spinner {
     width: 30px;
     height: 30px;
@@ -788,18 +809,11 @@ const handleSearch = () => console.log("Ricerca eseguita")
 }
 
 @keyframes spin {
-    0% {
-        transform: rotate(0deg);
-    }
-
-    100% {
-        transform: rotate(360deg);
-    }
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
 /* FULLSCREEN */
-
-/* --- LAYOUT 25/25/50 --- */
 .fs-overlay {
     position: fixed;
     inset: 0;
@@ -814,7 +828,6 @@ const handleSearch = () => console.log("Ricerca eseguita")
     overflow: hidden;
 }
 
-/* Sinistra (50%) */
 .fs-left-half {
     width: 50%;
     display: flex;
@@ -822,7 +835,6 @@ const handleSearch = () => console.log("Ricerca eseguita")
     border-right: 1px solid #e2e8f0;
 }
 
-/* Sotto-colonne (25% + 25%) */
 .fs-col-filters,
 .fs-col-cards {
     width: 50%;
@@ -840,7 +852,6 @@ const handleSearch = () => console.log("Ricerca eseguita")
     background: #f8fafc;
 }
 
-/* Destra (50%) */
 .fs-right-half {
     width: 50%;
     height: 100%;
@@ -852,7 +863,6 @@ const handleSearch = () => console.log("Ricerca eseguita")
     height: 100%;
 }
 
-/* --- CONTROLLI FLUTTUANTI --- */
 .fs-map-controls {
     position: absolute;
     top: 20px;
@@ -862,7 +872,6 @@ const handleSearch = () => console.log("Ricerca eseguita")
     justify-content: space-between;
     z-index: 1000;
     pointer-events: none;
-    /* Fondamentale per muovere la mappa sotto */
 }
 
 .fs-floating-search {
@@ -899,7 +908,6 @@ const handleSearch = () => console.log("Ricerca eseguita")
     justify-content: center;
 }
 
-/* --- DETTAGLI CARD E PANNELLI --- */
 .fs-panel-header {
     padding: 20px;
     border-bottom: 1px solid #f1f5f9;
@@ -928,6 +936,13 @@ const handleSearch = () => console.log("Ricerca eseguita")
     gap: 12px;
     cursor: pointer;
     transition: 0.2s;
+}
+
+.fs-mini-card:hover {
+    border-color: #006ce4;
+    background-color: #ffffff;
+    box-shadow: 0 4px 15px rgba(0, 108, 228, 0.2);
+    transform: translateY(-2px);
 }
 
 .mini-thumb {
@@ -963,13 +978,95 @@ const handleSearch = () => console.log("Ricerca eseguita")
     color: #1e293b;
 }
 
-/* Stile per il marker divIcon */
+.fs-reset-view {
+    pointer-events: auto;
+    background: white;
+    border: none;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 10px;
+    transition: transform 0.2s;
+}
+
+.fs-reset-view:hover {
+    transform: scale(1.1);
+    background-color: #f8fafc;
+}
+
+.extended-results-container {
+    text-align: center;
+    padding: 2rem;
+    background: #f1f5f9;
+    border: 2px dashed #cbd5e1;
+    border-radius: 12px;
+    margin-top: 1rem;
+}
+
+.extended-info {
+    color: #64748b;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+}
+
+.btn-show-more {
+    background-color: white;
+    color: #00408A;
+    border: 2px solid #00408A;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-show-more:hover {
+    background-color: #00408A;
+    color: white;
+}
+
+.fs-extended-results-mini {
+    text-align: center;
+    padding: 15px;
+    background: #f1f5f9;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+    margin-top: 10px;
+}
+
+.fs-extended-results-mini p {
+    font-size: 0.75rem;
+    color: #64748b;
+    margin-bottom: 8px;
+}
+
+.btn-show-more-mini {
+    background-color: white;
+    color: #00408A;
+    border: 1.5px solid #00408A;
+    padding: 6px 16px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-show-more-mini:hover {
+    background-color: #00408A;
+    color: white;
+}
+
 :deep(.custom-garage-marker) {
     background: none;
     border: none;
 }
 
-/* Stile base del pin (già presente, assicurati sia così) */
 :deep(.marker-pin) {
     width: 18px;
     height: 18px;
@@ -978,16 +1075,9 @@ const handleSearch = () => console.log("Ricerca eseguita")
     border-radius: 50%;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
     transition: all 0.3s ease;
-    /* Animazione fluida per il bagliore */
 }
 
-/* EFFETTO ILLUMINAZIONE */
-:deep(.custom-garage-marker.is-active .marker-pin) {
-    background-color: #006ce4 !important;
-    transform: scale(1.3);
-    box-shadow: 0 0 20px rgba(0, 108, 228, 0.6);
-}
-
+:deep(.custom-garage-marker.is-active .marker-pin),
 :deep(.custom-garage-marker:hover .marker-pin) {
     background-color: #006ce4 !important;
     transform: scale(1.3);
@@ -1010,36 +1100,5 @@ const handleSearch = () => console.log("Ricerca eseguita")
 
 :deep(.popup-detail-link:hover) {
     text-decoration: underline;
-}
-
-/* tasto per la reset view */
-.fs-reset-view {
-    pointer-events: auto;
-    background: white;
-    border: none;
-    width: 45px;
-    height: 45px;
-    border-radius: 50%;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: 10px;
-    transition: transform 0.2s;
-}
-
-.fs-reset-view:hover {
-    transform: scale(1.1);
-    background-color: #f8fafc;
-}
-
-
-/* La card quando è "hoverata" (sia da mouse che da mappa) */
-.fs-mini-card:hover {
-    border-color: #006ce4;
-    background-color: #ffffff;
-    box-shadow: 0 4px 15px rgba(0, 108, 228, 0.2);
-    transform: translateY(-2px);
 }
 </style>
