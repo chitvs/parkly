@@ -37,15 +37,16 @@ const router = createRouter({
       path: '/garage/:id',
       name: 'garage-detail',
       component: () => import('../views/GarageDetailView.vue'),
-      props: true, // passa l'ID dell'URL direttamente come "prop" al componente
+      props: true, 
     },
     {
       path: '/dashboard-gestore',
       name: 'dashboard-gestore',
-      component: () => import('../views/GestoreDashboardView.vue')
+      component: () => import('../views/GestoreDashboardView.vue'),
+      // AGGIUNTO: Solo chi è loggato E ha il ruolo GESTORE può entrare qui
+      meta: { requiresAuth: true, role: 'GESTORE' }
     },
     {
-      // link inventati
       path: '/:pathMatch(.*)*',
       redirect: '/',
     },
@@ -57,13 +58,20 @@ router.beforeEach(async (to, from) => {
     await authStore.checkAuth()
   }
   const isLoggato = !!authStore.utente
+  const ruoloUtente = authStore.utente?.ruolo
 
   // CASO 1: La rotta richiede autenticazione ma l'utente NON è loggato
   if (to.meta.requiresAuth && !isLoggato) {
     return { name: 'home' }
   }
 
-  // CASO 2: La rotta è "guestOnly" (es. Register) ma l'utente È loggato
+  // CASO 2: La rotta richiede un ruolo specifico (es. GESTORE)
+  if (to.meta.role && ruoloUtente !== to.meta.role) {
+    console.warn("Accesso negato: ruolo non autorizzato")
+    return { name: 'home' }
+  }
+
+  // CASO 3: La rotta è "guestOnly" (es. Register) ma l'utente È loggato
   if (to.meta.guestOnly && isLoggato) {
     return { name: 'home' }
   }
