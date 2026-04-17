@@ -35,11 +35,18 @@ const mapContainer = ref(null)
 const fullMapContainer = ref(null)
 let mapInstance = null
 let fullMapInstance = null
+let searchMarkerInstance = null
 
 const markersRefs = {}
 
 watch(searchLocation, () => {
     showExtendedResults.value = false
+
+    if (!searchLocation.value.trim() && searchMarkerInstance) {
+        searchMarkerInstance.remove()
+        searchMarkerInstance = null
+        if (fullMapInstance) fullMapInstance.flyTo(MAP_CENTER, 11, { duration: 1.0 })
+    }
 })
 
 watch([checkIn, checkOut], async ([newIn, newOut]) => {
@@ -258,7 +265,27 @@ const openMapFullscreen = async () => {
                 marker.on('mouseout', () => setHover(g, false))
             }
         })
+        if (matchedPOI.value) {
+            placeSearchMarker(matchedPOI.value.coords.lat, matchedPOI.value.coords.lng, matchedPOI.value.name)
+        }
+
     }
+}
+
+const placeSearchMarker = (lat, lon, name, openPopup = false) => {
+    if (searchMarkerInstance) {
+        searchMarkerInstance.remove()
+    }
+    const redIcon = L.divIcon({
+        className: 'custom-search-marker',
+        html: '<div class="search-marker-pin"></div>',
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
+    })
+    searchMarkerInstance = L.marker([lat, lon], { icon: redIcon })
+        .addTo(fullMapInstance)
+        .bindPopup(`<div style="text-align:center; font-weight:bold; font-family:Inter, sans-serif;">${name}</div>`)
+    if (openPopup) searchMarkerInstance.openPopup()
 }
 
 const closeMapFullscreen = () => {
@@ -267,6 +294,9 @@ const closeMapFullscreen = () => {
     if (fullMapInstance) {
         fullMapInstance.remove()
         fullMapInstance = null
+    }
+    if (searchMarkerInstance) {
+        searchMarkerInstance = null
     }
     Object.keys(markersRefs).forEach(key => delete markersRefs[key])
 }
@@ -280,6 +310,8 @@ watch(garagesFiltrati, (newGarages) => {
     })
 }, { deep: true })
 
+
+
 const goToDetail = (garage) => {
     const queryParams = {}
     if (checkIn.value) queryParams.inizio = checkIn.value
@@ -290,6 +322,38 @@ const goToDetail = (garage) => {
         query: queryParams
     })
 }
+
+const suggestions = ref([])
+const showSuggestions = ref(false)
+
+const handleSearchInput = () => {
+    const query = searchLocation.value.toLowerCase().trim()
+    if (query.length < 2) {
+        suggestions.value = []
+        showSuggestions.value = false
+        return
+    }
+    suggestions.value = strategic_places.filter(p =>
+        p.name.toLowerCase().includes(query) ||
+        p.synonyms.some(s => s.toLowerCase().includes(query))
+    ).map(p => ({
+        name: p.name,
+        lat: p.coords.lat,
+        lon: p.coords.lng
+    }))
+    showSuggestions.value = suggestions.value.length > 0
+}
+
+const selectSuggestion = (place) => {
+    searchLocation.value = place.name
+    showSuggestions.value = false
+
+    if (fullMapInstance && place.lat && place.lon) {
+        fullMapInstance.flyTo([place.lat, place.lon], 14, { duration: 1.5 })
+        placeSearchMarker(place.lat, place.lon, place.name, true)
+    }
+}
+
 </script>
 
 <template>
@@ -299,14 +363,29 @@ const goToDetail = (garage) => {
         <section class="search-area">
             <div class="search-container">
                 <div class="search-box">
-                    <div class="input-group location-group">
-                        <div class="icon"><img src="../assets/magnifying_glass.svg" class="icon-card" alt="Pin"
-                                style="transform: scale(1.3)" /></div>
+                    <div class="input-group location-group" style="position: relative;">
+                        <div class="icon">
+                            <img src="../assets/magnifying_glass.svg" class="icon-card" alt="Pin"
+                                style="transform: scale(1.3)" />
+                        </div>
+
                         <div class="fields">
                             <label>Dove vuoi parcheggiare?</label>
-                            <input type="text" v-model="searchLocation"
-                                placeholder="Inizia a scrivere una città o stazione...">
+                            <input type="text" v-model="searchLocation" @input="handleSearchInput"
+                                @focus="showSuggestions = suggestions.length > 0"
+                                @keydown.enter="suggestions.length > 0 && selectSuggestion(suggestions[0])"
+                                placeholder="Cerca un punto di interesse (es. Termini)..." autocomplete="off">
                         </div>
+
+                        <ul v-if="showSuggestions" class="autocomplete-dropdown">
+                            <li v-for="(sug, idx) in suggestions" :key="idx" @click="selectSuggestion(sug)">
+                                <div class="icon">
+                                    <div class="icon-card"></div>
+                                </div>
+
+                                <span class="sug-text">{{ sug.name }}</span>
+                            </li>
+                        </ul>
                     </div>
 
                     <div class="input-group">
@@ -397,11 +476,24 @@ const goToDetail = (garage) => {
                                             <div ref="fullMapContainer" class="fs-map-canvas"></div>
 
                                             <div class="fs-map-controls">
-                                                <div class="fs-floating-search">
+                                                <div class="fs-floating-search" style="position: relative;">
                                                     <span><img src="../assets/magnifying_glass.svg" class="icon-card"
                                                             alt="Pin" style="transform: scale(1.2)" /></span>
                                                     <input type="text" v-model="searchLocation"
-                                                        placeholder="Cerca sulla mappa..." />
+                                                        @input="handleSearchInput"
+                                                        @focus="showSuggestions = suggestions.length > 0"
+                                                        @keydown.enter="suggestions.length > 0 && selectSuggestion(suggestions[0])"
+                                                        placeholder="Cerca sulla mappa..." autocomplete="off" />
+
+                                                    <ul v-if="showSuggestions" class="autocomplete-dropdown">
+                                                        <li v-for="(sug, idx) in suggestions" :key="idx"
+                                                            @click="selectSuggestion(sug)">
+                                                            <div class="icon">
+                                                                <div class="icon-card"></div>
+                                                            </div>
+                                                            <span class="sug-text">{{ sug.name }}</span>
+                                                        </li>
+                                                    </ul>
                                                 </div>
                                                 <button class="fs-reset-view" @click="resetMapView"
                                                     title="Ripristina visuale">
@@ -597,6 +689,51 @@ const goToDetail = (garage) => {
     font-size: 1rem;
     width: 100%;
     color: #1e293b;
+}
+
+
+.autocomplete-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    padding: 0;
+    list-style: none;
+    max-height: 250px;
+    overflow-y: auto;
+    z-index: 1000;
+}
+
+.autocomplete-dropdown li {
+    padding: 12px 1rem;
+    border-bottom: 1px solid #f1f5f9;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: background 0.2s;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #1e293b;
+}
+
+.autocomplete-dropdown li:last-child {
+    border-bottom: none;
+}
+
+.autocomplete-dropdown li:hover {
+    background-color: #f8fafc;
+    color: #00408A;
+}
+
+.sug-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .page-body {
@@ -1116,6 +1253,12 @@ const goToDetail = (garage) => {
     color: white;
 }
 
+:deep(.custom-search-marker) {
+    background: none;
+    border: none;
+    overflow: visible !important;
+}
+
 :deep(.custom-garage-marker) {
     background: none;
     border: none;
@@ -1154,5 +1297,30 @@ const goToDetail = (garage) => {
 
 :deep(.popup-detail-link:hover) {
     text-decoration: underline;
+}
+
+:deep(.search-marker-pin) {
+    width: 20px;
+    height: 20px;
+    background-color: #dc3545;
+    /* Rosso acceso */
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    animation: pulse-red 1.5s infinite;
+}
+
+@keyframes pulse-red {
+    0% {
+        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+    }
+
+    70% {
+        box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+    }
 }
 </style>

@@ -41,7 +41,7 @@ export const strategic_places = [
     {
         id: 'p7',
         name: 'Vaticano',
-        synonyms: ['vaticano', 'san pietro', 'musei vaticani', 'prati'],
+        synonyms: ['vaticano', 'san pietro', 'musei vaticani'],
         coords: { lat: 41.9067, lng: 12.4526 }
     },
     {
@@ -87,5 +87,30 @@ export const strategic_places = [
         name: 'San Giovanni',
         synonyms: ['san giovanni', 're di roma', 'appia'],
         coords: { lat: 41.8861, lng: 12.5089 }
+    },
+    {
+        id: 'p15',
+        name: 'Parioli / Flaminio',
+        synonyms: ['parioli', 'luiss', 'flaminio', 'auditorium', 'parco della musica'],
+        coords: { lat: 41.9260, lng: 12.4900 }
+    },
+    {
+        id: 'p16',
+        name: 'Piazza di Spagna',
+        synonyms: ['spagna', 'via del corso', 'trevi', 'trinità dei monti', 'centro storico'],
+        coords: { lat: 41.9059, lng: 12.4827 }
+    },
+    {
+        id: 'p17',
+        name: 'Prati / Tribunale',
+        synonyms: ['prati', 'lepanto', 'clodio', 'tribunale', 'cola di rienzo'],
+        coords: { lat: 41.9100, lng: 12.4600 }
+    },
+    {
+        id: 'p18',
+        name: 'Ponte Milvio',
+        synonyms: ['ponte milvio', 'farnesina', 'movida', 'tor di quinto'],
+        coords: { lat: 41.9355, lng: 12.4665 }
     }
+
 ];
