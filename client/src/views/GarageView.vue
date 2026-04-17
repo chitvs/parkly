@@ -42,20 +42,47 @@ watch(searchLocation, () => {
     showExtendedResults.value = false
 })
 
+watch([checkIn, checkOut], async ([newIn, newOut]) => {
+    if ((newIn && newOut) || (!newIn && !newOut)) {
+        if (newIn && newOut && new Date(newIn) >= new Date(newOut)) {
+            alert("La data di check-out deve essere successiva a quella di check-in")
+            return
+        }
+        await fetchGarages()
+    }
+})
+
 const resetFilters = () => {
     filter24h.value = filterCoperto.value = filterElettrico.value = filterDisabili.value = false
     maxPrice.value = 25
     minHeight.value = 0
     filterTipoVeicolo.value = 'ALL'
     searchLocation.value = ''
+    checkIn.value = ''
+    checkOut.value = ''
 }
 
 const fetchGarages = async () => {
     isLoading.value = true
     try {
-        const response = await fetch('/api/garage')
+        let url = '/api/garage'
+        const params = new URLSearchParams()
+
+        if (checkIn.value && checkOut.value) {
+            params.append('inizio', checkIn.value)
+            params.append('fine', checkOut.value)
+        }
+
+        const queryString = params.toString()
+        if (queryString) {
+            url += `?${queryString}`
+        }
+
+        const response = await fetch(url)
         const result = await response.json()
-        if (result.success) garages.value = result.garage
+        if (result.success) {
+            garages.value = result.garage
+        }
     } catch (error) {
         console.error("Errore nel caricamento dei garage:", error)
     } finally {
@@ -86,7 +113,7 @@ const matchedPOI = computed(() => {
         ? strategic_places.find(p =>
             p.name.toLowerCase().includes(query) ||
             p.synonyms.some(s => s.toLowerCase().includes(query))
-          )
+        )
         : null
 })
 
@@ -253,7 +280,16 @@ watch(garagesFiltrati, (newGarages) => {
     })
 }, { deep: true })
 
-const goToDetail = (garage) => router.push({ name: 'garage-detail', params: { id: garage.id_garage } })
+const goToDetail = (garage) => {
+    const queryParams = {}
+    if (checkIn.value) queryParams.inizio = checkIn.value
+    if (checkOut.value) queryParams.fine = checkOut.value
+    router.push({
+        name: 'garage-detail',
+        params: { id: garage.id_garage },
+        query: queryParams
+    })
+}
 </script>
 
 <template>
@@ -264,7 +300,8 @@ const goToDetail = (garage) => router.push({ name: 'garage-detail', params: { id
             <div class="search-container">
                 <div class="search-box">
                     <div class="input-group location-group">
-                        <div class="icon">🔍</div>
+                        <div class="icon"><img src="../assets/magnifying_glass.svg" class="icon-card" alt="Pin"
+                                style="transform: scale(1.3)" /></div>
                         <div class="fields">
                             <label>Dove vuoi parcheggiare?</label>
                             <input type="text" v-model="searchLocation"
@@ -303,7 +340,8 @@ const goToDetail = (garage) => router.push({ name: 'garage-detail', params: { id
 
                                             <div class="fs-col-filters">
                                                 <div class="fs-panel-header">
-                                                    <h3 style="display: flex; justify-content: space-between; width: 100%;">
+                                                    <h3
+                                                        style="display: flex; justify-content: space-between; width: 100%;">
                                                         Filtri
                                                         <button @click="resetFilters" class="reset-btn"
                                                             style="color: white;">Reset</button>
@@ -329,15 +367,18 @@ const goToDetail = (garage) => router.push({ name: 'garage-detail', params: { id
                                                         @mouseenter="setHover(garage, true)"
                                                         @click="selectGarage(garage)">
                                                         <div class="mini-thumb">
-                                                            <div class="gcard-letter-box">{{ garage.nome.charAt(0) }}</div>
+                                                            <div class="gcard-letter-box">{{ garage.nome.charAt(0) }}
+                                                            </div>
                                                         </div>
                                                         <div class="mini-details">
                                                             <h4>{{ garage.nome }}</h4>
                                                             <p>{{ garage.indirizzo.slice(0, 30) }}...</p>
                                                             <p v-if="garage.displayPOIName">
-                                                                a {{ garage.displayDistanceLabel }} da {{ garage.displayPOIName }}
+                                                                a {{ garage.displayDistanceLabel }} da {{
+                                                                    garage.displayPOIName }}
                                                             </p>
-                                                            <span class="mini-price">€{{ Number(garage.tariffabase).toFixed(2) }}/ora</span>
+                                                            <span class="mini-price">€{{
+                                                                Number(garage.tariffabase).toFixed(2) }}/ora</span>
                                                         </div>
                                                     </div>
 
@@ -357,13 +398,16 @@ const goToDetail = (garage) => router.push({ name: 'garage-detail', params: { id
 
                                             <div class="fs-map-controls">
                                                 <div class="fs-floating-search">
-                                                    <span>🔍</span>
+                                                    <span><img src="../assets/magnifying_glass.svg" class="icon-card"
+                                                            alt="Pin" style="transform: scale(1.2)" /></span>
                                                     <input type="text" v-model="searchLocation"
                                                         placeholder="Cerca sulla mappa..." />
                                                 </div>
                                                 <button class="fs-reset-view" @click="resetMapView"
                                                     title="Ripristina visuale">
-                                                    <span style="font-size: 1.2rem;">🔄</span>
+                                                    <span style="font-size: 1.2rem;"><img src="../assets/refresh.svg"
+                                                            class="icon-card" alt="Pin"
+                                                            style="transform:translateX(3px) translateY(-0.5px) scale(1.7)" /></span>
                                                 </button>
                                                 <button class="fs-close-circle" @click="closeMapFullscreen">✕</button>
                                             </div>
@@ -402,7 +446,8 @@ const goToDetail = (garage) => router.push({ name: 'garage-detail', params: { id
                 <template v-else>
                     <div class="results-header" v-if="garagesFiltrati.length > 0">
                         <h2 class="results-count">
-                            {{ searchLocation || 'Risultati' }}: <span>{{ garagesFiltrati.length }} parcheggi trovati</span>
+                            {{ searchLocation || 'Risultati' }}: <span>{{ garagesFiltrati.length }} parcheggi
+                                trovati</span>
                         </h2>
                     </div>
 
@@ -432,10 +477,12 @@ const goToDetail = (garage) => router.push({ name: 'garage-detail', params: { id
                                 <div class="gcard-services">
                                     <span class="service-badge info">
                                         <img src="../assets/orologio.svg" class="icon-card" alt="Orario" />
-                                        {{ garage.is24h ? '24/7' : garage.orarioapertura.slice(0, 5) + ' - ' + garage.orariochiusura.slice(0, 5) }}
+                                        {{ garage.is24h ? '24/7' : garage.orarioapertura.slice(0, 5) + ' - ' +
+                                            garage.orariochiusura.slice(0, 5) }}
                                     </span>
                                     <span v-if="garage.altezzamassima" class="service-badge info">
-                                        <img src="../assets/altezza_massima.svg" class="icon-card" alt="Altezza massima" />
+                                        <img src="../assets/altezza_massima.svg" class="icon-card"
+                                            alt="Altezza massima" />
                                         Max: {{ garage.altezzamassima }}m
                                     </span>
                                     <span v-if="garage.hasCoperto" class="service-badge feature">
@@ -443,11 +490,13 @@ const goToDetail = (garage) => router.push({ name: 'garage-detail', params: { id
                                         Coperto
                                     </span>
                                     <span v-if="garage.hasElettrico" class="service-badge feature">
-                                        <img src="../assets/electricity.svg" class="icon-card" alt="Ricarica elettrica" />
+                                        <img src="../assets/electricity.svg" class="icon-card"
+                                            alt="Ricarica elettrica" />
                                         Ricarica
                                     </span>
                                     <span v-if="garage.hasDisabili" class="service-badge feature">
-                                        <img src="../assets/handicap.svg" class="icon-card" alt="Accessibile disabili" />
+                                        <img src="../assets/handicap.svg" class="icon-card"
+                                            alt="Accessibile disabili" />
                                         Disabili
                                     </span>
                                 </div>
@@ -809,8 +858,13 @@ const goToDetail = (garage) => router.push({ name: 'garage-detail', params: { id
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 /* FULLSCREEN */
