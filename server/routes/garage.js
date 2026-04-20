@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const db = require("../database/db");
 
-// 1. I garage del gestore loggato
+// ritorna la lista dei garage appartenenti al gestore loggato
 router.get("/miei-garage", async (req, res) => {
   try {
     const utenteLoggato = req.session?.utente || req.user;
