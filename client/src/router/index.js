@@ -43,7 +43,7 @@ const router = createRouter({
       path: '/dashboard-gestore',
       name: 'dashboard-gestore',
       component: () => import('../views/GestoreDashboardView.vue'),
-      // AGGIUNTO: Solo chi è loggato E ha il ruolo GESTORE può entrare qui
+      // solo chi è loggato ed è un gestore
       meta: { requiresAuth: true, role: 'GESTORE' }
     },
     {
