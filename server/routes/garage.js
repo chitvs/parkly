@@ -37,7 +37,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-// 3. Dettaglio singolo garage
+// dettaglio di un singolo garage
 router.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;
