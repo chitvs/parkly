@@ -121,6 +121,15 @@ const handleLogout = async () => {
           class="dropdown-menu show shadow border-0 parkly-dropdown" 
           style="position: absolute; right: 0; top: 100%; margin-top: 0;"
         >
+          <template v-if="authStore.utente?.ruolo === 'GESTORE'">
+            <li>
+              <RouterLink class="dropdown-item fw-bold text-primary" to="/dashboard-gestore" @click="isMenuOpen = false">
+                <i class="fas fa-chart-line me-2"></i> Area Gestore
+              </RouterLink>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+          </template>
+
           <li>
             <RouterLink class="dropdown-item" to="/bookings" @click="isMenuOpen = false">
               Le Tue Prenotazioni
@@ -140,7 +149,7 @@ const handleLogout = async () => {
         </ul>
 
       </div>
-      </div>
+    </div>
   </header>
 
   <div
