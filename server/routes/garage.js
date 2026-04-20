@@ -13,7 +13,7 @@ router.get("/miei-garage", async (req, res) => {
 
     const garage = await db.any(
       "SELECT * FROM Garage WHERE ID_Gestore = $1 ORDER BY ID_Garage",
-      [utenteLoggato.id]  // ← fix: era id_utente, la sessione usa "id"
+      [utenteLoggato.id]
     );
 
     res.json(garage);
