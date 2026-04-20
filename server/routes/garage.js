@@ -2,7 +2,28 @@ const express = require("express");
 const router = express.Router();
 const db = require("../database/db");
 
-// ritorna la lista di tutti i garage
+// 1. I garage del gestore loggato
+router.get("/miei-garage", async (req, res) => {
+  try {
+    const utenteLoggato = req.session?.utente || req.user;
+
+    if (!utenteLoggato || utenteLoggato.ruolo !== 'GESTORE') {
+      return res.status(401).json({ success: false, error: "Accesso negato" });
+    }
+
+    const garage = await db.any(
+      "SELECT * FROM Garage WHERE ID_Gestore = $1 ORDER BY ID_Garage",
+      [utenteLoggato.id]  // ← fix: era id_utente, la sessione usa "id"
+    );
+
+    res.json(garage);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: "Errore nel recupero garage" });
+  }
+});
+
+// 2. Lista tutti i garage
 router.get("/", async (req, res) => {
   try {
     const garage = await db.any("SELECT * FROM Garage");
@@ -12,83 +33,55 @@ router.get("/", async (req, res) => {
       garage,
     });
   } catch (err) {
-    res.status(500).json({
-      success: false,
-      error: "Errore interno",
-    });
+    res.status(500).json({ success: false, error: "Errore interno" });
   }
 });
 
-// dettaglio di un singolo garage
+// 3. Dettaglio singolo garage
 router.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const garage = await db.oneOrNone(
       "SELECT * FROM Garage WHERE ID_Garage = $1",
-      [id],
+      [id]
     );
-    if (!garage)
-      return res.status(404).json({
-        success: false,
-        error: "Garage non trovato",
-      });
-    res.json({
-      success: true,
-      garage,
-    });
+    if (!garage) return res.status(404).json({ success: false, error: "Garage non trovato" });
+    res.json({ success: true, garage });
   } catch (err) {
-    res.status(500).json({
-      success: false,
-      error: "Errore interno",
-    });
+    res.status(500).json({ success: false, error: "Errore interno" });
   }
 });
 
-// stato dei posti per la planimetria
+// 4. Posti con stato occupazione (per planimetria)
 router.get("/:id/posti", async (req, res) => {
   try {
     const { id } = req.params;
-    const { inizio, fine } = req.query;
+    let { inizio, fine } = req.query;
 
-    // Anteprima, tutti i posti sono come occupati
-    if (!inizio || !fine || inizio === "" || fine === "") {
-      const querySemplice = `
-                SELECT p.*, FALSE AS is_occupato 
-                FROM PostoAuto p
-                WHERE p.ID_Garage = $1
-                ORDER BY p.CodicePosto
-            `;
-      const posti = await db.any(querySemplice, [id]);
-      return res.json({
-        success: true,
-        posti,
-      });
+    if (!inizio || !fine) {
+      const adesso = new Date();
+      const fraUnOra = new Date(adesso.getTime() + (60 * 60 * 1000));
+      inizio = adesso.toISOString();
+      fine = fraUnOra.toISOString();
     }
 
-    // Ricerca reale
-    const queryComplessa = `
-            SELECT p.*, 
-            EXISTS (
-                SELECT 1 FROM Prenotazione pr 
-                WHERE pr.ID_Posto = p.ID_Posto 
-                AND pr.Stato = 'ATTIVA'
-                AND (pr.InizioSosta, pr.FineSosta) OVERLAPS ($2::timestamp, $3::timestamp)
-            ) AS is_occupato
-            FROM PostoAuto p
-            WHERE p.ID_Garage = $1
-            ORDER BY p.CodicePosto
-        `;
-    const posti = await db.any(queryComplessa, [id, inizio, fine]);
-    res.json({
-      success: true,
-      posti,
-    });
+    const posti = await db.any(`
+      SELECT p.*, 
+        EXISTS (
+          SELECT 1 FROM Prenotazione pr 
+          WHERE pr.ID_Posto = p.ID_Posto
+          AND pr.Stato = 'ATTIVA'
+          AND (pr.InizioSosta, pr.FineSosta) OVERLAPS ($2::timestamp, $3::timestamp)
+        ) AS is_occupato
+      FROM PostoAuto p
+      WHERE p.ID_Garage = $1
+      ORDER BY p.CodicePosto
+    `, [id, inizio, fine]);
+
+    res.json({ posti });
   } catch (err) {
     console.error("Errore SQL:", err);
-    res.status(500).json({
-      success: false,
-      error: "Errore recupero mappa posti",
-    });
+    res.status(500).json({ success: false, error: "Errore recupero mappa posti" });
   }
 });
 

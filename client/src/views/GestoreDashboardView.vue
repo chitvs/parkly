@@ -141,6 +141,23 @@
               </div>
             </div>
 
+            <div class="filter-card">
+              <h3 style="font-size: 0.9rem; margin-bottom: 12px; color: #333;">Filtra per Orario Sosta</h3>
+              <div class="form-row form-row--2col" style="margin-bottom: 0;">
+                <div class="form-group">
+                  <label class="form-label">Inizio Sosta</label>
+                  <input type="datetime-local" class="form-input" v-model="filtroInizio">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Fine Sosta</label>
+                  <input type="datetime-local" class="form-input" v-model="filtroFine">
+                </div>
+              </div>
+              <button class="btn-primary" style="margin-top: 16px; width: 100%;" @click="aggiornaMappaOrari">
+                Verifica Disponibilità
+              </button>
+            </div>
+            
             <div class="stato-grid">
               <div v-for="garage in mieiGarage" :key="garage.id_garage" class="stato-card">
                 <div class="stato-card-header">
@@ -165,10 +182,19 @@
                 <div class="stato-meta">
                   <span>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                    {{ garage.is24h ? 'Aperto 24h' : `${garage.orarioapertura?.substring(0,5)} – ${garage.orariochiusura?.substring(0,5)}` }}
+                    {{ garage.is24h ? 'Aperto 24h' : `${garage.orarioapertura?.substring(0,5)} - ${garage.orariochiusura?.substring(0,5)}` }}
                   </span>
                   <span>€ {{ garage.tariffabase }}/h</span>
                 </div>
+
+                <div class="planimetria-wrapper">
+                  <PlanimetriaGarage
+                    :key="'mappa-' + garage.id_garage + '-' + reRenderKey"
+                    :posti="postiPerGarage[garage.id_garage] || []"
+                    :mappaTestuale="garage.mappatestuale"
+                  />
+                </div>
+
               </div>
             </div>
 
@@ -331,11 +357,10 @@ import { ref, computed, onMounted } from 'vue'
 import { authStore } from '../store/auth.js'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
+import PlanimetriaGarage from '../components/PlanimetriaGarage.vue'
 
-// ── AUTH GUARD ────────────────────────────────────────────────
 const isGestore = computed(() => authStore.utente?.ruolo === 'GESTORE')
 
-// ── STATE ─────────────────────────────────────────────────────
 const vistaAttiva = ref('statistiche')
 const isLoading   = ref(false)
 const staSalvando = ref(false)
@@ -344,7 +369,14 @@ const erroreForm  = ref('')
 const mieiGarage           = ref([])
 const storicoPrenotazioni   = ref([])
 const allerteStato          = ref([])
-const occupazioneGarage     = ref({})  // { id_garage: percentuale_int }
+const occupazioneGarage     = ref({})
+const postiPerGarage        = ref({})
+
+// CHIAVE PER FORZARE L'AGGIORNAMENTO DELLA MAPPA
+const reRenderKey = ref(0)
+
+const filtroInizio = ref('')
+const filtroFine = ref('')
 
 const nuovoGarage = ref({
   nome: '', indirizzo: '', descrizione: '',
@@ -353,9 +385,6 @@ const nuovoGarage = ref({
   is24h: false, mappatestuale: ''
 })
 
-// ── COMPUTED ──────────────────────────────────────────────────
-
-// Somma importi del mese corrente escludendo ANNULLATE
 const guadagnoMese = computed(() => {
   const ora = new Date()
   return storicoPrenotazioni.value
@@ -372,11 +401,10 @@ const prenotazioniAttive = computed(() =>
   storicoPrenotazioni.value.filter(p => p.stato === 'ATTIVA').length
 )
 
-// ── HELPERS ───────────────────────────────────────────────────
 const getOccupancy = (idGarage) => occupazioneGarage.value[idGarage] ?? 0
 
 const formatData = (iso) => {
-  if (!iso) return '—'
+  if (!iso) return '-'
   const d = new Date(iso)
   return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: '2-digit' })
        + ' ' + d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
@@ -388,7 +416,6 @@ const statoBadge = (stato) => {
   return 'badge--gray'
 }
 
-// ── API CALLS ─────────────────────────────────────────────────
 const caricaDati = async () => {
   if (!isGestore.value) return
   isLoading.value = true
@@ -405,16 +432,51 @@ const caricaGarage = async () => {
   const data = await res.json()
   mieiGarage.value = data
 
-  // Occupazione per ogni garage
   await Promise.all(data.map(async (g) => {
+    try {
+      const r = await fetch(`/api/garage/${g.id_garage}/posti`, { credentials: 'include' })
+      if (r.ok) {
+        const resPosti = await r.json()
+        postiPerGarage.value[g.id_garage] = resPosti.posti 
+      }
+    } catch { /* ignora */ }
+
     try {
       const r = await fetch(`/api/garages/${g.id_garage}/occupazione`, { credentials: 'include' })
       if (r.ok) {
         const { percentuale } = await r.json()
         occupazioneGarage.value[g.id_garage] = Math.round(percentuale)
       }
-    } catch { /* endpoint opzionale */ }
+    } catch { /* ignora */ }
   }))
+  
+  // Aggiorna la mappa appena caricata
+  reRenderKey.value++
+}
+
+const aggiornaMappaOrari = async () => {
+  if (!filtroInizio.value || !filtroFine.value) {
+    alert("Inserisci sia l'orario di inizio che di fine!");
+    return;
+  }
+
+  const inizioIso = new Date(filtroInizio.value).toISOString();
+  const fineIso = new Date(filtroFine.value).toISOString();
+
+  await Promise.all(mieiGarage.value.map(async (g) => {
+    try {
+      const r = await fetch(`/api/garage/${g.id_garage}/posti?inizio=${inizioIso}&fine=${fineIso}`, { credentials: 'include' });
+      if (r.ok) {
+        const data = await r.json();
+        postiPerGarage.value[g.id_garage] = data.posti;
+      }
+    } catch (e) {
+      console.error("Errore nell'aggiornamento mappa:", e);
+    }
+  }));
+
+  // QUESTO E' IL SEGRETO: Forza Vue a cancellare e ridisegnare la mappa
+  reRenderKey.value++;
 }
 
 const caricaStorico = async () => {
@@ -467,18 +529,16 @@ const salvaNuovoGarage = async () => {
 
 onMounted(caricaDati)
 
-// ── NAV ITEMS ─────────────────────────────────────────────────
 const navItems = [
-  { id: 'statistiche', label: 'Statistiche',    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>` },
-  { id: 'garage',      label: 'I miei Garage',  icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>` },
-  { id: 'stato',       label: 'Stato Corrente', icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>` },
-  { id: 'storico',     label: 'Storico',         icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>` },
-  { id: 'aggiungi',    label: 'Aggiungi Garage', icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>` },
+  { id: 'statistiche', label: 'Statistiche',    icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>' },
+  { id: 'garage',      label: 'I miei Garage',  icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>' },
+  { id: 'stato',       label: 'Stato Corrente', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>' },
+  { id: 'storico',     label: 'Storico',         icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>' },
+  { id: 'aggiungi',    label: 'Aggiungi Garage', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' },
 ]
 </script>
 
 <style scoped>
-/* ── LAYOUT ─────────────────────────────────────────────────── */
 .page-wrapper {
   display: flex;
   flex-direction: column;
@@ -488,7 +548,6 @@ const navItems = [
 }
 .dashboard-layout { display: flex; flex: 1; }
 
-/* ── ACCESS DENIED ──────────────────────────────────────────── */
 .access-denied {
   flex: 1;
   display: flex;
@@ -517,7 +576,6 @@ const navItems = [
 }
 .btn-back:hover { background: #00204A; }
 
-/* ── SIDEBAR ────────────────────────────────────────────────── */
 .sidebar {
   width: 240px;
   min-width: 240px;
@@ -569,10 +627,8 @@ const navItems = [
 .sidebar-user-name { font-size: 0.82rem; font-weight: 600; color: rgba(255,255,255,0.9); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sidebar-user-role { font-size: 0.7rem; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.06em; }
 
-/* ── MAIN ───────────────────────────────────────────────────── */
 .main-content { flex: 1; padding: 40px 48px; overflow-y: auto; }
 
-/* ── LOADING ────────────────────────────────────────────────── */
 .loading-state {
   display: flex; flex-direction: column; align-items: center;
   justify-content: center; gap: 16px; min-height: 300px;
@@ -587,19 +643,16 @@ const navItems = [
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── ANIMATIONS ─────────────────────────────────────────────── */
 .vista { animation: fadeIn 0.25s ease; }
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ── PAGE HEADER ────────────────────────────────────────────── */
 .page-header { margin-bottom: 32px; }
 .page-header h1 { font-size: 1.6rem; font-weight: 700; color: var(--deep-blue, #00204A); letter-spacing: -0.5px; margin: 0 0 4px; }
 .subtitle { font-size: 0.875rem; color: #888; margin: 0; }
 
-/* ── STAT CARDS ─────────────────────────────────────────────── */
 .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 40px; }
 .stat-card { background: #fff; border: 0.5px solid #E8E8E8; border-radius: 12px; padding: 20px; display: flex; align-items: center; gap: 16px; }
 .stat-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -610,11 +663,9 @@ const navItems = [
 .stat-label { font-size: 0.72rem; color: #999; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
 .stat-value { font-size: 1.5rem; font-weight: 700; color: var(--deep-blue, #00204A); letter-spacing: -0.5px; line-height: 1; }
 
-/* ── SECTION HEADER ─────────────────────────────────────────── */
 .section-header { margin-bottom: 12px; }
 .section-header h2 { font-size: 1rem; font-weight: 600; color: var(--deep-blue, #00204A); }
 
-/* ── TABLE ──────────────────────────────────────────────────── */
 .table-card { background: #fff; border: 0.5px solid #E8E8E8; border-radius: 12px; overflow: hidden; }
 .parkly-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
 .parkly-table thead tr { background: #FAFAFA; border-bottom: 0.5px solid #EFEFEF; }
@@ -628,16 +679,14 @@ const navItems = [
 .td-blue  { color: #0066CC; }
 .td-empty { text-align: center; padding: 40px; color: #ccc; font-size: 0.85rem; }
 
-/* ── BADGES ─────────────────────────────────────────────────── */
 .badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
 .badge--green { background: #EAFAF1; color: #1E8449; }
 .badge--red   { background: #FDEDEC; color: #C0392B; }
 .badge--gray  { background: #F0F0F0; color: #888; }
 .targa-badge  { display: inline-block; background: #F5F5F5; border: 0.5px solid #E0E0E0; border-radius: 4px; padding: 2px 8px; font-size: 0.78rem; font-weight: 600; font-family: 'Courier New', monospace; color: #444; letter-spacing: 0.06em; }
 
-/* ── STATO CORRENTE ─────────────────────────────────────────── */
-.stato-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
-.stato-card { background: #fff; border: 0.5px solid #E8E8E8; border-radius: 12px; padding: 20px; }
+.stato-grid { display: flex; flex-direction: column; gap: 24px; }
+.stato-card { background: #fff; border: 0.5px solid #E8E8E8; border-radius: 12px; padding: 24px; width: 100%; box-sizing: border-box; }
 .stato-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
 .stato-nome      { font-size: 0.9rem; font-weight: 600; color: #222; }
 .stato-indirizzo { font-size: 0.78rem; color: #aaa; margin: 0 0 16px; }
@@ -649,7 +698,21 @@ const navItems = [
 .stato-meta      { display: flex; justify-content: space-between; font-size: 0.75rem; color: #aaa; }
 .stato-meta span { display: flex; align-items: center; gap: 4px; }
 
-/* ── ALLERTE ────────────────────────────────────────────────── */
+.planimetria-wrapper {
+  margin-top: 16px;
+  border-top: 1px solid #f0f0f0;
+  padding-top: 12px;
+  overflow-x: auto;
+}
+
+.filter-card {
+  background: #fff;
+  border: 0.5px solid #E8E8E8;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
 .allerta-card { display: flex; align-items: flex-start; gap: 16px; padding: 20px 24px; border-radius: 12px; margin-bottom: 12px; border: 0.5px solid transparent; }
 .allerta--ok     { background: #EAFAF1; border-color: #A9DFBF; }
 .allerta--ok .allerta-icon { color: #27AE60; }
@@ -661,7 +724,6 @@ const navItems = [
 .allerta-title { font-size: 0.9rem; font-weight: 600; color: #222; margin: 0 0 4px; }
 .allerta-msg   { font-size: 0.85rem; color: #666; margin: 0; line-height: 1.5; }
 
-/* ── FORM ───────────────────────────────────────────────────── */
 .form-card { background: #fff; border: 0.5px solid #E8E8E8; border-radius: 12px; padding: 32px; max-width: 620px; }
 .form-row       { margin-bottom: 20px; }
 .form-row--2col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
@@ -685,12 +747,11 @@ const navItems = [
 .btn-primary:hover:not(:disabled) { background: #00204A; transform: translateY(-1px); }
 .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
 
-/* ── RESPONSIVE ─────────────────────────────────────────────── */
 @media (max-width: 900px) {
   .sidebar { display: none; }
   .main-content { padding: 24px 20px; }
   .stats-grid { grid-template-columns: 1fr; }
   .form-row--2col { grid-template-columns: 1fr; }
-  .stato-grid { grid-template-columns: 1fr; }
+  .stato-grid { display: flex; flex-direction: column; gap: 24px; }
 }
 </style>

@@ -14,15 +14,26 @@ const port = process.env.PORT || 3000;
 
 
 // MIDDLEWARE DI BASE
-app.use(cors());
+app.use(cors({
+    origin: 'http://localhost:5173', // L'indirizzo del tuo frontend
+    credentials: true,               // Permette l'invio dei cookie di sessione
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
 
 // CONFIGURAZIONE DELLA SESSIONE
 app.use(session({
-    secret: process.env.SESSION_SECRET , // sicurezza, firma digitale per i cookie
-    resave: false, // non salvare la sessione se non ci sono modifiche
-    saveUninitialized: false, // non creare la sessione finchè non viene salvato qualcosa
-    cookie: { maxAge: 1000 * 60 * 60 * 24 } // 24 ore
+    // Aggiunto fallback per evitare crash se SESSION_SECRET è undefined
+    secret: process.env.SESSION_SECRET || 'parkly_secret_key_123', 
+    resave: false, 
+    saveUninitialized: false, 
+    cookie: { 
+        maxAge: 1000 * 60 * 60 * 24, // 24 ore
+        secure: false,               // Deve essere false per HTTP (localhost)
+        sameSite: 'lax'              // Necessario per far passare i cookie tra 5173 e 3000
+    }
 }));
 
 app.use((req, res, next) => {
@@ -57,6 +68,84 @@ app.get('/test-db', (req, res) => {
     });
 });
 
+// ==========================================
+// ROTTE PER LA DASHBOARD GESTORE (Dinamiche)
+// ==========================================
+
+// 1. Recupera i garage del gestore loggato
+app.get('/api/garages-gestore', async (req, res) => {
+  try {
+    const utenteLoggato = req.session?.utente;
+    if (!utenteLoggato || utenteLoggato.ruolo !== 'GESTORE') {
+      return res.status(401).json({ error: 'Accesso negato' });
+    }
+    const idGestore = utenteLoggato.id; // ← fix
+    const result = await db.any('SELECT * FROM Garage WHERE ID_Gestore = $1', [idGestore]);
+    res.json(result);
+  } catch (error) {
+    console.error("Errore recupero garage:", error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+app.get('/api/prenotazioni-gestore', async (req, res) => {
+  try {
+    const utenteLoggato = req.session?.utente;
+    if (!utenteLoggato || utenteLoggato.ruolo !== 'GESTORE') {
+      return res.status(401).json({ error: 'Accesso negato' });
+    }
+    const idGestore = utenteLoggato.id; // ← fix
+    const query = `
+      SELECT p.*, g.Nome as nome_garage 
+      FROM Prenotazione p
+      JOIN PostoAuto pa ON p.ID_Posto = pa.ID_Posto
+      JOIN Garage g ON pa.ID_Garage = g.ID_Garage
+      WHERE g.ID_Gestore = $1
+    `; // ← fix colonna
+    const result = await db.any(query, [idGestore]);
+    res.json(result);
+  } catch (error) {
+    console.error("Errore recupero prenotazioni:", error);
+    res.status(500).json({ error: 'Errore interno' });
+  }
+});
+
+// 2. Recupera lo storico delle prenotazioni del gestore loggato
+app.get('/api/prenotazioni-gestore', async (req, res) => {
+  try {
+    const utenteLoggato = req.session?.utente || req.user; 
+
+    if (!utenteLoggato || utenteLoggato.ruolo !== 'GESTORE') {
+      return res.status(401).json({ error: 'Accesso negato' });
+    }
+
+    const idGestore = utenteLoggato.id_utente;
+
+    const query = `
+      SELECT p.*, g.Nome as nome_garage 
+      FROM Prenotazione p
+      JOIN PostoAuto pa ON p.ID_PostoAuto = pa.ID_PostoAuto
+      JOIN Garage g ON pa.ID_Garage = g.ID_Garage
+      WHERE g.ID_Gestore = $1
+    `;
+    
+    const result = await db.any(query, [idGestore]);
+    
+    res.json(result);
+  } catch (error) {
+    console.error("Errore recupero prenotazioni:", error);
+    res.json([]); 
+  }
+});
+
+// 3. Recupera le allerte/stato
+app.get('/api/stato-garages-gestore', async (req, res) => {
+  res.json([]); 
+});
+
+// ==========================================
+// AVVIO SERVER (Sempre alla fine!)
+// ==========================================
 app.listen(port, () => {
     console.log(`Server in ascolto sulla porta ${port}...`);
 });
