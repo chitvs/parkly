@@ -8,7 +8,7 @@ const { isLoggato } = require('../middleware/authMiddleware');
 const multer = require('multer');
 const { createClient } = require('@supabase/supabase-js');
 
-// Configura il client Supabase usando le variabili esatte del .env
+// configura il client Supabase usando le variabili dell'environment
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
 // Configura Multer (handler per le foto prima di mandarle a Supabase)
