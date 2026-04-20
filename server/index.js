@@ -25,15 +25,10 @@ app.use(express.json());
 
 // CONFIGURAZIONE DELLA SESSIONE
 app.use(session({
-    // Aggiunto fallback per evitare crash se SESSION_SECRET è undefined
-    secret: process.env.SESSION_SECRET || 'parkly_secret_key_123', 
-    resave: false, 
-    saveUninitialized: false, 
-    cookie: { 
-        maxAge: 1000 * 60 * 60 * 24, // 24 ore
-        secure: false,               // Deve essere false per HTTP (localhost)
-        sameSite: 'lax'              // Necessario per far passare i cookie tra 5173 e 3000
-    }
+    secret: process.env.SESSION_SECRET, // sicurezza, firma digitale per i cookie
+    resave: false, // non salvare la sessione se non ci sono modifiche
+    saveUninitialized: false, // non creare la sessione finchè non viene salvato qualcosa
+    cookie: { maxAge: 1000 * 60 * 60 * 24, secure: false, sameSite: 'lax' } // 24 ore
 }));
 
 app.use((req, res, next) => {
