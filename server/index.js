@@ -63,11 +63,10 @@ app.get('/test-db', (req, res) => {
     });
 });
 
-// ==========================================
-// ROTTE PER LA DASHBOARD GESTORE (Dinamiche)
-// ==========================================
 
-// 1. Recupera i garage del gestore loggato
+// rotte per la dashboard gestore
+
+// recupera i garage del gestore loggato
 app.get('/api/garages-gestore', async (req, res) => {
   try {
     const utenteLoggato = req.session?.utente;
@@ -105,7 +104,7 @@ app.get('/api/prenotazioni-gestore', async (req, res) => {
   }
 });
 
-// 2. Recupera lo storico delle prenotazioni del gestore loggato
+// recupera lo storico delle prenotazioni del gestore loggato
 app.get('/api/prenotazioni-gestore', async (req, res) => {
   try {
     const utenteLoggato = req.session?.utente || req.user; 
@@ -133,14 +132,10 @@ app.get('/api/prenotazioni-gestore', async (req, res) => {
   }
 });
 
-// 3. Recupera le allerte/stato
+// recupera le allerte/stato
 app.get('/api/stato-garages-gestore', async (req, res) => {
   res.json([]); 
 });
-
-// ==========================================
-// AVVIO SERVER (Sempre alla fine!)
-// ==========================================
 app.listen(port, () => {
     console.log(`Server in ascolto sulla porta ${port}...`);
 });
