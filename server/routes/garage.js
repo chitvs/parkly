@@ -52,36 +52,51 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// 4. Posti con stato occupazione (per planimetria)
+// stato dei posti per la planimetria
 router.get("/:id/posti", async (req, res) => {
   try {
     const { id } = req.params;
-    let { inizio, fine } = req.query;
+    const { inizio, fine } = req.query;
 
-    if (!inizio || !fine) {
-      const adesso = new Date();
-      const fraUnOra = new Date(adesso.getTime() + (60 * 60 * 1000));
-      inizio = adesso.toISOString();
-      fine = fraUnOra.toISOString();
+    // Anteprima, tutti i posti sono come occupati
+    if (!inizio || !fine || inizio === "" || fine === "") {
+      const querySemplice = `
+                SELECT p.*, FALSE AS is_occupato 
+                FROM PostoAuto p
+                WHERE p.ID_Garage = $1
+                ORDER BY p.CodicePosto
+            `;
+      const posti = await db.any(querySemplice, [id]);
+      return res.json({
+        success: true,
+        posti,
+      });
     }
 
-    const posti = await db.any(`
-      SELECT p.*, 
-        EXISTS (
-          SELECT 1 FROM Prenotazione pr 
-          WHERE pr.ID_Posto = p.ID_Posto
-          AND pr.Stato = 'ATTIVA'
-          AND (pr.InizioSosta, pr.FineSosta) OVERLAPS ($2::timestamp, $3::timestamp)
-        ) AS is_occupato
-      FROM PostoAuto p
-      WHERE p.ID_Garage = $1
-      ORDER BY p.CodicePosto
-    `, [id, inizio, fine]);
-
-    res.json({ posti });
+    // Ricerca reale
+    const queryComplessa = `
+            SELECT p.*, 
+            EXISTS (
+                SELECT 1 FROM Prenotazione pr 
+                WHERE pr.ID_Posto = p.ID_Posto 
+                AND pr.Stato = 'ATTIVA'
+                AND (pr.InizioSosta, pr.FineSosta) OVERLAPS ($2::timestamp, $3::timestamp)
+            ) AS is_occupato
+            FROM PostoAuto p
+            WHERE p.ID_Garage = $1
+            ORDER BY p.CodicePosto
+        `;
+    const posti = await db.any(queryComplessa, [id, inizio, fine]);
+    res.json({
+      success: true,
+      posti,
+    });
   } catch (err) {
     console.error("Errore SQL:", err);
-    res.status(500).json({ success: false, error: "Errore recupero mappa posti" });
+    res.status(500).json({
+      success: false,
+      error: "Errore recupero mappa posti",
+    });
   }
 });
 
