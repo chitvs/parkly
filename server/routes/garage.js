@@ -23,7 +23,7 @@ router.get("/miei-garage", async (req, res) => {
   }
 });
 
-// 2. Lista tutti i garage
+// ritorna la lista di tutti i garage
 router.get("/", async (req, res) => {
   try {
     const garage = await db.any("SELECT * FROM Garage");
