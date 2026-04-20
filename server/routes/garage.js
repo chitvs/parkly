@@ -2,6 +2,27 @@ const express = require("express");
 const router = express.Router();
 const db = require("../database/db");
 
+// ritorna la lista dei garage appartenenti al gestore loggato
+router.get("/miei-garage", async (req, res) => {
+  try {
+    const utenteLoggato = req.session?.utente || req.user;
+
+    if (!utenteLoggato || utenteLoggato.ruolo !== 'GESTORE') {
+      return res.status(401).json({ success: false, error: "Accesso negato" });
+    }
+
+    const garage = await db.any(
+      "SELECT * FROM Garage WHERE ID_Gestore = $1 ORDER BY ID_Garage",
+      [utenteLoggato.id]
+    );
+
+    res.json(garage);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: "Errore nel recupero garage" });
+  }
+});
+
 // ritorna la lista di tutti i garage
 router.get("/", async (req, res) => {
   try {
@@ -12,10 +33,7 @@ router.get("/", async (req, res) => {
       garage,
     });
   } catch (err) {
-    res.status(500).json({
-      success: false,
-      error: "Errore interno",
-    });
+    res.status(500).json({ success: false, error: "Errore interno" });
   }
 });
 
@@ -25,22 +43,12 @@ router.get("/:id", async (req, res) => {
     const { id } = req.params;
     const garage = await db.oneOrNone(
       "SELECT * FROM Garage WHERE ID_Garage = $1",
-      [id],
+      [id]
     );
-    if (!garage)
-      return res.status(404).json({
-        success: false,
-        error: "Garage non trovato",
-      });
-    res.json({
-      success: true,
-      garage,
-    });
+    if (!garage) return res.status(404).json({ success: false, error: "Garage non trovato" });
+    res.json({ success: true, garage });
   } catch (err) {
-    res.status(500).json({
-      success: false,
-      error: "Errore interno",
-    });
+    res.status(500).json({ success: false, error: "Errore interno" });
   }
 });
 
