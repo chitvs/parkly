@@ -1,35 +1,28 @@
 <script setup>
-import { ref, computed, onMounted, nextTick, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, nextTick, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 import GarageFilters from '../components/GarageFilters.vue'
+import SearchBar from '../components/SearchBar.vue'
+import { useGarages } from '../composables/useGarages.js'
+import { useGarageFilters } from '../composables/useGarageFilters.js'
+import { useSpatialSearch } from '../composables/useSpatialSearch.js'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { calculateDistance } from '../utils/distance.js'
-import { strategic_places } from '../constants/places.js'
 
 const router = useRouter()
+const route = useRoute()
 
 const MAP_CENTER = [41.9028, 12.4964]
 const TILE_LAYER = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
 
-const isLoading = ref(true)
-const garages = ref([])
 const isMapFullscreen = ref(false)
 const hoveredGarageId = ref(null)
-const showExtendedResults = ref(false)
 
 const searchLocation = ref('')
 const checkIn = ref('')
 const checkOut = ref('')
-const filter24h = ref(false)
-const maxPrice = ref(25)
-const minHeight = ref(0)
-const filterCoperto = ref(false)
-const filterElettrico = ref(false)
-const filterDisabili = ref(false)
-const filterTipoVeicolo = ref('ALL')
 
 const mapContainer = ref(null)
 const fullMapContainer = ref(null)
@@ -39,9 +32,20 @@ let searchMarkerInstance = null
 
 const markersRefs = {}
 
-watch(searchLocation, () => {
-    showExtendedResults.value = false
+const { isLoading, garages, fetchGarages } = useGarages()
+const {
+    filter24h, maxPrice, minHeight, filterCoperto,
+    filterElettrico, filterDisabili, filterTipoVeicolo,
+    resetTechnicalFilters, passaFiltriTecnici
+} = useGarageFilters()
+const {
+    showExtendedResults,
+    matchedPOI,
+    garagesFiltrati,
+    hasMoreResults
+} = useSpatialSearch(searchLocation, garages, passaFiltriTecnici)
 
+watch(searchLocation, () => {
     if (!searchLocation.value.trim() && searchMarkerInstance) {
         searchMarkerInstance.remove()
         searchMarkerInstance = null
@@ -55,50 +59,26 @@ watch([checkIn, checkOut], async ([newIn, newOut]) => {
             alert("La data di check-out deve essere successiva a quella di check-in")
             return
         }
-        await fetchGarages()
+        await fetchGarages(newIn, newOut)
     }
 })
 
+
+
 const resetFilters = () => {
-    filter24h.value = filterCoperto.value = filterElettrico.value = filterDisabili.value = false
-    maxPrice.value = 25
-    minHeight.value = 0
-    filterTipoVeicolo.value = 'ALL'
+    resetTechnicalFilters()
     searchLocation.value = ''
     checkIn.value = ''
     checkOut.value = ''
 }
 
-const fetchGarages = async () => {
-    isLoading.value = true
-    try {
-        let url = '/api/garage'
-        const params = new URLSearchParams()
-
-        if (checkIn.value && checkOut.value) {
-            params.append('inizio', checkIn.value)
-            params.append('fine', checkOut.value)
-        }
-
-        const queryString = params.toString()
-        if (queryString) {
-            url += `?${queryString}`
-        }
-
-        const response = await fetch(url)
-        const result = await response.json()
-        if (result.success) {
-            garages.value = result.garage
-        }
-    } catch (error) {
-        console.error("Errore nel caricamento dei garage:", error)
-    } finally {
-        isLoading.value = false
-    }
-}
-
 onMounted(async () => {
-    await fetchGarages()
+
+    if (route.query.location) searchLocation.value = route.query.location
+    if (route.query.checkIn) checkIn.value = route.query.checkIn
+    if (route.query.checkOut) checkOut.value = route.query.checkOut
+
+    await fetchGarages(checkIn.value, checkOut.value)
     await nextTick()
 
     if (mapContainer.value) {
@@ -112,84 +92,6 @@ onMounted(async () => {
         L.tileLayer(TILE_LAYER).addTo(mapInstance)
         setTimeout(() => mapInstance.invalidateSize(), 400)
     }
-})
-
-const matchedPOI = computed(() => {
-    const query = searchLocation.value.toLowerCase().trim()
-    return query.length > 2
-        ? strategic_places.find(p =>
-            p.name.toLowerCase().includes(query) ||
-            p.synonyms.some(s => s.toLowerCase().includes(query))
-        )
-        : null
-})
-
-const passaFiltriTecnici = (g) => {
-    return (!filter24h.value || g.is24h) &&
-        Number(g.tariffabase) <= maxPrice.value &&
-        (!minHeight.value || (g.altezzamassima && Number(g.altezzamassima) >= minHeight.value)) &&
-        (!filterCoperto.value || g.hasCoperto) &&
-        (!filterElettrico.value || g.hasElettrico) &&
-        (!filterDisabili.value || g.hasDisabili) &&
-        (filterTipoVeicolo.value === 'ALL' || g.tipiDisponibili?.includes(filterTipoVeicolo.value))
-}
-
-const garagesFiltrati = computed(() => {
-    const query = searchLocation.value.toLowerCase().trim()
-    const poi = matchedPOI.value
-
-    const allProcessed = garages.value.map(g => {
-        let referencePOI = null
-        let distance = 0
-
-        if (poi) {
-            referencePOI = poi
-            distance = calculateDistance(poi.coords.lat, poi.coords.lng, g.latitudine, g.longitudine)
-        } else {
-            let minDist = Infinity
-            strategic_places.forEach(p => {
-                const d = calculateDistance(p.coords.lat, p.coords.lng, g.latitudine, g.longitudine)
-                if (d < minDist) { minDist = d; referencePOI = p }
-            })
-            distance = minDist
-        }
-
-        return {
-            ...g,
-            displayPOIName: referencePOI ? referencePOI.name : '',
-            displayDistanceKM: distance,
-            displayDistanceLabel: distance < 1 ? `${Math.round(distance * 1000)}m` : `${distance.toFixed(1)}km`
-        }
-    })
-
-    if (poi) {
-        const near = allProcessed.filter(g => passaFiltriTecnici(g) && g.displayDistanceKM <= 1.5)
-        const far = allProcessed.filter(g => passaFiltriTecnici(g) && g.displayDistanceKM > 1.5 && g.displayDistanceKM <= 5)
-        const results = near.length > 0
-            ? (showExtendedResults.value ? [...near, ...far] : near)
-            : far
-        return results.sort((a, b) => a.displayDistanceKM - b.displayDistanceKM)
-    }
-
-    return allProcessed.filter(g => {
-        const matchesSearch = g.nome.toLowerCase().includes(query) || g.indirizzo.toLowerCase().includes(query)
-        return matchesSearch && passaFiltriTecnici(g)
-    })
-})
-
-const hasMoreResults = computed(() => {
-    const poi = matchedPOI.value
-    if (!poi || showExtendedResults.value) return false
-
-    const near = garages.value.filter(g => {
-        const d = calculateDistance(poi.coords.lat, poi.coords.lng, g.latitudine, g.longitudine)
-        return d <= 1.5 && passaFiltriTecnici(g)
-    })
-    const far = garages.value.filter(g => {
-        const d = calculateDistance(poi.coords.lat, poi.coords.lng, g.latitudine, g.longitudine)
-        return d > 1.5 && d <= 5 && passaFiltriTecnici(g)
-    })
-    return near.length > 0 && far.length > 0
 })
 
 const setHover = (garage, active) => {
@@ -323,37 +225,12 @@ const goToDetail = (garage) => {
     })
 }
 
-const suggestions = ref([])
-const showSuggestions = ref(false)
-
-const handleSearchInput = () => {
-    const query = searchLocation.value.toLowerCase().trim()
-    if (query.length < 2) {
-        suggestions.value = []
-        showSuggestions.value = false
-        return
-    }
-    suggestions.value = strategic_places.filter(p =>
-        p.name.toLowerCase().includes(query) ||
-        p.synonyms.some(s => s.toLowerCase().includes(query))
-    ).map(p => ({
-        name: p.name,
-        lat: p.coords.lat,
-        lon: p.coords.lng
-    }))
-    showSuggestions.value = suggestions.value.length > 0
-}
-
-const selectSuggestion = (place) => {
-    searchLocation.value = place.name
-    showSuggestions.value = false
-
+const handleSuggestionSelected = (place) => {
     if (fullMapInstance && place.lat && place.lon) {
         fullMapInstance.flyTo([place.lat, place.lon], 14, { duration: 1.5 })
         placeSearchMarker(place.lat, place.lon, place.name, true)
     }
 }
-
 </script>
 
 <template>
@@ -362,42 +239,8 @@ const selectSuggestion = (place) => {
 
         <section class="search-area">
             <div class="search-container">
-                <div class="search-box">
-                    <div class="input-group location-group" style="position: relative;">
-                        <div class="icon">
-                            <img src="../assets/magnifying_glass.svg" class="icon-card" alt="Pin"
-                                style="transform: scale(1.3)" />
-                        </div>
-
-                        <div class="fields">
-                            <label>Dove vuoi parcheggiare?</label>
-                            <input type="text" v-model="searchLocation" @input="handleSearchInput"
-                                @focus="showSuggestions = suggestions.length > 0"
-                                @keydown.enter="suggestions.length > 0 && selectSuggestion(suggestions[0])"
-                                placeholder="Cerca un punto di interesse (es. Termini)..." autocomplete="off">
-                        </div>
-
-                        <ul v-if="showSuggestions" class="autocomplete-dropdown">
-                            <li v-for="(sug, idx) in suggestions" :key="idx" @click="selectSuggestion(sug)">
-                                <div class="icon">
-                                    <div class="icon-card"></div>
-                                </div>
-
-                                <span class="sug-text">{{ sug.name }}</span>
-                            </li>
-                        </ul>
-                    </div>
-
-                    <div class="input-group">
-                        <label>Check-in</label>
-                        <input type="datetime-local" v-model="checkIn">
-                    </div>
-
-                    <div class="input-group">
-                        <label>Check-out</label>
-                        <input type="datetime-local" v-model="checkOut">
-                    </div>
-                </div>
+                <SearchBar v-model:location="searchLocation" v-model:checkIn="checkIn" v-model:checkOut="checkOut"
+                    @suggestion-selected="handleSuggestionSelected" />
             </div>
         </section>
 
@@ -476,24 +319,10 @@ const selectSuggestion = (place) => {
                                             <div ref="fullMapContainer" class="fs-map-canvas"></div>
 
                                             <div class="fs-map-controls">
-                                                <div class="fs-floating-search" style="position: relative;">
-                                                    <span><img src="../assets/magnifying_glass.svg" class="icon-card"
-                                                            alt="Pin" style="transform: scale(1.2)" /></span>
-                                                    <input type="text" v-model="searchLocation"
-                                                        @input="handleSearchInput"
-                                                        @focus="showSuggestions = suggestions.length > 0"
-                                                        @keydown.enter="suggestions.length > 0 && selectSuggestion(suggestions[0])"
-                                                        placeholder="Cerca sulla mappa..." autocomplete="off" />
-
-                                                    <ul v-if="showSuggestions" class="autocomplete-dropdown">
-                                                        <li v-for="(sug, idx) in suggestions" :key="idx"
-                                                            @click="selectSuggestion(sug)">
-                                                            <div class="icon">
-                                                                <div class="icon-card"></div>
-                                                            </div>
-                                                            <span class="sug-text">{{ sug.name }}</span>
-                                                        </li>
-                                                    </ul>
+                                                <div class="fs-floating-search">
+                                                    <SearchBar v-model:location="searchLocation" :simple="true"
+                                                        placeholder="Cerca sulla mappa..."
+                                                        @suggestion-selected="handleSuggestionSelected" />
                                                 </div>
                                                 <button class="fs-reset-view" @click="resetMapView"
                                                     title="Ripristina visuale">
@@ -633,107 +462,6 @@ const selectSuggestion = (place) => {
     max-width: 1200px;
     margin: 0 auto;
     padding: 0 1.5rem;
-}
-
-.search-box {
-    display: flex;
-    max-width: 90%;
-    background: #ffffff;
-    padding: 0.8rem;
-    border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-    gap: 12px;
-    margin: 0 auto;
-}
-
-.input-group {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    padding: 0.5rem 1rem;
-    background: #ffffff;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
-    transition: all 0.3s;
-}
-
-.input-group:focus-within {
-    border-color: #00408A;
-    box-shadow: 0 0 0 3px rgba(0, 64, 138, 0.1);
-}
-
-.location-group {
-    flex: 1.8;
-    flex-direction: row;
-    align-items: center;
-    gap: 12px;
-}
-
-.location-group .fields {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-}
-
-.input-group label {
-    font-size: 0.7rem;
-    font-weight: 800;
-    color: #00408A;
-    text-transform: uppercase;
-    margin-bottom: 2px;
-}
-
-.input-group input {
-    border: none;
-    outline: none;
-    font-size: 1rem;
-    width: 100%;
-    color: #1e293b;
-}
-
-
-.autocomplete-dropdown {
-    position: absolute;
-    top: calc(100% + 8px);
-    left: 0;
-    right: 0;
-    background: white;
-    border: 1px solid #cbd5e1;
-    border-radius: 8px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-    padding: 0;
-    list-style: none;
-    max-height: 250px;
-    overflow-y: auto;
-    z-index: 1000;
-}
-
-.autocomplete-dropdown li {
-    padding: 12px 1rem;
-    border-bottom: 1px solid #f1f5f9;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    transition: background 0.2s;
-    font-size: 0.95rem;
-    font-weight: 500;
-    color: #1e293b;
-}
-
-.autocomplete-dropdown li:last-child {
-    border-bottom: none;
-}
-
-.autocomplete-dropdown li:hover {
-    background-color: #f8fafc;
-    color: #00408A;
-}
-
-.sug-text {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .page-body {

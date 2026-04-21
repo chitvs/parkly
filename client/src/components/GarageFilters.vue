@@ -21,7 +21,6 @@ const emit = defineEmits([
     'update:minHeight'
 ])
 
-// v-model interni con cast esplicito a Number dove serve
 const tipoVeicolo = computed({
     get: () => props.filterTipoVeicolo,
     set: val => emit('update:filterTipoVeicolo', val)
@@ -29,7 +28,7 @@ const tipoVeicolo = computed({
 
 const prezzo = computed({
     get: () => props.maxPrice,
-    set: val => emit('update:maxPrice', Number(val)) // Forza numero
+    set: val => emit('update:maxPrice', Number(val))
 })
 
 const h24 = computed({
@@ -54,7 +53,7 @@ const disabili = computed({
 
 const altezza = computed({
     get: () => props.minHeight,
-    set: val => emit('update:minHeight', Number(val)) // Forza numero
+    set: val => emit('update:minHeight', Number(val))
 })
 </script>
 
