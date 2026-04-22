@@ -2,38 +2,95 @@ const express = require("express");
 const router = express.Router();
 const db = require("../database/db");
 
-// ritorna la lista dei garage appartenenti al gestore loggato
-router.get("/miei-garage", async (req, res) => {
-  try {
-    const utenteLoggato = req.session?.utente || req.user;
-
-    if (!utenteLoggato || utenteLoggato.ruolo !== 'GESTORE') {
-      return res.status(401).json({ success: false, error: "Accesso negato" });
-    }
-
-    const garage = await db.any(
-      "SELECT * FROM Garage WHERE ID_Gestore = $1 ORDER BY ID_Garage",
-      [utenteLoggato.id]
-    );
-
-    res.json(garage);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, error: "Errore nel recupero garage" });
-  }
-});
-
 // ritorna la lista di tutti i garage
 router.get("/", async (req, res) => {
   try {
-    const garage = await db.any("SELECT * FROM Garage");
+    const { inizio, fine } = req.query;
+    let query = "";
+    let params = [];
+
+    if (inizio && fine) {
+      // 1. RICERCA CON DATE: 
+      query = `
+        SELECT 
+            g.*,
+            COALESCE(p.hasCoperto, false) AS "hasCoperto",
+            COALESCE(p.hasElettrico, false) AS "hasElettrico",
+            COALESCE(p.hasDisabili, false) AS "hasDisabili",
+            COALESCE(p.tipiDisponibili, '{}') AS "tipiDisponibili"
+        FROM garage g
+        INNER JOIN (
+            SELECT 
+                id_garage,
+                BOOL_OR(iscoperto) AS hasCoperto,
+                BOOL_OR(iselettrica) AS hasElettrico,
+                BOOL_OR(isdisabili) AS hasDisabili,
+                ARRAY_AGG(DISTINCT tipoveicolo) AS tipiDisponibili
+            FROM postoauto pa
+            WHERE NOT EXISTS (
+                SELECT 1 FROM prenotazione pr
+                WHERE pr.id_posto = pa.id_posto
+                AND pr.stato = 'ATTIVA'
+                AND (pr.iniziososta, pr.finesosta) OVERLAPS ($1::timestamp, $2::timestamp)
+            )
+            GROUP BY id_garage
+        ) p ON g.id_garage = p.id_garage
+        WHERE g.isattivo = TRUE
+        
+        -- NUOVO CONTROLLO ORARI DI APERTURA E CHIUSURA
+        AND (
+            g.is24h = TRUE 
+            OR (
+                -- Caso diurno (es. 08:00 - 20:00)
+                g.orarioapertura < g.orariochiusura 
+                AND ($1::timestamp::time >= g.orarioapertura AND $1::timestamp::time <= g.orariochiusura)
+                AND ($2::timestamp::time >= g.orarioapertura AND $2::timestamp::time <= g.orariochiusura)
+            )
+            OR (
+                -- Caso notturno a cavallo della mezzanotte (es. Testaccio 07:00 - 02:00)
+                g.orarioapertura > g.orariochiusura 
+                AND ($1::timestamp::time >= g.orarioapertura OR $1::timestamp::time <= g.orariochiusura)
+                AND ($2::timestamp::time >= g.orarioapertura OR $2::timestamp::time <= g.orariochiusura)
+            )
+        )
+      `;
+      params = [inizio, fine];
+    } else {
+      query = `
+        SELECT 
+            g.*,
+            COALESCE(p.hasCoperto, false) AS "hasCoperto",
+            COALESCE(p.hasElettrico, false) AS "hasElettrico",
+            COALESCE(p.hasDisabili, false) AS "hasDisabili",
+            COALESCE(p.tipiDisponibili, '{}') AS "tipiDisponibili"
+        FROM garage g
+        LEFT JOIN (
+            SELECT 
+                id_garage,
+                BOOL_OR(iscoperto) AS hasCoperto,
+                BOOL_OR(iselettrica) AS hasElettrico,
+                BOOL_OR(isdisabili) AS hasDisabili,
+                ARRAY_AGG(DISTINCT tipoveicolo) AS tipiDisponibili
+            FROM postoauto
+            GROUP BY id_garage
+        ) p ON g.id_garage = p.id_garage
+        WHERE g.isattivo = TRUE
+      `;
+    }
+
+    const garage = await db.any(query, params);
+
     res.json({
       success: true,
       risultati: garage.length,
       garage,
     });
   } catch (err) {
-    res.status(500).json({ success: false, error: "Errore interno" });
+    console.error("Errore SQL in GET /api/garage:", err);
+    res.status(500).json({
+      success: false,
+      error: "Errore interno",
+    });
   }
 });
 
@@ -43,12 +100,22 @@ router.get("/:id", async (req, res) => {
     const { id } = req.params;
     const garage = await db.oneOrNone(
       "SELECT * FROM Garage WHERE ID_Garage = $1",
-      [id]
+      [id],
     );
-    if (!garage) return res.status(404).json({ success: false, error: "Garage non trovato" });
-    res.json({ success: true, garage });
+    if (!garage)
+      return res.status(404).json({
+        success: false,
+        error: "Garage non trovato",
+      });
+    res.json({
+      success: true,
+      garage,
+    });
   } catch (err) {
-    res.status(500).json({ success: false, error: "Errore interno" });
+    res.status(500).json({
+      success: false,
+      error: "Errore interno",
+    });
   }
 });
 
