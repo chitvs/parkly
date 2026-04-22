@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue';
+
 const props = defineProps({
     posti: { type: Array, default: () => [] },
     mappaTestuale: { type: String, default: '' },
