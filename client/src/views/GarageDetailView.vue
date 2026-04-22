@@ -283,8 +283,8 @@ const gestisciPrenotazione = async () => {
                 </aside>
             </div>
         </main>
-        <Footer />
     </div>
+    <Footer />
 </template>
 
 <style scoped>
