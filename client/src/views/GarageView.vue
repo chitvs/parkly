@@ -3,8 +3,8 @@ import { ref, onMounted, nextTick, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
-import GarageFilters from '../components/GarageFilters.vue'
 import SearchBar from '../components/SearchBar.vue'
+import GarageFilters from '../components/GarageFilters.vue'
 import { useGarages } from '../composables/useGarages.js'
 import { useGarageFilters } from '../composables/useGarageFilters.js'
 import { useSpatialSearch } from '../composables/useSpatialSearch.js'
@@ -33,11 +33,13 @@ let searchMarkerInstance = null
 const markersRefs = {}
 
 const { isLoading, garages, fetchGarages } = useGarages()
+
 const {
     filter24h, maxPrice, minHeight, filterCoperto,
     filterElettrico, filterDisabili, filterTipoVeicolo,
     resetTechnicalFilters, passaFiltriTecnici
 } = useGarageFilters()
+
 const {
     showExtendedResults,
     matchedPOI,
@@ -63,14 +65,14 @@ watch([checkIn, checkOut], async ([newIn, newOut]) => {
     }
 })
 
-
-
-const resetFilters = () => {
-    resetTechnicalFilters()
-    searchLocation.value = ''
-    checkIn.value = ''
-    checkOut.value = ''
-}
+watch(garagesFiltrati, (newGarages) => {
+    if (!fullMapInstance) return
+    const activeIds = newGarages.map(g => g.id_garage)
+    Object.keys(markersRefs).forEach(id => {
+        const marker = markersRefs[id]
+        activeIds.includes(Number(id)) ? marker.addTo(fullMapInstance) : marker.remove()
+    })
+}, { deep: true })
 
 onMounted(async () => {
 
@@ -93,6 +95,14 @@ onMounted(async () => {
         setTimeout(() => mapInstance.invalidateSize(), 400)
     }
 })
+
+const resetFilters = () => {
+    resetTechnicalFilters()
+    searchLocation.value = ''
+    checkIn.value = ''
+    checkOut.value = ''
+}
+
 
 const setHover = (garage, active) => {
     Object.values(markersRefs).forEach(m => {
@@ -203,17 +213,6 @@ const closeMapFullscreen = () => {
     Object.keys(markersRefs).forEach(key => delete markersRefs[key])
 }
 
-watch(garagesFiltrati, (newGarages) => {
-    if (!fullMapInstance) return
-    const activeIds = newGarages.map(g => g.id_garage)
-    Object.keys(markersRefs).forEach(id => {
-        const marker = markersRefs[id]
-        activeIds.includes(Number(id)) ? marker.addTo(fullMapInstance) : marker.remove()
-    })
-}, { deep: true })
-
-
-
 const goToDetail = (garage) => {
     const queryParams = {}
     if (checkIn.value) queryParams.inizio = checkIn.value
@@ -250,8 +249,8 @@ const handleSuggestionSelected = (place) => {
                     <div ref="mapContainer" class="leaflet-map-canvas"></div>
                     <div class="map-overlay">
                         <button class="map-view-btn" @click="openMapFullscreen">
-                            <span class="pin-emoji">📍</span>
-                            Vedi su mappa
+                            <img src="../assets/pin.svg" class="icon-card" alt="Pin"
+                                            style="transform: scale(1.5) translateY(-1px); filter:  invert(1);" /> Vedi su mappa
                         </button>
                         <Teleport to="body">
                             <Transition name="fs-fade">
@@ -367,7 +366,7 @@ const handleSuggestionSelected = (place) => {
                 <template v-else>
                     <div class="results-header" v-if="garagesFiltrati.length > 0">
                         <h2 class="results-count">
-                            {{ searchLocation || 'Risultati' }}: <span>{{ garagesFiltrati.length }} parcheggi
+                            Risultati: <span>{{ garagesFiltrati.length }} parcheggi
                                 trovati</span>
                         </h2>
                     </div>

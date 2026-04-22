@@ -10,7 +10,6 @@ export function useGarages() {
             let url = '/api/garage'
             const params = new URLSearchParams()
 
-            // Usiamo i parametri passati alla funzione invece dei ref globali
             if (checkInDate && checkOutDate) {
                 params.append('inizio', checkInDate)
                 params.append('fine', checkOutDate)
@@ -33,7 +32,6 @@ export function useGarages() {
         }
     }
 
-    // Esponiamo le variabili e la funzione per farle usare al componente
     return {
         isLoading,
         garages,

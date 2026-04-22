@@ -1,5 +1,3 @@
-// client/src/utils/geo.js
-
 /*
  * Calcola la distanza in chilometri tra due punti geografici.
  * @param {number} lat1 - Latitudine punto A
@@ -8,6 +6,7 @@
  * @param {number} lon2 - Longitudine punto B
  * @returns {number} Distanza in km
  */
+
 export const calculateDistance = (lat1, lon1, lat2, lon2) => {
     if (!lat1 || !lon1 || !lat2 || !lon2) return Infinity;
 

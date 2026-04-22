@@ -7,7 +7,7 @@ const props = defineProps({
     checkIn: { type: String, default: '' },
     checkOut: { type: String, default: '' },
     showSubmitButton: { type: Boolean, default: false },
-    simple: { type: Boolean, default: false }, // Se true, nasconde date e pulsanti
+    simple: { type: Boolean, default: false },
     placeholder: { type: String, default: 'Cerca un punto di interesse...' }
 })
 

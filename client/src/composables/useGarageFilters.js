@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 
 export function useGarageFilters() {
-    // 1. Stato dei filtri
+    
     const filter24h = ref(false)
     const maxPrice = ref(25)
     const minHeight = ref(0)
@@ -10,7 +10,6 @@ export function useGarageFilters() {
     const filterDisabili = ref(false)
     const filterTipoVeicolo = ref('ALL')
 
-    // 2. Logica di reset (solo per i filtri tecnici)
     const resetTechnicalFilters = () => {
         filter24h.value = false
         filterCoperto.value = false
@@ -21,7 +20,6 @@ export function useGarageFilters() {
         filterTipoVeicolo.value = 'ALL'
     }
 
-    // 3. Logica di validazione del singolo garage
     const passaFiltriTecnici = (g) => {
         return (!filter24h.value || g.is24h) &&
             Number(g.tariffabase) <= maxPrice.value &&
