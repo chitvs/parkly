@@ -116,7 +116,13 @@
                 <tbody>
                   <tr v-for="garage in mieiGarage" :key="garage.id_garage">
                     <td class="td-muted">#{{ garage.id_garage }}</td>
-                    <td class="td-bold">{{ garage.nome }}</td>
+                    <td class="td-bold">
+                  <RouterLink 
+                  :to="`/garage/${garage.id_garage}`" 
+                  class="garage-link">
+                  {{ garage.nome }}
+                </RouterLink>
+                </td>
                     <td class="td-muted">{{ garage.indirizzo }}</td>
                     <td>€ {{ garage.tariffabase }}/h</td>
                     <td>
@@ -539,6 +545,16 @@ const navItems = [
 </script>
 
 <style scoped>
+.garage-link {
+  color: #0066CC;
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.15s;
+}
+.garage-link:hover {
+  color: #00204A;
+  text-decoration: underline;
+}
 .page-wrapper {
   display: flex;
   flex-direction: column;
