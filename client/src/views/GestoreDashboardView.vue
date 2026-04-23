@@ -336,6 +336,18 @@
                     <input type="file" accept=".txt" class="form-input form-input--file" @change="caricaPlanimetria">
                     <span class="form-hint">Carica la planimetria del garage in formato testo.</span>
                   </div>
+
+                  <div v-if="nuovoGarage.mappatestuale" class="anteprima-planimetria">
+                    <div class="anteprima-header">
+                      <span class="anteprima-label">✓ Planimetria caricata — Anteprima</span>
+                      <button type="button" class="anteprima-reset" @click="nuovoGarage.mappatestuale = ''">Rimuovi</button>
+                    </div>
+                    <PlanimetriaGarage
+                      :posti="[]"
+                      :mappaTestuale="nuovoGarage.mappatestuale"
+                      :isAnteprima="true"
+                    />
+                  </div>
                 </div>
 
                 <div v-if="erroreForm" class="form-error">{{ erroreForm }}</div>
@@ -762,6 +774,36 @@ const navItems = [
 .btn-primary { background: #0066CC; color: #fff; border: none; border-radius: 8px; height: 48px; padding: 0 32px; font-size: 0.9rem; font-weight: 600; cursor: pointer; font-family: inherit; transition: background 0.15s, transform 0.1s; }
 .btn-primary:hover:not(:disabled) { background: #00204A; transform: translateY(-1px); }
 .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
+
+.anteprima-planimetria {
+  margin-top: 16px;
+  border: 0.5px solid #E0E0E0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.anteprima-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: #EAFAF1;
+  border-bottom: 0.5px solid #A9DFBF;
+}
+.anteprima-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #1E8449;
+}
+.anteprima-reset {
+  background: none;
+  border: none;
+  font-size: 0.75rem;
+  color: #C0392B;
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0;
+}
+.anteprima-reset:hover { text-decoration: underline; }
 
 @media (max-width: 900px) {
   .sidebar { display: none; }
