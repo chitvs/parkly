@@ -32,6 +32,30 @@ router.post('/', isLoggato, async (req, res) => {
                 };
             }
 
+            // controllo che il garage sia aperto
+            const checkOrari = await t.one(`
+                SELECT 
+                    g.Is24h,
+                    g.OrarioApertura,
+                    g.OrarioChiusura,
+                    ($2::timestamp::time >= g.OrarioApertura AND $2::timestamp::time <= g.OrarioChiusura) AS inizio_valido,
+                    ($3::timestamp::time >= g.OrarioApertura AND $3::timestamp::time <= g.OrarioChiusura) AS fine_valida
+                FROM Garage g
+                JOIN PostoAuto p ON g.ID_Garage = p.ID_Garage
+                WHERE p.ID_Posto = $1
+            `, [id_posto, inizio, fine]);
+
+            // Se il garage non è h24 inizio e fine devono stare negli orari di apertura/chiusura
+            if (!checkOrari.is24h) {
+                if (!checkOrari.inizio_valido || !checkOrari.fine_valida) {
+                    throw {
+                        isCustom: true,
+                        status: 400,
+                        message: 'Gli orari selezionati non rientrano nell\'orario di apertura del garage.'
+                    };
+                }
+            }
+
             // controllo disponibilità
             const occupato = await t.oneOrNone(`
                 SELECT ID_Prenotazione FROM Prenotazione 
