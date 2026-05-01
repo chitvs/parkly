@@ -74,3 +74,26 @@ CREATE TABLE Prenotazione (
     FOREIGN KEY (ID_Posto) REFERENCES PostoAuto(ID_Posto) ON DELETE CASCADE,
     CONSTRAINT CHK_DateSosta CHECK (FineSosta > InizioSosta)
 );
+
+-- 5. MESSAGGIO
+-- La chat è consentita solo fra Cliente e Gestore di un garage prenotato.
+-- La validazione avviene lato server prima di persistere il messaggio.
+ 
+CREATE TABLE Messaggio (
+    ID_Messaggio SERIAL PRIMARY KEY,
+    ID_Mittente INT NOT NULL,
+    ID_Destinatario INT NOT NULL,
+    ID_Garage INT NOT NULL,               -- Contesto: la conversazione è sempre legata a un garage
+    Testo TEXT NOT NULL,
+    Letto BOOLEAN DEFAULT FALSE,
+    DataInvio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (ID_Mittente) REFERENCES Utente(ID_Utente) ON DELETE CASCADE,
+    FOREIGN KEY (ID_Destinatario) REFERENCES Utente(ID_Utente) ON DELETE CASCADE,
+    FOREIGN KEY (ID_Garage) REFERENCES Garage(ID_Garage) ON DELETE CASCADE,
+    CONSTRAINT CHK_No_Self_Chat CHECK (ID_Mittente <> ID_Destinatario)
+);
+ 
+-- Indici per velocizzare le query di caricamento conversazione
+CREATE INDEX idx_messaggio_garage ON Messaggio(ID_Garage);
+CREATE INDEX idx_messaggio_mittente ON Messaggio(ID_Mittente);
+CREATE INDEX idx_messaggio_destinatario ON Messaggio(ID_Destinatario);
