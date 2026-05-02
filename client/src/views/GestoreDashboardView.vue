@@ -283,14 +283,16 @@
                 <div class="form-row">
                   <div class="form-group">
                     <label class="form-label">Nome del Garage</label>
-                    <input type="text" class="form-input" v-model="nuovoGarage.nome" required placeholder="Es. Garage Roma Centro">
+                    <input type="text" :class="['form-input', {'input-error': erroriValidazione.nome}]" v-model="nuovoGarage.nome" placeholder="Es. Garage Roma Centro">
+                    <span v-if="erroriValidazione.nome" class="form-error-text">{{ erroriValidazione.nome }}</span>
                   </div>
                 </div>
 
                 <div class="form-row">
                   <div class="form-group">
                     <label class="form-label">Indirizzo Completo</label>
-                    <input type="text" class="form-input" v-model="nuovoGarage.indirizzo" required placeholder="Es. Via Roma 10, Roma">
+                    <input type="text" :class="['form-input', {'input-error': erroriValidazione.indirizzo}]" v-model="nuovoGarage.indirizzo" placeholder="Es. Via Roma 10, Roma">
+                    <span v-if="erroriValidazione.indirizzo" class="form-error-text">{{ erroriValidazione.indirizzo }}</span>
                   </div>
                 </div>
 
@@ -304,7 +306,8 @@
                 <div class="form-row form-row--2col">
                   <div class="form-group">
                     <label class="form-label">Tariffa Base (€/h)</label>
-                    <input type="number" step="0.50" class="form-input" v-model="nuovoGarage.tariffabase" required min="0">
+                    <input type="number" step="0.50" :class="['form-input', {'input-error': erroriValidazione.tariffabase}]" v-model="nuovoGarage.tariffabase" min="0">
+                    <span v-if="erroriValidazione.tariffabase" class="form-error-text">{{ erroriValidazione.tariffabase }}</span>
                   </div>
                   <div class="form-group">
                     <label class="form-label">Altezza Massima (m)</label>
@@ -332,9 +335,13 @@
 
                 <div class="form-row">
                   <div class="form-group">
-                    <label class="form-label">Planimetria (.txt)</label>
-                    <input type="file" accept=".txt" class="form-input form-input--file" @change="caricaPlanimetria">
-                    <span class="form-hint">Carica la planimetria del garage in formato testo.</span>
+                    <label class="form-label">Codice Planimetria</label>
+                    <textarea 
+                      :class="['form-input', 'form-textarea', {'input-error': erroriValidazione.mappatestuale}]" 
+                      v-model="nuovoGarage.mappatestuale" 
+                    ></textarea>
+                    <span class="form-hint">Incolla qui la stringa testuale che definisce la griglia del parcheggio.</span>
+                    <span v-if="erroriValidazione.mappatestuale" class="form-error-text">{{ erroriValidazione.mappatestuale }}</span>
                   </div>
 
                   <div v-if="nuovoGarage.mappatestuale" class="anteprima-planimetria">
@@ -383,6 +390,7 @@ const vistaAttiva = ref('statistiche')
 const isLoading   = ref(false)
 const staSalvando = ref(false)
 const erroreForm  = ref('')
+const erroriValidazione = ref({})
 
 const mieiGarage           = ref([])
 const storicoPrenotazioni   = ref([])
@@ -515,8 +523,37 @@ const caricaPlanimetria = (event) => {
   reader.readAsText(file)
 }
 
+const validaForm = () => {
+  const errori = {}
+  
+  if (!nuovoGarage.value.nome || !nuovoGarage.value.nome.trim()) {
+    errori.nome = "Il nome del garage è obbligatorio."
+  }
+  
+  if (!nuovoGarage.value.indirizzo || !nuovoGarage.value.indirizzo.trim()) {
+    errori.indirizzo = "L'indirizzo è obbligatorio."
+  }
+  
+  if (!nuovoGarage.value.tariffabase || nuovoGarage.value.tariffabase <= 0) {
+    errori.tariffabase = "Inserisci una tariffa base maggiore di 0."
+  }
+  
+  if (!nuovoGarage.value.mappatestuale || !nuovoGarage.value.mappatestuale.trim()) {
+    errori.mappatestuale = "Devi incollare la stringa della planimetria per creare il garage."
+  }
+
+  erroriValidazione.value = errori
+  return Object.keys(errori).length === 0
+}
+
 const salvaNuovoGarage = async () => {
   erroreForm.value = ''
+
+  if (!validaForm()) {
+    erroreForm.value = "Attenzione: controlla i campi evidenziati in rosso e riprova."
+    return
+  }
+
   staSalvando.value = true
   try {
     const res = await fetch('/api/garages-gestore', {
@@ -532,6 +569,7 @@ const salvaNuovoGarage = async () => {
         orarioapertura: '08:00', orariochiusura: '20:00',
         is24h: false, mappatestuale: ''
       }
+      erroriValidazione.value = {}
       await caricaGarage()
       vistaAttiva.value = 'statistiche'
     } else {
@@ -557,6 +595,25 @@ const navItems = [
 </script>
 
 <style scoped>
+/* NUOVI STILI PER GLI ERRORI E LA TEXTAREA */
+.input-error {
+  border-color: #C0392B !important;
+  background-color: #FDEDEC !important;
+}
+.form-error-text {
+  color: #C0392B;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-top: 4px;
+}
+.form-textarea {
+  min-height: 120px;
+  resize: vertical;
+  padding-top: 12px;
+  font-family: monospace;
+}
+
+/* IL TUO CSS ORIGINALE INTATTO */
 .garage-link {
   color: #0066CC;
   text-decoration: none;
