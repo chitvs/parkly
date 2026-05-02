@@ -111,6 +111,7 @@
                     <th>Indirizzo</th>
                     <th>Tariffa Base</th>
                     <th>Stato</th>
+                    <th>Chat</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -260,6 +261,12 @@
                     <td>
                       <span :class="['badge', statoBadge(p.stato)]">{{ p.stato }}</span>
                     </td>
+                    <td>
+                      <button class="btn-chat" @click="apriChat(p)" title="Scrivi al cliente">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        Scrivi
+                      </button>
+                    </td>
                   </tr>
                   <tr v-if="storicoPrenotazioni.length === 0">
                     <td colspan="7" class="td-empty">Nessuna prenotazione trovata.</td>
@@ -367,6 +374,20 @@
     </div>
 
     <Footer />
+
+    <!-- Popup Chat -->
+    <div v-if="chatSelezionata" class="chat-overlay" @click.self="chiudiChat">
+      <div class="chat-popup">
+        <button class="chat-popup__chiudi" @click="chiudiChat" title="Chiudi">✕</button>
+        <ChatBox
+          :id-garage="chatSelezionata.idGarage"
+          :id-destinatario="chatSelezionata.idDestinatario"
+          :nome-destinatario="chatSelezionata.nomeDestinatario"
+          ruolo-destinatario="Cliente"
+        />
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -376,6 +397,7 @@ import { authStore } from '../store/auth.js'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 import PlanimetriaGarage from '../components/PlanimetriaGarage.vue'
+import ChatBox from '../components/ChatBox.vue'
 
 const isGestore = computed(() => authStore.utente?.ruolo === 'GESTORE')
 
@@ -387,6 +409,7 @@ const erroreForm  = ref('')
 const mieiGarage           = ref([])
 const storicoPrenotazioni   = ref([])
 const allerteStato          = ref([])
+const chatSelezionata       = ref(null)  // stato per gestire la chat aperta{ idGarage, idDestinatario, nomeDestinatario }
 const occupazioneGarage     = ref({})
 const postiPerGarage        = ref({})
 
@@ -544,6 +567,24 @@ const salvaNuovoGarage = async () => {
     staSalvando.value = false
   }
 }
+
+const apriChat = (prenotazione) => {
+  const idGarage  = Number(prenotazione.id_garage)
+  const idCliente = Number(prenotazione.id_utente)
+  if (!idGarage || !idCliente || isNaN(idGarage) || isNaN(idCliente)) {
+    console.error('[Chat] Dati mancanti sulla prenotazione:', prenotazione)
+    return
+  }
+  chatSelezionata.value = {
+    idGarage,
+    idDestinatario: idCliente,
+    nomeDestinatario: prenotazione.nomecliente
+      ? prenotazione.nomecliente + ' ' + (prenotazione.cognomecliente || '')
+      : 'Cliente'
+  }
+}
+
+const chiudiChat = () => { chatSelezionata.value = null }
 
 onMounted(caricaDati)
 
@@ -805,6 +846,73 @@ const navItems = [
 }
 .anteprima-reset:hover { text-decoration: underline; }
 
+
+/* ── Pulsante Chat nella tabella ── */
+.btn-chat {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border: 0.5px solid #0066CC;
+  border-radius: 6px;
+  background: #EBF3FF;
+  color: #0066CC;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.btn-chat:hover {
+  background: #0066CC;
+  color: #fff;
+}
+
+/* ── Overlay popup ── */
+.chat-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.chat-popup {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.chat-popup__chiudi {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+  background: rgba(255,255,255,0.2);
+  border: none;
+  color: #fff;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+.chat-popup__chiudi:hover {
+  background: rgba(255,255,255,0.35);
+}
+
 @media (max-width: 900px) {
   .sidebar { display: none; }
   .main-content { padding: 24px 20px; }
@@ -812,4 +920,5 @@ const navItems = [
   .form-row--2col { grid-template-columns: 1fr; }
   .stato-grid { display: flex; flex-direction: column; gap: 24px; }
 }
+
 </style>

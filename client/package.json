@@ -15,6 +15,7 @@
   "dependencies": {
     "bootstrap": "^5.3.8",
     "leaflet": "^1.9.4",
+    "socket.io-client": "^4.8.3",
     "vue": "^3.5.30",
     "vue-router": "^5.0.3"
   },

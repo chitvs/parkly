@@ -4,11 +4,16 @@ import { authStore } from '../store/auth.js'
 
 import Header from '../components/Header.vue' 
 import Footer from '../components/Footer.vue'
+import ChatBox from '../components/ChatBox.vue' // Importo la ChatBox
 
 const bookings = ref([])
 const isLoading = ref(true)
 
+// Stato per gestire la chat aperta
+const chatSelezionata = ref(null)
+
 onMounted(async () => {
+  // getBookings deve restituire anche id_garage e id_gestore
   const response = await authStore.getBookings()
   
   if (response.success) {
@@ -43,11 +48,10 @@ const getStatusBadgeClass = (stato) => {
   }
 }
 
-// funzione per cancellazione prenotazioni
+// funzione per cancellare le prenotazioni
 const handleCancelBooking = async (codice) => {
   // Chiedo conferma all'utente
   const confermato = confirm("Sei sicuro di voler annullare questa prenotazione? L'operazione non può essere annullata.");
-  
   if (!confermato) return; // Se clicca "Annulla" nel popup, fermiamo tutto
 
   // Chiamiamo lo store
@@ -63,6 +67,20 @@ const handleCancelBooking = async (codice) => {
   } else {
     alert(response.error || "Impossibile annullare la prenotazione.");
   }
+}
+
+// Funzioni per aprire e chiudere la chat
+const apriChat = (booking) => {
+  // id_garage e id_gestore devono arrivare dalla query API (vedi fix route)
+  chatSelezionata.value = {
+    idGarage: Number(booking.id_garage),
+    idDestinatario: Number(booking.id_gestore),
+    nomeDestinatario: booking.nomegestore || booking.nomegarage || 'Gestore'
+  }
+}
+
+const chiudiChat = () => {
+  chatSelezionata.value = null
 }
 </script>
 
@@ -150,7 +168,17 @@ const handleCancelBooking = async (codice) => {
 
                 <div class="col-md-2 text-md-end text-start mt-3 mt-md-0">
                   <span class="d-block text-muted small fw-semibold text-uppercase mb-1">Totale</span>
-                  <span class="fw-bold fs-4 text-success">€ {{ Number(booking.prezzototale).toFixed(2) }}</span>
+                  <span class="fw-bold fs-4 text-success mb-2 d-block">€ {{ Number(booking.prezzototale).toFixed(2) }}</span>
+                  
+                  <!-- Pulsante per aprire la chat -->
+                  <button 
+                    v-if="booking.stato === 'ATTIVA'" 
+                    @click="apriChat(booking)" 
+                    class="btn btn-outline-primary btn-sm w-100 fw-semibold"
+                  >
+                    💬 Contatta
+                  </button>
+
                 </div>
 
               </div>
@@ -161,6 +189,21 @@ const handleCancelBooking = async (codice) => {
       </div>
 
     </main>
+
+    <!-- Componente ChatBox montato come Popup fluttuante -->
+    <div v-if="chatSelezionata" class="chat-popup-container">
+      <div class="chat-popup-close-bar">
+         <button @click="chiudiChat" class="btn btn-sm btn-danger rounded-pill fw-bold px-3">
+            Chiudi Chat X
+         </button>
+      </div>
+      <ChatBox 
+        :idGarage="chatSelezionata.idGarage"
+        :idDestinatario="chatSelezionata.idDestinatario"
+        :nomeDestinatario="chatSelezionata.nomeDestinatario"
+        ruoloDestinatario="Gestore"
+      />
+    </div>
 
     <Footer />
   </div>
@@ -207,9 +250,35 @@ const handleCancelBooking = async (codice) => {
   background-color: #00336E;
 }
 
-/* Stile per replicare un po' l'estetica delle targhe */
+/* Stile per replicare l'estetica delle targhe */
 .font-monospace {
   letter-spacing: 2px;
   font-family: 'Courier New', Courier, monospace;
+}
+
+/*  CSS PER IL POPUP DELLA CHAT */
+.chat-popup-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 350px;
+  max-width: calc(100vw - 48px);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  animation: slideUp 0.3s ease-out;
+}
+
+.chat-popup-close-bar {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 </style>
