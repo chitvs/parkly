@@ -174,7 +174,7 @@ router.post('/garages-gestore', async (req, res) => {
 
 // recupera le allerte/stato
 router.get('/stato-garages-gestore', async (req, res) => {
-  res.json([]); 
+  res.json([]);
 });
 
 // dettaglio di un singolo garage
@@ -253,24 +253,27 @@ router.get("/:id/posti", async (req, res) => {
 // calcolo occupazione in tempo reale (per la dashboard del gestore)
 router.get('/:id/occupazione', async (req, res) => {
   try {
-      const idGarage = req.params.id;
-      const resultPosti = await db.one('SELECT COUNT(*) as tot FROM PostoAuto WHERE ID_Garage = $1', [idGarage]);
-      
-      const resultOccupati = await db.one(`
+    const idGarage = req.params.id;
+    const resultPosti = await db.one('SELECT COUNT(*) as tot FROM PostoAuto WHERE ID_Garage = $1', [idGarage]);
+
+    const resultOccupati = await db.one(`
           SELECT COUNT(*) as occ FROM Prenotazione p
           JOIN PostoAuto pa ON p.ID_Posto = pa.ID_Posto
           WHERE pa.ID_Garage = $1 AND p.Stato = 'ATTIVA' 
           AND NOW() BETWEEN p.InizioSosta AND p.FineSosta
       `, [idGarage]);
 
-      const tot = parseInt(resultPosti.tot);
-      const occ = parseInt(resultOccupati.occ);
-      const percentuale = tot > 0 ? (occ / tot) * 100 : 0;
+    const tot = parseInt(resultPosti.tot);
+    const occ = parseInt(resultOccupati.occ);
+    const percentuale = tot > 0 ? (occ / tot) * 100 : 0;
 
-      res.json({ success: true, percentuale });
+    res.json({ success: true, percentuale });
   } catch (err) {
-      console.error("Errore occupazione:", err);
-      res.status(500).json({ success: false, percentuale: 0 });
+    console.error("Errore occupazione:", err);
+    res.status(500).json({ success: false, percentuale: 0 });
+  }
+});
+
 // GET /api/garage/:id/recensioni - Recupera le recensioni di un singolo garage
 router.get("/:id/recensioni", async (req, res) => {
   try {
@@ -282,7 +285,7 @@ router.get("/:id/recensioni", async (req, res) => {
         WHERE r.ID_Garage = $1
         ORDER BY r.DataCreazione DESC
     `, [id]);
-    
+
     res.json({ success: true, recensioni });
   } catch (err) {
     console.error("Errore recupero recensioni:", err);
