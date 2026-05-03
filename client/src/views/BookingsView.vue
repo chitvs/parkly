@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { authStore } from '../store/auth.js'
+import { prenotazioniStore } from '../store/prenotazioni.js'
 
 import Header from '../components/Header.vue' 
 import Footer from '../components/Footer.vue'
@@ -9,7 +9,7 @@ const bookings = ref([])
 const isLoading = ref(true)
 
 onMounted(async () => {
-  const response = await authStore.getBookings()
+  const response = await prenotazioniStore.getBookings()
   
   if (response.success) {
     bookings.value = response.data
@@ -51,7 +51,7 @@ const handleCancelBooking = async (codice) => {
   if (!confermato) return; // Se clicca "Annulla" nel popup, fermiamo tutto
 
   // Chiamiamo lo store
-  const response = await authStore.cancelBooking(codice);
+  const response = await prenotazioniStore.cancelBooking(codice);
 
   if (response.success) {
     // Aggiorniamo visivamente la lista senza dover ricaricare la pagina

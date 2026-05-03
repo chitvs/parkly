@@ -138,38 +138,6 @@ async updateProfile(payload) {
   }
 },
 
-// Funzione per recuperare le prenotazioni dell'utente
-async getBookings() {
-  try {
-    const response = await fetch('/api/auth/bookings', {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include' // FONDAMENTALE per i cookie di sessione
-    });
-    
-    return await response.json();
-  } catch (error) {
-    console.error("Errore fetch prenotazioni:", error);
-    return { success: false, error: "Errore di connessione" };
-  }
-},
-
-// Funzione per annullare una prenotazione specifica
-async cancelBooking(codicePrenotazione) {
-  try {
-    const response = await fetch(`/api/auth/bookings/${codicePrenotazione}/cancel`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include'
-    });
-    
-    return await response.json();
-  } catch (error) {
-    console.error("Errore durante l'annullamento:", error);
-    return { success: false, error: "Errore di connessione al server" };
-  }
-},
-
 // Logica Logout completa
   async logout() {
     try {
@@ -182,5 +150,5 @@ async cancelBooking(codicePrenotazione) {
     } finally {
       this.setUtente(null);
     }
-  }
+  } 
 })
