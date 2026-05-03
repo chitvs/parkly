@@ -2,11 +2,14 @@
 import { ref, onMounted } from 'vue'
 import { prenotazioniStore } from '../store/prenotazioni.js'
 
-import Header from '../components/Header.vue' 
+import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 
 const bookings = ref([])
 const isLoading = ref(true)
+const selectedBookingForReview = ref(null)
+const initialRating = ref(0)
+const showReviewModal = ref(false)
 
 onMounted(async () => {
   const response = await prenotazioniStore.getBookings()
@@ -16,7 +19,7 @@ onMounted(async () => {
   } else {
     alert(response.error || "Impossibile caricare le prenotazioni")
   }
-  
+
   isLoading.value = false
 })
 
@@ -24,9 +27,9 @@ onMounted(async () => {
 const formatDate = (dateString) => {
   if (!dateString) return ''
   const date = new Date(dateString)
-  return new Intl.DateTimeFormat('it-IT', { 
-    day: '2-digit', 
-    month: 'long', 
+  return new Intl.DateTimeFormat('it-IT', {
+    day: '2-digit',
+    month: 'long',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit'
@@ -35,7 +38,7 @@ const formatDate = (dateString) => {
 
 // Funzione helper per assegnare il colore al badge in base allo stato
 const getStatusBadgeClass = (stato) => {
-  switch(stato) {
+  switch (stato) {
     case 'ATTIVA': return 'bg-success' // Verde
     case 'CONCLUSA': return 'bg-secondary' // Grigio
     case 'ANNULLATA': return 'bg-danger' // Rosso
@@ -47,7 +50,7 @@ const getStatusBadgeClass = (stato) => {
 const handleCancelBooking = async (codice) => {
   // Chiedo conferma all'utente
   const confermato = confirm("Sei sicuro di voler annullare questa prenotazione? L'operazione non può essere annullata.");
-  
+
   if (!confermato) return; // Se clicca "Annulla" nel popup, fermiamo tutto
 
   // Chiamiamo lo store
@@ -64,6 +67,15 @@ const handleCancelBooking = async (codice) => {
     alert(response.error || "Impossibile annullare la prenotazione.");
   }
 }
+
+const iniziaRecensione = (booking, starValue) => {
+  selectedBookingForReview.value = booking
+  initialRating.value = starValue
+  showReviewModal.value = true
+  // Per ora facciamo solo un console.log per assicurarci che funzioni!
+  console.log(`Inizio recensione per ${booking.nomegarage} partendo da ${starValue} stelle.`)
+}
+
 </script>
 
 <template>
@@ -95,32 +107,39 @@ const handleCancelBooking = async (codice) => {
         <div class="col-12" v-for="(booking, index) in bookings" :key="index">
           <div class="card booking-card border-0 shadow-sm">
             <div class="card-body p-4">
-              
+
               <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
                 <div>
                   <h5 class="fw-bold mb-0 text-dark">{{ booking.nomegarage }}</h5>
                   <small class="text-muted"><i class="bi bi-geo-alt-fill me-1"></i>{{ booking.indirizzo }}</small>
                 </div>
                 <div class="d-flex align-items-center gap-2">
-  
-                  <span class="badge rounded-pill px-3 py-2 text-uppercase fw-semibold" :class="getStatusBadgeClass(booking.stato)">
+
+                  <span class="badge rounded-pill px-3 py-2 text-uppercase fw-semibold"
+                    :class="getStatusBadgeClass(booking.stato)">
                     {{ booking.stato }}
                   </span>
-                  
-                  <button 
-                      v-if="booking.stato === 'ATTIVA'" 
-                      @click="handleCancelBooking(booking.codiceprenotazione)" 
-                      class="btn btn-outline-danger btn-sm rounded-circle d-flex align-items-center justify-content-center fw-bold fs-5"
-                      style="width: 32px; height: 32px; padding-bottom: 4px;"
-                      title="Annulla Prenotazione"
-                  >
-                  &times; </button>
-  
+
+                  <button v-if="booking.stato === 'ATTIVA'" @click="handleCancelBooking(booking.codiceprenotazione)"
+                    class="btn btn-outline-danger btn-sm rounded-circle d-flex align-items-center justify-content-center fw-bold fs-5"
+                    style="width: 32px; height: 32px; padding-bottom: 4px;" title="Annulla Prenotazione">
+                    &times; </button>
+
+                  <div v-if="booking.stato === 'CONCLUSA' && !booking.ha_recensito"
+                    class="d-flex align-items-center ms-3 border-start ps-3">
+                    <span class="text-muted small fw-semibold me-2 d-none d-sm-inline">Com'è andata?</span>
+                    <div class="d-flex gap-1 trigger-stars">
+                      <!-- Generiamo 5 stelline cliccabili -->
+                      <i v-for="star in 5" :key="star" class="bi bi-star text-warning cursor-pointer fs-5"
+                        @click="iniziaRecensione(booking, star)"></i>
+                    </div>
+                  </div>
+
                 </div>
               </div>
 
               <div class="row align-items-center">
-                
+
                 <div class="col-md-3 mb-3 mb-md-0">
                   <span class="d-block text-muted small fw-semibold text-uppercase mb-1">Cod. Prenotazione</span>
                   <span class="fw-bold fs-5 text-primary">{{ booking.codiceprenotazione }}</span>
@@ -144,7 +163,8 @@ const handleCancelBooking = async (codice) => {
                   </div>
                   <div>
                     <span class="d-block text-muted small fw-semibold text-uppercase">Targa</span>
-                    <span class="fw-medium border rounded px-2 py-1 bg-light text-uppercase font-monospace">{{ booking.targa || 'N/D' }}</span>
+                    <span class="fw-medium border rounded px-2 py-1 bg-light text-uppercase font-monospace">{{
+                      booking.targa || 'N/D' }}</span>
                   </div>
                 </div>
 
@@ -171,7 +191,8 @@ const handleCancelBooking = async (codice) => {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: #f8f9fa; /* Sfondo leggermente grigio per far risaltare le card bianche */
+  background-color: #f8f9fa;
+  /* Sfondo leggermente grigio per far risaltare le card bianche */
 }
 
 .title-color {
@@ -186,13 +207,13 @@ const handleCancelBooking = async (codice) => {
 
 .booking-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 10px 25px rgba(0,0,0,0.08) !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08) !important;
 }
 
 .empty-state {
   background-color: white;
   border-radius: 16px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
 }
 
 .btn-primary {
@@ -211,5 +232,13 @@ const handleCancelBooking = async (codice) => {
 .font-monospace {
   letter-spacing: 2px;
   font-family: 'Courier New', Courier, monospace;
+}
+
+.trigger-stars i {
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+.trigger-stars i:hover {
+  transform: scale(1.2);
 }
 </style>

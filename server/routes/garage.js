@@ -271,6 +271,22 @@ router.get('/:id/occupazione', async (req, res) => {
   } catch (err) {
       console.error("Errore occupazione:", err);
       res.status(500).json({ success: false, percentuale: 0 });
+// GET /api/garage/:id/recensioni - Recupera le recensioni di un singolo garage
+router.get("/:id/recensioni", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const recensioni = await db.any(`
+        SELECT r.VotoGenerale, r.Commento, r.DataCreazione, u.Nome, u.Cognome 
+        FROM Recensione r
+        JOIN Utente u ON r.ID_Utente = u.ID_Utente
+        WHERE r.ID_Garage = $1
+        ORDER BY r.DataCreazione DESC
+    `, [id]);
+    
+    res.json({ success: true, recensioni });
+  } catch (err) {
+    console.error("Errore recupero recensioni:", err);
+    res.status(500).json({ success: false, error: "Errore interno" });
   }
 });
 

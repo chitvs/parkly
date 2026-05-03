@@ -9,6 +9,7 @@ const db = require('./database/db');
 const authRoutes = require('./routes/auth'); 
 const garagesRoutes = require('./routes/garage');
 const prenotazioniRoutes = require('./routes/prenotazioni');
+const recensioniRoutes = require('./routes/recensioni');
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -42,6 +43,7 @@ app.use('/client', express.static(path.join(__dirname, '../client')));
 app.use('/api/auth', authRoutes);
 app.use('/api/garage', garagesRoutes);
 app.use('/api/prenotazioni', prenotazioniRoutes);
+app.use('/api/recensioni', recensioniRoutes);
 
 // TEST DB
 app.get('/test-db', (req, res) => {

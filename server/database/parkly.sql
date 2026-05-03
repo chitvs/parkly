@@ -31,6 +31,13 @@ CREATE TABLE Garage (
     MappaTestuale TEXT,
     IsAttivo BOOLEAN DEFAULT TRUE,  
     DataCreazione TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    MediaGenerale DECIMAL(3,2) DEFAULT 0.00,
+    MediaPosizione DECIMAL(3,2) DEFAULT 0.00,
+    MediaPrezzo DECIMAL(3,2) DEFAULT 0.00,
+    MediaPulizia DECIMAL(3,2) DEFAULT 0.00,
+    MediaSpazio DECIMAL(3,2) DEFAULT 0.00,
+    MediaSicurezza DECIMAL(3,2) DEFAULT 0.00,
+    NumeroRecensioni INT DEFAULT 0,
     FOREIGN KEY (ID_Gestore) REFERENCES Utente(ID_Utente) ON DELETE CASCADE
 );
 
@@ -66,15 +73,19 @@ CREATE TABLE Prenotazione (
     CONSTRAINT CHK_DateSosta CHECK (FineSosta > InizioSosta)
 );
 
--- RECENSIONE
+-- 5. RECENSIONE
 CREATE TABLE Recensione (
     ID_Recensione SERIAL PRIMARY KEY,
     ID_Prenotazione INT NOT NULL UNIQUE, 
-    ID_Utente INT NOT NULL,              
-    ID_Garage INT NOT NULL,              
-    Voto INT NOT NULL CHECK (Voto >= 1 AND Voto <= 5),
+    ID_Utente INT NOT NULL,
+    ID_Garage INT NOT NULL,
+    VotoGenerale INT CHECK (VotoGenerale >= 1 AND VotoGenerale <= 5) NOT NULL,
+    VotoPosizione INT CHECK (VotoPosizione >= 1 AND VotoPosizione <= 5) NOT NULL,
+    VotoPrezzo INT CHECK (VotoPrezzo >= 1 AND VotoPrezzo <= 5) NOT NULL,
+    VotoPulizia INT CHECK (VotoPulizia >= 1 AND VotoPulizia <= 5) NOT NULL,
+    VotoSpazio INT CHECK (VotoSpazio >= 1 AND VotoSpazio <= 5) NOT NULL,
+    VotoSicurezza INT CHECK (VotoSicurezza >= 1 AND VotoSicurezza <= 5) NOT NULL,
     Commento TEXT,
-    RispostaGestore TEXT, 
     DataCreazione TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (ID_Prenotazione) REFERENCES Prenotazione(ID_Prenotazione) ON DELETE CASCADE,
     FOREIGN KEY (ID_Utente) REFERENCES Utente(ID_Utente) ON DELETE CASCADE,
