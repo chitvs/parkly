@@ -460,7 +460,7 @@ const caricaGarage = async () => {
     } catch { /* ignora */ }
 
     try {
-      const r = await fetch(`/api/garages/${g.id_garage}/occupazione`, { credentials: 'include' })
+      const r = await fetch(`/api/garage/${g.id_garage}/occupazione`, { credentials: 'include' })
       if (r.ok) {
         const { percentuale } = await r.json()
         occupazioneGarage.value[g.id_garage] = Math.round(percentuale)

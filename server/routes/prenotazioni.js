@@ -128,4 +128,98 @@ router.post('/', isLoggato, async (req, res) => {
     }
 });
 
+// Recupero le prenotazioni dell'utente loggato
+router.get('/', async (req, res) => {
+    // Controllo sicurezza: l'utente è loggato?
+    if (!req.session.utente || !req.session.utente.id) {
+        return res.status(401).json({ success: false, error: 'Non autorizzato' });
+    }
+
+    try {
+        // Faccio una JOIN per recuperare anche il nome del Garage e il Codice del Posto
+        const query = `
+            SELECT 
+                p.CodicePrenotazione, p.Targa, p.InizioSosta, p.FineSosta, 
+                p.PrezzoTotale, p.Stato, p.DataCreazione,
+                pa.CodicePosto, 
+                g.Nome AS NomeGarage, g.Indirizzo
+            FROM Prenotazione p
+            JOIN PostoAuto pa ON p.ID_Posto = pa.ID_Posto
+            JOIN Garage g ON pa.ID_Garage = g.ID_Garage
+            WHERE p.ID_Utente = $1
+            ORDER BY p.InizioSosta DESC
+        `;
+
+        const prenotazioni = await db.any(query, [req.session.utente.id]);
+        res.json({ success: true, data: prenotazioni });
+
+    } catch (err) {
+        console.error('Errore recupero prenotazioni:', err);
+        res.status(500).json({ success: false, error: 'Errore interno del server' });
+    }
+});
+
+// Annullamento di una prenotazione
+router.put('/:codice/annulla', async (req, res) => {
+    if (!req.session.utente || !req.session.utente.id) {
+        return res.status(401).json({ success: false, error: 'Non autorizzato' });
+    }
+
+    try {
+        const codicePrenotazione = req.params.codice;
+        const utenteId = req.session.utente.id;
+        
+        // Eseguiamo l'UPDATE solo se lo stato è ancora 'ATTIVA' e se è del nostro utente
+        const result = await db.result(
+            `UPDATE Prenotazione 
+             SET Stato = 'ANNULLATA' 
+             WHERE CodicePrenotazione = $1 AND ID_Utente = $2 AND Stato = 'ATTIVA'`,
+            [codicePrenotazione, utenteId]
+        );
+
+        // db.result ci dice quante righe sono state modificate
+        if (result.rowCount === 0) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Prenotazione non trovata o già annullata.' 
+            });
+        }
+
+        res.json({ success: true, messaggio: 'Prenotazione annullata con successo' });
+
+    } catch (err) {
+        console.error('Errore annullamento prenotazione:', err);
+        res.status(500).json({ success: false, error: 'Errore interno del server' });
+    }
+});
+
+// recupera lo storico delle prenotazioni del gestore loggato
+router.get('/prenotazioni-gestore', async (req, res) => {
+    try {
+        const utenteLoggato = req.session?.utente;
+        
+        if (!utenteLoggato || utenteLoggato.ruolo !== 'GESTORE') {
+            return res.status(401).json({ error: 'Accesso negato' });
+        }
+        
+        const idGestore = utenteLoggato.id;
+        
+        const query = `
+            SELECT p.*, g.Nome as nome_garage 
+            FROM Prenotazione p
+            JOIN PostoAuto pa ON p.ID_Posto = pa.ID_Posto
+            JOIN Garage g ON pa.ID_Garage = g.ID_Garage
+            WHERE g.ID_Gestore = $1
+            ORDER BY p.InizioSosta DESC
+        `;
+        
+        const result = await db.any(query, [idGestore]);
+        res.json(result);
+
+    } catch (error) {
+        console.error("Errore storico gestore:", error);
+        res.status(500).json({ error: 'Errore interno' });
+    }
+});
+
 module.exports = router;

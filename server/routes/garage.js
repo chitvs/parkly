@@ -94,6 +94,89 @@ router.get("/", async (req, res) => {
   }
 });
 
+// recupera i garage del gestore loggato
+router.get('/garages-gestore', async (req, res) => {
+  try {
+    const utenteLoggato = req.session?.utente;
+    if (!utenteLoggato || utenteLoggato.ruolo !== 'GESTORE') {
+      return res.status(401).json({ error: 'Accesso negato' });
+    }
+    const idGestore = utenteLoggato.id;
+    const result = await db.any('SELECT * FROM Garage WHERE ID_Gestore = $1', [idGestore]);
+    res.json(result);
+  } catch (error) {
+    console.error("Errore recupero garage:", error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// crea un nuovo garage per il gestore loggato
+router.post('/garages-gestore', async (req, res) => {
+  try {
+    const utenteLoggato = req.session?.utente;
+    if (!utenteLoggato || utenteLoggato.ruolo !== 'GESTORE') {
+      return res.status(401).json({ error: 'Accesso negato' });
+    }
+
+    const idGestore = utenteLoggato.id;
+
+    const {
+      nome,
+      descrizione,
+      indirizzo,
+      tariffabase,
+      altezzamassima,
+      orarioapertura,
+      orariochiusura,
+      is24h,
+      mappatestuale
+    } = req.body;
+
+    // Validazione campi obbligatori
+    if (!nome || !indirizzo || !tariffabase) {
+      return res.status(400).json({ error: 'Nome, indirizzo e tariffa base sono obbligatori.' });
+    }
+
+    // Se is24h, usiamo orari di default (vengono ignorati dalla logica ma la colonna è NOT NULL)
+    const apertura = is24h ? '00:00' : (orarioapertura || '08:00');
+    const chiusura = is24h ? '23:59' : (orariochiusura || '20:00');
+
+    // Il testo della planimetria arriva già come stringa dal FileReader del frontend
+    const mappa = mappatestuale || null;
+
+    const result = await db.one(
+      `INSERT INTO Garage
+        (ID_Gestore, Nome, Descrizione, Indirizzo, AltezzaMassima, TariffaBase, OrarioApertura, OrarioChiusura, Is24h, MappaTestuale, IsAttivo)
+       VALUES
+        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE)
+       RETURNING *`,
+      [
+        idGestore,
+        nome,
+        descrizione || null,
+        indirizzo,
+        altezzamassima || null,
+        tariffabase,
+        apertura,
+        chiusura,
+        is24h || false,
+        mappa
+      ]
+    );
+
+    res.status(201).json({ success: true, garage: result });
+
+  } catch (error) {
+    console.error("Errore creazione garage:", error);
+    res.status(500).json({ error: 'Errore interno del server.' });
+  }
+});
+
+// recupera le allerte/stato
+router.get('/stato-garages-gestore', async (req, res) => {
+  res.json([]); 
+});
+
 // dettaglio di un singolo garage
 router.get("/:id", async (req, res) => {
   try {
@@ -164,6 +247,30 @@ router.get("/:id/posti", async (req, res) => {
       success: false,
       error: "Errore recupero mappa posti",
     });
+  }
+});
+
+// calcolo occupazione in tempo reale (per la dashboard del gestore)
+router.get('/:id/occupazione', async (req, res) => {
+  try {
+      const idGarage = req.params.id;
+      const resultPosti = await db.one('SELECT COUNT(*) as tot FROM PostoAuto WHERE ID_Garage = $1', [idGarage]);
+      
+      const resultOccupati = await db.one(`
+          SELECT COUNT(*) as occ FROM Prenotazione p
+          JOIN PostoAuto pa ON p.ID_Posto = pa.ID_Posto
+          WHERE pa.ID_Garage = $1 AND p.Stato = 'ATTIVA' 
+          AND NOW() BETWEEN p.InizioSosta AND p.FineSosta
+      `, [idGarage]);
+
+      const tot = parseInt(resultPosti.tot);
+      const occ = parseInt(resultOccupati.occ);
+      const percentuale = tot > 0 ? (occ / tot) * 100 : 0;
+
+      res.json({ success: true, percentuale });
+  } catch (err) {
+      console.error("Errore occupazione:", err);
+      res.status(500).json({ success: false, percentuale: 0 });
   }
 });
 
