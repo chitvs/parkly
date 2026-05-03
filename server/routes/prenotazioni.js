@@ -128,33 +128,54 @@ router.post('/', isLoggato, async (req, res) => {
     }
 });
 
-// Recupero le prenotazioni dell'utente loggato
+// Recupero le prenotazioni dell'utente loggato (in prenotazioni.js)
 router.get('/', async (req, res) => {
-    // Controllo sicurezza: l'utente è loggato?
     if (!req.session.utente || !req.session.utente.id) {
         return res.status(401).json({ success: false, error: 'Non autorizzato' });
     }
 
+    const utenteId = req.session.utente.id;
+
     try {
-        // Faccio una JOIN per recuperare anche il nome del Garage e il Codice del Posto
+        // 1. LAZY UPDATE: Aggiorniamo fisicamente lo stato sul DB prima di leggere
+        await db.none(`
+            UPDATE Prenotazione 
+            SET Stato = 'CONCLUSA' 
+            WHERE ID_Utente = $1 
+              AND Stato = 'ATTIVA' 
+              AND FineSosta < (NOW() + INTERVAL '2 hours')
+        `, [utenteId]);
+
+        // 2. RECUPERO DATI POTENZIATO
         const query = `
             SELECT 
+                p.ID_Prenotazione, -- Cruciale per la recensione
+                pa.ID_Garage,      -- Cruciale per la recensione
+                p.ID_Utente,       -- Cruciale per la recensione
                 p.CodicePrenotazione, p.Targa, p.InizioSosta, p.FineSosta, 
                 p.PrezzoTotale, p.Stato, p.DataCreazione,
+                
+                -- Flag per sapere se mostrare o meno le stelline sulla card
+                CASE 
+                    WHEN r.ID_Recensione IS NOT NULL THEN TRUE
+                    ELSE FALSE
+                END AS ha_recensito,
+
                 pa.CodicePosto, 
                 g.Nome AS NomeGarage, g.Indirizzo
             FROM Prenotazione p
             JOIN PostoAuto pa ON p.ID_Posto = pa.ID_Posto
             JOIN Garage g ON pa.ID_Garage = g.ID_Garage
+            LEFT JOIN Recensione r ON p.ID_Prenotazione = r.ID_Prenotazione
             WHERE p.ID_Utente = $1
             ORDER BY p.InizioSosta DESC
         `;
 
-        const prenotazioni = await db.any(query, [req.session.utente.id]);
+        const prenotazioni = await db.any(query, [utenteId]);
         res.json({ success: true, data: prenotazioni });
 
     } catch (err) {
-        console.error('Errore recupero prenotazioni:', err);
+        console.error('Errore recupero/aggiornamento prenotazioni:', err);
         res.status(500).json({ success: false, error: 'Errore interno del server' });
     }
 });
