@@ -35,9 +35,7 @@ export function useChat(idGarage, idDestinatario) {
   const messaggi = ref([]);
   const staCaricando = ref(false);
   const errore = ref(null);
-  
 
-  let scrittura_timeout = null;
 
   const socket = getSocket();
 
@@ -47,7 +45,7 @@ export function useChat(idGarage, idDestinatario) {
     errore.value = null;
     messaggi.value=[];
     try {
-      const res = await fetch(`${SERVER_URL}/api/messaggi/${idGarage}`, {
+      const res = await fetch(`${SERVER_URL}/api/messaggi/${idGarage}/${idDestinatario}`, {
         credentials: 'include', // invia cookie sessione
       });
       if (!res.ok) throw new Error('Errore nel caricamento dei messaggi');

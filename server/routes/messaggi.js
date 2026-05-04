@@ -12,10 +12,11 @@ function requireAuth(req, res, next) {
   next();
 }
 
-// ─── GET /api/messaggi/:idGarage ─────────────────────────────────────────────
-// Carica lo storico della conversazione per un garage specifico
-router.get('/:idGarage', requireAuth, async (req, res) => {
+// ─── GET /api/messaggi/:idGarage/:idInterlocutore ───────────────────────────
+// Carica lo storico della conversazione specifica tra l'utente loggato e l'interlocutore
+router.get('/:idGarage/:idInterlocutore', requireAuth, async (req, res) => {
   const idGarage = parseInt(req.params.idGarage);
+  const idInterlocutore = parseInt(req.params.idInterlocutore); 
   const idUtente = req.session.utente.id;
 
   try {
@@ -35,6 +36,7 @@ router.get('/:idGarage', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'Accesso non autorizzato a questa conversazione.' });
     }
 
+    // <-- Query: restituisce solo i messaggi tra idUtente e idInterlocutore
     const messaggi = await db.any(
       `SELECT m.*,
               u_mit.Nome     AS nomemittente,
@@ -45,16 +47,20 @@ router.get('/:idGarage', requireAuth, async (req, res) => {
        JOIN Utente u_mit ON u_mit.ID_Utente = m.ID_Mittente
        JOIN Utente u_des ON u_des.ID_Utente = m.ID_Destinatario
        WHERE m.ID_Garage = $1
-         AND (m.ID_Mittente = $2 OR m.ID_Destinatario = $2)
+         AND (
+           (m.ID_Mittente = $2 AND m.ID_Destinatario = $3) 
+           OR 
+           (m.ID_Mittente = $3 AND m.ID_Destinatario = $2)
+         )
        ORDER BY m.DataInvio ASC`,
-      [idGarage, idUtente]
+      [idGarage, idUtente, idInterlocutore]
     );
 
-    // Marca come letti i messaggi ricevuti dall'utente corrente
+    // <-- Marca come letti solo i messaggi inviati da questo specifico interlocutore
     await db.none(
       `UPDATE Messaggio SET Letto = TRUE
-       WHERE ID_Garage = $1 AND ID_Destinatario = $2 AND Letto = FALSE`,
-      [idGarage, idUtente]
+       WHERE ID_Garage = $1 AND ID_Destinatario = $2 AND ID_Mittente = $3 AND Letto = FALSE`,
+      [idGarage, idUtente, idInterlocutore]
     );
 
     res.json(messaggi);

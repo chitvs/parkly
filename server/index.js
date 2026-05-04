@@ -270,13 +270,6 @@ io.on('connection', (socket) => {
     }
   });
 
-  //  "Sta scrivendo..." 
-  socket.on('sta_scrivendo', ({ idDestinatario, idGarage }) => {
-    io.to(`user:${idDestinatario}`).emit('utente_sta_scrivendo', {
-      idMittente: utente.id,
-      idGarage,
-    });
-  });
 
   socket.on('disconnect', () => {
     console.log(`[Socket] Disconnesso: ${utente.nome} (ID: ${utente.id})`);
