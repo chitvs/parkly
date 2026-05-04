@@ -35,6 +35,24 @@ watch([checkIn, checkOut], () => {
     postoSelezionato.value = null
 })
 
+// calcolo delle tariffe dinamiche per veicolo
+const tariffePerVeicolo = computed(() => {
+    const posti = garageStore.posti;
+    if (!posti || !posti.length) return {};
+    
+    const minPrices = {};
+    posti.forEach(p => {
+        const tipo = p.tipoveicolo;
+        const prezzo = Number(p.tariffaoraria);
+        
+        // se non ho ancora registrato questo tipo di veicolo, o se questo posto costa meno, lo salvo
+        if (!minPrices[tipo] || prezzo < minPrices[tipo]) {
+            minPrices[tipo] = prezzo;
+        }
+    });
+    return minPrices;
+});
+
 const formattaTarga = () => {
     // rimuove qualsiasi carattere che non sia lettera o numero e converte in maiuscolo
     targa.value = targa.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
@@ -234,8 +252,27 @@ const distribuzioneVoti = computed(() => {
                     </div>
 
                     <div class="hero-right">
-                        <div class="prezzo-label">Tariffa base</div>
-                        <div class="prezzo-valore">€{{ garageStore.currentGarage.tariffabase }}<span>/ora</span></div>
+                        <div class="prezzo-label">Tariffe a partire da:</div>
+                        
+                        <div class="price-line" v-if="tariffePerVeicolo['MOTO']">
+                            <span class="v-tipo">Moto</span>
+                            <span class="prezzo-valore-small">€{{ tariffePerVeicolo['MOTO'].toFixed(2) }}<span>/h</span></span>
+                        </div>
+                        
+                        <div class="price-line" v-if="tariffePerVeicolo['AUTO']">
+                            <span class="v-tipo">Auto</span>
+                            <span class="prezzo-valore-small">€{{ tariffePerVeicolo['AUTO'].toFixed(2) }}<span>/h</span></span>
+                        </div>
+                        
+                        <div class="price-line" v-if="tariffePerVeicolo['FURGONE']">
+                            <span class="v-tipo">Furgone</span>
+                            <span class="prezzo-valore-small">€{{ tariffePerVeicolo['FURGONE'].toFixed(2) }}<span>/h</span></span>
+                        </div>
+
+                        <div class="price-line" v-if="Object.keys(tariffePerVeicolo).length === 0">
+                            <span class="v-tipo">Base</span>
+                            <span class="prezzo-valore-small">€{{ garageStore.currentGarage.tariffabase }}<span>/h</span></span>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -530,42 +567,54 @@ const distribuzioneVoti = computed(() => {
     text-align: right;
     flex-shrink: 0;
     padding-top: 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end; /* Allinea tutto perfettamente a destra */
+    gap: 8px; /* Spazio tra le righe */
 }
 
 .prezzo-label {
     font-size: 0.68rem;
-    color: rgba(255, 255, 255, 0.35);
+    color: rgba(255, 255, 255, 0.9);
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
 }
 
-.prezzo-valore {
-    font-size: 2.2rem;
+.price-line {
+    display: flex;
+    align-items: center;
+    gap: 15px; /* Spazio tra il nome del veicolo e il prezzo */
+}
+
+.v-tipo {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 500;
+}
+
+.prezzo-valore-small {
+    font-size: 1.4rem;
     font-weight: 700;
     color: var(--white);
     line-height: 1;
+    min-width: 65px;
+    text-align: right;
 }
 
-.prezzo-valore span {
-    font-size: 0.95rem;
+.prezzo-valore-small span {
+    font-size: 0.8rem;
     font-weight: 400;
     opacity: 0.5;
 }
 
 @media (max-width: 600px) {
-    .hero-top {
-        flex-direction: column;
-        gap: 16px;
-        padding: 0 20px;
-    }
-
     .hero-right {
+        align-items: flex-start; /* Su mobile li allinea a sinistra */
         text-align: left;
     }
-
-    .basic-hero {
-        padding: 24px 0 20px;
+    .prezzo-valore-small {
+        text-align: left;
     }
 }
 

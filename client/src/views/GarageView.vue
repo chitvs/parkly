@@ -40,6 +40,16 @@ const {
     resetTechnicalFilters, passaFiltriTecnici
 } = useGarageFilters()
 
+const getDisplayPrice = (garage) => {
+    // se l'utente ha selezionato un veicolo specifico e il backend ci ha mandato i dati
+    if (filterTipoVeicolo.value !== 'ALL' && garage.tariffeVeicoli && garage.tariffeVeicoli[filterTipoVeicolo.value]) {
+        return Number(garage.tariffeVeicoli[filterTipoVeicolo.value]).toFixed(2);
+    }
+    // altrimenti mostra la tariffa base generica
+    return Number(garage.tariffabase).toFixed(2);
+}
+//
+
 const {
     showExtendedResults,
     matchedPOI,
@@ -298,8 +308,7 @@ const handleSuggestionSelected = (place) => {
                                                                 a {{ garage.displayDistanceLabel }} da {{
                                                                     garage.displayPOIName }}
                                                             </p>
-                                                            <span class="mini-price">€{{
-                                                                Number(garage.tariffabase).toFixed(2) }}/ora</span>
+                                                            <span class="mini-price">€{{ getDisplayPrice(garage) }}/ora</span>
                                                         </div>
                                                     </div>
 
@@ -424,8 +433,10 @@ const handleSuggestionSelected = (place) => {
 
                             <div class="gcard-right">
                                 <div class="gcard-price-block">
-                                    <span class="price-label">TARIFFA BASE</span>
-                                    <span class="price-value">€{{ Number(garage.tariffabase).toFixed(2) }}/ora</span>
+                                    <span class="price-label">
+                                        {{ filterTipoVeicolo === 'ALL' ? 'TARIFFA BASE' : 'TARIFFA ' + filterTipoVeicolo }}
+                                    </span>
+                                    <span class="price-value">€{{ getDisplayPrice(garage) }}/ora</span>
                                 </div>
                             </div>
                         </div>

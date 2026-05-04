@@ -17,7 +17,17 @@ router.get("/", async (req, res) => {
             COALESCE(p.hasCoperto, false) AS "hasCoperto",
             COALESCE(p.hasElettrico, false) AS "hasElettrico",
             COALESCE(p.hasDisabili, false) AS "hasDisabili",
-            COALESCE(p.tipiDisponibili, '{}') AS "tipiDisponibili"
+            COALESCE(p.tipiDisponibili, '{}') AS "tipiDisponibili",
+            -- creiamo un oggetto JSON con il prezzo minimo per ogni tipo di veicolo
+            COALESCE((
+                SELECT json_object_agg(t.tipoveicolo, t.min_tar)
+                FROM (
+                    SELECT tipoveicolo, MIN(tariffaoraria) as min_tar
+                    FROM postoauto
+                    WHERE id_garage = g.id_garage
+                    GROUP BY tipoveicolo
+                ) t
+            ), '{}'::json) AS "tariffeVeicoli"
         FROM garage g
         INNER JOIN (
             SELECT 
@@ -62,7 +72,17 @@ router.get("/", async (req, res) => {
             COALESCE(p.hasCoperto, false) AS "hasCoperto",
             COALESCE(p.hasElettrico, false) AS "hasElettrico",
             COALESCE(p.hasDisabili, false) AS "hasDisabili",
-            COALESCE(p.tipiDisponibili, '{}') AS "tipiDisponibili"
+            COALESCE(p.tipiDisponibili, '{}') AS "tipiDisponibili",
+            -- creiamo un oggetto JSON con il prezzo minimo per ogni tipo di veicolo
+            COALESCE((
+                SELECT json_object_agg(t.tipoveicolo, t.min_tar)
+                FROM (
+                    SELECT tipoveicolo, MIN(tariffaoraria) as min_tar
+                    FROM postoauto
+                    WHERE id_garage = g.id_garage
+                    GROUP BY tipoveicolo
+                ) t
+            ), '{}'::json) AS "tariffeVeicoli"
         FROM garage g
         LEFT JOIN (
             SELECT 
