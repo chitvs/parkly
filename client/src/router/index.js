@@ -23,8 +23,8 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
-      path: '/bookings',
-      name: 'bookings',
+      path: '/prenotazioni',
+      name: 'prenotazioni',
       component: () => import('../views/BookingsView.vue'),
       meta: { requiresAuth: true },
     },

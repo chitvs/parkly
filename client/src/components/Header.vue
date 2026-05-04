@@ -131,7 +131,7 @@ const handleLogout = async () => {
           </template>
 
           <li>
-            <RouterLink class="dropdown-item" to="/bookings" @click="isMenuOpen = false">
+            <RouterLink class="dropdown-item" to="/prenotazioni" @click="isMenuOpen = false">
               Le Tue Prenotazioni
             </RouterLink>
           </li>
