@@ -279,7 +279,12 @@ router.get("/:id/recensioni", async (req, res) => {
   try {
     const { id } = req.params;
     const recensioni = await db.any(`
-        SELECT r.VotoGenerale, r.Commento, r.DataCreazione, u.Nome, u.Cognome 
+        SELECT 
+            r.VotoGenerale, r.VotoPosizione, r.VotoPrezzo, r.VotoPulizia, r.VotoSpazio, r.VotoSicurezza, 
+            r.Commento, r.DataCreazione, 
+            u.Nome, 
+            SUBSTRING(u.Cognome, 1, 1) AS InizialeCognome, 
+            u.FotoProfilo_URL 
         FROM Recensione r
         JOIN Utente u ON r.ID_Utente = u.ID_Utente
         WHERE r.ID_Garage = $1

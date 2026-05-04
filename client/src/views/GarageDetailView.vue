@@ -3,6 +3,7 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { garageStore } from '../store/garage'
 import { authStore } from '../store/auth'
+import 'bootstrap-icons/font/bootstrap-icons.css'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 import PlanimetriaGarage from '../components/PlanimetriaGarage.vue'
@@ -22,6 +23,7 @@ onMounted(async () => {
     garageStore.clearGarageData()
     await garageStore.fetchGarage(Number(props.id))
     await garageStore.fetchPosti(props.id, '', '')
+    await garageStore.fetchRecensioni(props.id)
 
     if (checkIn.value && checkOut.value) {
         await aggiornaMappa()
@@ -66,7 +68,7 @@ const aggiornaMappa = async () => {
         messaggio.value = { tipo: 'error', testo: 'L\'orario di partenza deve essere successivo a quello di arrivo.' }
         return
     }
-    
+
     messaggio.value = null
     await garageStore.fetchPosti(props.id, checkIn.value, checkOut.value)
     isMapConfirmed.value = true
@@ -99,7 +101,7 @@ const durataOre = computed(() => {
 
 const gestisciPrenotazione = async () => {
     if (!postoSelezionato.value) return
-    
+
     if (!isTargaValida.value) {
         messaggio.value = { tipo: 'error', testo: 'Inserisci una targa valida prima di procedere.' }
         return
@@ -136,6 +138,46 @@ const gestisciPrenotazione = async () => {
         messaggio.value = { tipo: 'error', testo: res.error || 'Errore durante la prenotazione' }
     }
 }
+
+const commentiEspansi = ref(new Set())
+
+const toggleCommento = (index) => {
+    const nuovoSet = new Set(commentiEspansi.value)
+    if (nuovoSet.has(index)) {
+        nuovoSet.delete(index)
+    } else {
+        nuovoSet.add(index)
+    }
+    commentiEspansi.value = nuovoSet
+}
+
+const formattaDataRecensione = (dataString) => {
+    if (!dataString) return ''
+    const data = new Date(dataString)
+    return new Intl.DateTimeFormat('it-IT', {
+        month: 'long',
+        year: 'numeric'
+    }).format(data)
+}
+
+// Calcola le percentuali per la "scaletta" dei voti complessivi
+const distribuzioneVoti = computed(() => {
+    const recensioni = garageStore.recensioni
+    const totale = recensioni.length
+    const distrib = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }
+    if (totale === 0) return distrib
+    recensioni.forEach(r => {
+        const voto = Math.floor(r.votogenerale || 0)
+        if (distrib[voto] !== undefined) {
+            distrib[voto]++
+        }
+    })
+    for (let i = 1; i <= 5; i++) {
+        distrib[i] = (distrib[i] / totale) * 100
+    }
+    return distrib
+})
+
 </script>
 
 <template>
@@ -162,26 +204,29 @@ const gestisciPrenotazione = async () => {
                             </div>
 
                             <div class="badge" v-if="garageStore.currentGarage.is24h">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <circle cx="12" cy="12" r="10"></circle>
                                     <polyline points="12 6 12 12 16 14"></polyline>
                                 </svg>
                                 Aperto 24h
                             </div>
-                            
+
                             <div class="badge" v-else>
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
                                     <circle cx="12" cy="12" r="10" />
                                     <polyline points="12 6 12 12 16 14" />
                                 </svg>
                                 {{ garageStore.currentGarage.orarioapertura.substring(0, 5) }} - {{
-                                    garageStore.currentGarage.orariochiusura.substring(0,5) }}
+                                    garageStore.currentGarage.orariochiusura.substring(0, 5) }}
                             </div>
                             <div class="badge" v-if="garageStore.currentGarage.altezzamassima">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M12 22V5"/>
-                                    <path d="M7 10l5-5 5 5"/>
-                                    <line x1="4" y1="2" x2="20" y2="2"/>
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 22V5" />
+                                    <path d="M7 10l5-5 5 5" />
+                                    <line x1="4" y1="2" x2="20" y2="2" />
                                 </svg>
                                 Max {{ garageStore.currentGarage.altezzamassima }}m
                             </div>
@@ -208,10 +253,9 @@ const gestisciPrenotazione = async () => {
                     <div class="card-body">
                         <PlanimetriaGarage :posti="garageStore.posti"
                             :mappaTestuale="garageStore.currentGarage.mappatestuale"
-                            :selectedId="postoSelezionato?.id_posto"
-                            :isAnteprima="!isMapConfirmed"
+                            :selectedId="postoSelezionato?.id_posto" :isAnteprima="!isMapConfirmed"
                             @select="(p) => postoSelezionato = p"
-                            @error="(msg) => messaggio = { tipo: 'error', testo: msg }"/>
+                            @error="(msg) => messaggio = { tipo: 'error', testo: msg }" />
                     </div>
                 </div>
 
@@ -244,14 +288,8 @@ const gestisciPrenotazione = async () => {
                             <hr>
                             <div class="form-group">
                                 <label>Targa veicolo</label>
-                                <input 
-                                    type="text" 
-                                    v-model="targa" 
-                                    @input="formattaTarga"
-                                    placeholder="Es. AA123BB"
-                                    maxlength="7"
-                                    required
-                                >
+                                <input type="text" v-model="targa" @input="formattaTarga" placeholder="Es. AA123BB"
+                                    maxlength="7" required>
                                 <small v-if="targa.length > 0 && !isTargaValida" class="error-text">
                                     Formato non valido.
                                 </small>
@@ -289,6 +327,130 @@ const gestisciPrenotazione = async () => {
                     </div>
                 </aside>
             </div>
+            <!-- SEZIONE RECENSIONI -->
+            <section class="reviews-section card" v-if="garageStore.currentGarage">
+                <div class="card-body">
+
+                    <div class="overall-rating-header">
+                        <h2 class="rating-number">{{ Number(garageStore.currentGarage.mediagenerale).toFixed(2) }}</h2>
+
+                        <div class="average-stars">
+                            <i v-for="i in 5" :key="i" class="bi" :class="[
+                                garageStore.currentGarage.mediagenerale >= i ? 'bi-star-fill star--on' :
+                                    garageStore.currentGarage.mediagenerale >= i - 0.5 ? 'bi-star-half star--on' :
+                                        'bi-star star--off'
+                            ]">
+                            </i>
+                        </div>
+
+                        <span class="reviews-count">
+                            {{ garageStore.recensioni.length }} recensioni
+                        </span>
+                    </div>
+
+                    <hr class="reviews-divider">
+
+                    <!-- CONTENITORE UNICO PER CHI HA RECENSIONI -->
+                    <div v-if="garageStore.recensioni.length > 0">
+
+                        <div class="reviews-breakdown">
+                            <!-- Sinistra: Scaletta dei voti -->
+                            <div class="rating-ladder">
+                                <div v-for="star in 5" :key="star" class="ladder-row">
+                                    <span class="ladder-num">{{ 6 - star }}</span>
+                                    <div class="ladder-bar-bg">
+                                        <div class="ladder-bar-fill"
+                                            :style="{ width: distribuzioneVoti[6 - star] + '%' }">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Destra: Categorie Specifiche -->
+                            <div class="categories-grid">
+                                <div class="category-item">
+                                    <span class="cat-label"><i class="bi bi-geo-alt"></i> Posizione</span>
+                                    <span class="cat-val">{{ Number(garageStore.currentGarage.mediaposizione).toFixed(1)
+                                    }}</span>
+                                </div>
+                                <div class="category-item">
+                                    <span class="cat-label"><i class="bi bi-tag"></i> Qualità/Prezzo</span>
+                                    <span class="cat-val">{{ Number(garageStore.currentGarage.mediaprezzo).toFixed(1)
+                                    }}</span>
+                                </div>
+                                <div class="category-item">
+                                    <span class="cat-label"><i class="bi bi-stars"></i> Pulizia</span>
+                                    <span class="cat-val">{{ Number(garageStore.currentGarage.mediapulizia).toFixed(1)
+                                    }}</span>
+                                </div>
+                                <div class="category-item">
+                                    <span class="cat-label"><i class="bi bi-car-front"></i> Spazio Manovra</span>
+                                    <span class="cat-val">{{ Number(garageStore.currentGarage.mediaspazio).toFixed(1)
+                                    }}</span>
+                                </div>
+                                <div class="category-item">
+                                    <span class="cat-label"><i class="bi bi-shield-check"></i> Sicurezza</span>
+                                    <span class="cat-val">{{ Number(garageStore.currentGarage.mediasicurezza).toFixed(1)
+                                    }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Blocco Commenti -->
+                        <div class="user-comments-section mt-5 pt-4 border-top">
+                            <div class="comments-grid">
+                                <div v-for="(recensione, index) in garageStore.recensioni" :key="index"
+                                    class="comment-card">
+                                    <div class="comment-header">
+                                        <!-- Avatar -->
+                                        <div class="user-avatar">
+                                            <img v-if="recensione.fotoprofilo_url" :src="recensione.fotoprofilo_url"
+                                                alt="User avatar">
+                                            <span v-else>{{ recensione.nome.charAt(0).toUpperCase() }}</span>
+                                        </div>
+
+                                        <!-- Nome e Info -->
+                                        <div class="user-info">
+                                            <h4 class="user-name">{{ recensione.nome }} {{ recensione.inizialecognome
+                                            }}.</h4>
+                                        </div>
+                                    </div>
+
+                                    <div class="comment-meta">
+                                        <!-- Stelline piccole per la singola recensione -->
+                                        <div class="small-stars">
+                                            <i v-for="star in 5" :key="'s' + star" class="bi"
+                                                :class="star <= Math.round(recensione.votogenerale) ? 'bi-star-fill star--on' : 'bi-star star--off'">
+                                            </i>
+                                        </div>
+                                        <span class="meta-dot">·</span>
+                                        <span class="comment-date">{{ formattaDataRecensione(recensione.datacreazione)
+                                        }}</span>
+                                    </div>
+
+                                    <!-- Testo Recensione -->
+                                    <p class="comment-text"
+                                        :class="{ 'comment-text--expanded': commentiEspansi.has(index) }"
+                                        v-if="recensione.commento">{{ recensione.commento }}</p>
+                                    <p class="comment-text text-muted fst-italic" v-else>Nessun commento testuale
+                                        lasciato.</p>
+
+                                    <button v-if="recensione.commento && recensione.commento.length > 180"
+                                        class="mostra-altro-btn" @click="toggleCommento(index)">
+                                        {{ commentiEspansi.has(index) ? 'Mostra meno' : 'Mostra altro' }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div v-else class="empty-reviews text-center py-4 text-muted">
+                        Nessuna recensione presente al momento. Sii il primo a prenotare e recensire!
+                    </div>
+
+                </div>
+            </section>
         </main>
     </div>
     <Footer />
@@ -501,7 +663,7 @@ const gestisciPrenotazione = async () => {
     color: #aaa;
 }
 
-.form-group input, 
+.form-group input,
 .form-group textarea {
     width: 100%;
     padding: 9px 11px;
@@ -638,5 +800,272 @@ const gestisciPrenotazione = async () => {
     font-size: 0.75rem;
     margin-top: 4px;
     display: block;
+}
+
+/* SEZIONE RECENSIONI */
+.reviews-section {
+    max-width: 1200px;
+    margin: 0 auto 40px;
+    width: calc(100% - 64px);
+}
+
+.reviews-section .card-body {
+    padding: 32px 48px;
+}
+
+.overall-rating-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.overall-rating-header h2.rating-number {
+    font-size: 4.5rem;
+    font-weight: 800;
+    color: var(--text-dark);
+    margin: 0 0 4px 0;
+    line-height: 1;
+    letter-spacing: -0.05em;
+}
+
+.average-stars {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.average-stars i {
+    font-size: 2.2rem;
+    transition: transform 0.2s;
+}
+
+.star--on {
+    color: #f59e0b;
+    filter: drop-shadow(0 3px 10px rgba(245, 158, 11, 0.45));
+}
+
+.star--off {
+    color: #dde3ed;
+}
+
+.overall-rating-header h2 {
+    font-size: 4rem;
+    font-weight: 800;
+    color: var(--text-dark);
+    margin: 0;
+    line-height: 1.1;
+    letter-spacing: -0.04em;
+}
+
+.reviews-count {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #64748b;
+}
+
+.reviews-divider {
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    margin: 0 0 32px 0;
+}
+
+.reviews-breakdown {
+    display: flex;
+    gap: 60px;
+    align-items: flex-start;
+}
+
+/* Scaletta Sinistra */
+.rating-ladder {
+    flex: 0 0 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.ladder-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ladder-num {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #334155;
+    width: 12px;
+}
+
+.ladder-bar-bg {
+    flex-grow: 1;
+    height: 6px;
+    background: #e2e8f0;
+    border-radius: 99px;
+    overflow: hidden;
+}
+
+.ladder-bar-fill {
+    height: 100%;
+    background: #0f172a;
+    border-radius: 99px;
+    transition: width 0.5s ease-out;
+}
+
+/* Categorie Destra */
+.categories-grid {
+    flex-grow: 1;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 24px 32px;
+}
+
+.category-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-left: 20px;
+    border-left: 1px solid #f1f5f9;
+}
+
+.cat-label {
+    font-size: 0.85rem;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cat-label i {
+    font-size: 1.1rem;
+    color: var(--text-dark);
+}
+
+.cat-val {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text-dark);
+}
+
+/* GRIGLIA COMMENTI */
+.user-comments-section {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+.comments-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 32px 48px;
+}
+
+.comment-card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.comment-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.user-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    color: #64748b;
+    font-weight: 700;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.user-name {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-dark);
+}
+
+.comment-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.small-stars {
+    display: flex;
+    gap: 2px;
+}
+
+.small-stars i {
+    font-size: 0.8rem;
+}
+
+.meta-dot {
+    color: #94a3b8;
+    font-weight: bold;
+}
+
+.comment-date {
+    font-size: 0.9rem;
+    color: #64748b;
+}
+
+.comment-text {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: #334155;
+    margin: 0 0 8px;
+    display: -webkit-box;
+    line-clamp: 3;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-word;
+}
+
+.comment-text--expanded {
+    line-clamp: unset;
+    -webkit-line-clamp: unset;
+    overflow: visible;
+}
+
+.mostra-altro-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-dark);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    align-self: flex-start;
+    transition: opacity 0.15s;
+}
+
+.mostra-altro-btn:hover {
+    opacity: 0.6;
 }
 </style>
