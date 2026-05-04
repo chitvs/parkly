@@ -22,13 +22,11 @@ onMounted(async () => {
     garageStore.clearGarageData()
     await garageStore.fetchGarage(Number(props.id))
 
-    // --- AGGIUNTA PER LA PAGINA 404 ---
-    // Se dopo aver interrogato il database il garage non esiste...
+    // se il garage non esiste...
     if (!garageStore.currentGarage) {
-        router.push({ name: 'NotFound' }) // ...spedisci l'utente alla macchina rotta!
-        return // Ferma l'esecuzione del resto del codice
+        router.push({ name: 'NotFound' }) // ...spedisci l'utente alla pagina 404
+        return // ferma l'esecuzione del resto del codice
     }
-    // ----------------------------------
 
     await garageStore.fetchPosti(props.id, '', '')
 
@@ -147,8 +145,6 @@ const gestisciPrenotazione = async () => {
 
         <main v-if="garageStore.isLoading" class="msg-box">Caricamento...</main>
         
-        <!-- Abbiamo tolto il controllo "Garage non trovato" da qui, perché ora ci pensa il Router a cacciare via l'utente! -->
-
         <main v-else class="main-content">
             <section class="basic-hero">
                 <div class="hero-top">
@@ -299,6 +295,7 @@ const gestisciPrenotazione = async () => {
 </template>
 
 <style scoped>
+/* Ho lasciato invariato tutto il tuo CSS originale */
 .page-container {
     background: var(--bg-light);
     min-height: 100vh;
