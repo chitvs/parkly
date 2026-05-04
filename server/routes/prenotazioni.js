@@ -10,7 +10,8 @@ router.post('/', isLoggato, async (req, res) => {
         note,
         inizio, 
         fine, 
-        prezzo_totale 
+        prezzo_totale,
+        codice_disabilita
     } = req.body;
 
     const id_utente = req.session.utente.id;
@@ -58,10 +59,18 @@ router.post('/', isLoggato, async (req, res) => {
                 }
             }
 
-            // blocchiamo il posto auto per la durata di questa transazione.
+            // blocchiamo il posto auto per la durata di questa transazione e controlliamo se è per disabili.
             // Se un altro utente tenta di prenotare lo stesso posto contemporaneamente,
             // il DB lo metterà in "pausa" finché noi non abbiamo finito.
-            await t.one('SELECT 1 FROM PostoAuto WHERE ID_Posto = $1 FOR UPDATE', [id_posto]);
+            const posto = await t.one('SELECT IsDisabili FROM PostoAuto WHERE ID_Posto = $1 FOR UPDATE', [id_posto]);
+
+            if (posto.isdisabili && (!codice_disabilita || codice_disabilita.trim() === '')) {
+                throw { 
+                    isCustom: true, 
+                    status: 400, 
+                    message: 'Codice Contrassegno Disabili obbligatorio per questo parcheggio.' 
+                };
+            }
 
             // controllo disponibilità
             const occupato = await t.oneOrNone(`
@@ -116,10 +125,20 @@ router.post('/', isLoggato, async (req, res) => {
 
             // inserisco nel db la prenotazione
             return await t.one(`
-                INSERT INTO Prenotazione (ID_Utente, ID_Posto, CodicePrenotazione, Targa, Note, InizioSosta, FineSosta, PrezzoTotale)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                INSERT INTO Prenotazione (ID_Utente, ID_Posto, CodicePrenotazione, Targa, Note, CodiceDisabilita, InizioSosta, FineSosta, PrezzoTotale)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                 RETURNING ID_Prenotazione, CodicePrenotazione
-            `, [id_utente, id_posto, codice, targa, note, inizio, fine, prezzo_totale]);
+            `, [
+                id_utente, 
+                id_posto, 
+                codice, 
+                targa, 
+                note, 
+                posto.isdisabili ? codice_disabilita : null, // Salva il codice o mette NULL
+                inizio, 
+                fine, 
+                prezzo_totale
+            ]);
         });
 
         res.json({ 

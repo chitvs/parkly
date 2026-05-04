@@ -25,7 +25,11 @@ CREATE TABLE Garage (
     Latitudine DECIMAL(8,6),
     Longitudine DECIMAL(9,6),   
     AltezzaMassima DECIMAL(4,2),
-    TariffaBase DECIMAL(5, 2) NOT NULL,
+    TariffaAuto DECIMAL(5, 2) NOT NULL,
+    TariffaMoto DECIMAL(5, 2),
+    TariffaFurgone DECIMAL(5, 2),
+    TariffaElettrica DECIMAL(5, 2),
+    TariffaDisabili DECIMAL(5, 2),
     OrarioApertura TIME NOT NULL,
     OrarioChiusura TIME NOT NULL,
     Is24h BOOLEAN DEFAULT FALSE,
@@ -51,7 +55,6 @@ CREATE TABLE PostoAuto (
     IsDisabili BOOLEAN DEFAULT FALSE,
     IsElettrica BOOLEAN DEFAULT FALSE,  
     IsCoperto BOOLEAN DEFAULT TRUE,    
-    TariffaOraria DECIMAL(5, 2) NOT NULL,  
     FOREIGN KEY (ID_Garage) REFERENCES Garage(ID_Garage) ON DELETE CASCADE,
     UNIQUE(ID_Garage, CodicePosto)
 );
@@ -64,6 +67,7 @@ CREATE TABLE Prenotazione (
     CodicePrenotazione VARCHAR(11) UNIQUE,
     Targa VARCHAR(15),
     Note TEXT,
+    CodiceDisabilita VARCHAR(50) DEFAULT NULL,
     InizioSosta TIMESTAMP NOT NULL,
     FineSosta TIMESTAMP NOT NULL,
     PrezzoTotale DECIMAL(8, 2) NOT NULL,

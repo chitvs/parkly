@@ -14,6 +14,7 @@ const checkIn = ref(route.query.inizio || '')
 const checkOut = ref(route.query.fine || '')
 const targa = ref('')
 const note = ref('')
+const codiceDisabilita = ref('')
 const postoSelezionato = ref(null)
 const messaggio = ref(null)
 const isMapConfirmed = ref(false)
@@ -42,15 +43,28 @@ const tariffePerVeicolo = computed(() => {
     
     const minPrices = {};
     posti.forEach(p => {
+        if (p.isdisabili || p.iselettrica) return; 
+
         const tipo = p.tipoveicolo;
         const prezzo = Number(p.tariffaoraria);
         
-        // se non ho ancora registrato questo tipo di veicolo, o se questo posto costa meno, lo salvo
         if (!minPrices[tipo] || prezzo < minPrices[tipo]) {
             minPrices[tipo] = prezzo;
         }
     });
     return minPrices;
+});
+
+// tariffa speciale Disabili
+const tariffaDisabili = computed(() => {
+    const posto = garageStore.posti?.find(p => p.isdisabili);
+    return posto ? Number(posto.tariffaoraria).toFixed(2) : null;
+});
+
+// tariffa speciale Elettrica
+const tariffaElettrica = computed(() => {
+    const posto = garageStore.posti?.find(p => p.iselettrica && !p.isdisabili);
+    return posto ? Number(posto.tariffaoraria).toFixed(2) : null;
 });
 
 const formattaTarga = () => {
@@ -65,6 +79,20 @@ const isTargaValida = computed(() => {
     // [A-Z]{2}$ (finisce con 2 lettere)
     const regex = /^[A-Z]{2}\d{3}[A-Z]{2}$/
     return regex.test(targa.value)
+})
+
+const formattaCude = () => {
+    // rimuove qualsiasi carattere che non sia lettera, numero o trattino, e converte in maiuscolo
+    codiceDisabilita.value = codiceDisabilita.value.replace(/[^a-zA-Z0-9-]/g, '').toUpperCase()
+}
+
+const isCudeValido = computed(() => {
+    // se non abbiamo selezionato un posto per disabili, il campo è tecnicamente "valido" a prescindere
+    if (!postoSelezionato.value?.isdisabili) return true;
+    
+    // solo lettere maiuscole, numeri e trattini. Lunghezza da 5 a 20 caratteri.
+    const regex = /^[A-Z0-9-]{5,20}$/;
+    return regex.test(codiceDisabilita.value);
 })
 
 const aggiornaMappa = async () => {
@@ -99,6 +127,7 @@ const resetSelezione = async () => {
     targa.value = ''
     note.value = ''
     postoSelezionato.value = null
+    codiceDisabilita.value = ''
     messaggio.value = null
     isMapConfirmed.value = false
 
@@ -125,6 +154,11 @@ const gestisciPrenotazione = async () => {
         return
     }
 
+    if (postoSelezionato.value.isdisabili && !isCudeValido.value) {
+        messaggio.value = { tipo: 'error', testo: 'Inserisci un codice Contrassegno CUDE valido (es. IT-1234567).' }
+        return
+    }
+
     isPrenotando.value = true;
 
     const payload = {
@@ -133,7 +167,8 @@ const gestisciPrenotazione = async () => {
         note: note.value,
         inizio: checkIn.value,
         fine: checkOut.value,
-        prezzo_totale: prezzoTotale.value
+        prezzo_totale: prezzoTotale.value,
+        codice_disabilita: codiceDisabilita.value
     }
 
     const res = await garageStore.prenota(payload)
@@ -269,9 +304,18 @@ const distribuzioneVoti = computed(() => {
                             <span class="prezzo-valore-small">€{{ tariffePerVeicolo['FURGONE'].toFixed(2) }}<span>/h</span></span>
                         </div>
 
-                        <div class="price-line" v-if="Object.keys(tariffePerVeicolo).length === 0">
-                            <span class="v-tipo">Base</span>
-                            <span class="prezzo-valore-small">€{{ garageStore.currentGarage.tariffabase }}<span>/h</span></span>
+                        <div class="special-rates-container" v-if="tariffaElettrica || tariffaDisabili">
+                            
+                            <div class="special-line ev-line" v-if="tariffaElettrica">
+                                <span class="v-tipo">Ricarica elettrica</span>
+                                <span class="prezzo-valore-small">€{{ tariffaElettrica }}<span>/h</span></span>
+                            </div>
+
+                            <div class="special-line cude-line" v-if="tariffaDisabili">
+                                <span class="v-tipo">Disabili</span>
+                                <span class="prezzo-valore-small">€{{ tariffaDisabili }}<span>/h</span></span>
+                            </div>
+
                         </div>
                     </div>
                 </div>
@@ -331,6 +375,15 @@ const distribuzioneVoti = computed(() => {
                                     Formato non valido.
                                 </small>
                             </div>
+
+                            <div class="form-group" v-if="postoSelezionato.isdisabili">
+                                <label>Codice Contrassegno CUDE</label>
+                                <input type="text" v-model="codiceDisabilita" @input="formattaCude" placeholder="Es. IT-1234567" required>
+                                <small v-if="codiceDisabilita.length > 0 && !isCudeValido" class="error-text">
+                                    Formato non valido.
+                                </small>
+                            </div>
+
                             <div class="form-group">
                                 <label>Note (opzionale)</label>
                                 <input type="text" v-model="note">
@@ -356,7 +409,7 @@ const distribuzioneVoti = computed(() => {
                             </div>
                         </div>
 
-                        <button class="btn fill" :disabled="!isMapConfirmed || !postoSelezionato || !targa || !isTargaValida"
+                        <button class="btn fill" :disabled="!isMapConfirmed || !postoSelezionato || !targa || !isTargaValida || (postoSelezionato.isdisabili && !isCudeValido)"
                             @click="gestisciPrenotazione">
                             Prenota ora
                         </button>
@@ -1117,4 +1170,34 @@ const distribuzioneVoti = computed(() => {
 .mostra-altro-btn:hover {
     opacity: 0.6;
 }
+
+/* Stili per le Tariffe Speciali */
+.special-rates-container {
+    margin-top: 6px;
+    padding-top: 8px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.2);
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.special-line {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end; /* Allinea i prezzi a destra */
+    gap: 15px;
+    width: 100%;
+}
+
+.special-line .prezzo-valore-small span {
+    opacity: 0.7;
+}
+
+@media (max-width: 600px) {
+    .special-line {
+        justify-content: flex-start; /* Su mobile allinea a sinistra */
+    }
+}
+
 </style>

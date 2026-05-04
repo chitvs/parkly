@@ -14,20 +14,16 @@ router.get("/", async (req, res) => {
       query = `
         SELECT 
             g.*,
+            g.TariffaAuto AS tariffabase, -- Fallback per compatibilità col frontend
+            json_strip_nulls(json_build_object(
+                'AUTO', g.TariffaAuto,
+                'MOTO', g.TariffaMoto,
+                'FURGONE', g.TariffaFurgone
+            )) AS "tariffeVeicoli",
             COALESCE(p.hasCoperto, false) AS "hasCoperto",
             COALESCE(p.hasElettrico, false) AS "hasElettrico",
             COALESCE(p.hasDisabili, false) AS "hasDisabili",
-            COALESCE(p.tipiDisponibili, '{}') AS "tipiDisponibili",
-            -- creiamo un oggetto JSON con il prezzo minimo per ogni tipo di veicolo
-            COALESCE((
-                SELECT json_object_agg(t.tipoveicolo, t.min_tar)
-                FROM (
-                    SELECT tipoveicolo, MIN(tariffaoraria) as min_tar
-                    FROM postoauto
-                    WHERE id_garage = g.id_garage
-                    GROUP BY tipoveicolo
-                ) t
-            ), '{}'::json) AS "tariffeVeicoli"
+            COALESCE(p.tipiDisponibili, '{}') AS "tipiDisponibili"
         FROM garage g
         INNER JOIN (
             SELECT 
@@ -69,20 +65,16 @@ router.get("/", async (req, res) => {
       query = `
         SELECT 
             g.*,
+            g.TariffaAuto AS tariffabase, -- Fallback per compatibilità col frontend
+            json_strip_nulls(json_build_object(
+                'AUTO', g.TariffaAuto,
+                'MOTO', g.TariffaMoto,
+                'FURGONE', g.TariffaFurgone
+            )) AS "tariffeVeicoli",
             COALESCE(p.hasCoperto, false) AS "hasCoperto",
             COALESCE(p.hasElettrico, false) AS "hasElettrico",
             COALESCE(p.hasDisabili, false) AS "hasDisabili",
-            COALESCE(p.tipiDisponibili, '{}') AS "tipiDisponibili",
-            -- creiamo un oggetto JSON con il prezzo minimo per ogni tipo di veicolo
-            COALESCE((
-                SELECT json_object_agg(t.tipoveicolo, t.min_tar)
-                FROM (
-                    SELECT tipoveicolo, MIN(tariffaoraria) as min_tar
-                    FROM postoauto
-                    WHERE id_garage = g.id_garage
-                    GROUP BY tipoveicolo
-                ) t
-            ), '{}'::json) AS "tariffeVeicoli"
+            COALESCE(p.tipiDisponibili, '{}') AS "tipiDisponibili"
         FROM garage g
         LEFT JOIN (
             SELECT 
@@ -202,7 +194,7 @@ router.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const garage = await db.oneOrNone(
-      "SELECT * FROM Garage WHERE ID_Garage = $1",
+      "SELECT *, TariffaAuto AS tariffabase FROM Garage WHERE ID_Garage = $1",
       [id],
     );
     if (!garage)
@@ -228,11 +220,19 @@ router.get("/:id/posti", async (req, res) => {
     const { id } = req.params;
     const { inizio, fine } = req.query;
 
-    // Anteprima, tutti i posti sono come occupati
+    // anteprima, tutti i posti sono liberi
     if (!inizio || !fine || inizio === "" || fine === "") {
       const querySemplice = `
-                SELECT p.*, FALSE AS is_occupato 
+                SELECT p.*, FALSE AS is_occupato,
+                CASE 
+                    WHEN p.IsDisabili THEN g.TariffaDisabili 
+                    WHEN p.IsElettrica THEN g.TariffaElettrica 
+                    WHEN p.TipoVeicolo = 'AUTO' THEN g.TariffaAuto 
+                    WHEN p.TipoVeicolo = 'MOTO' THEN g.TariffaMoto 
+                    WHEN p.TipoVeicolo = 'FURGONE' THEN g.TariffaFurgone 
+                END as tariffaoraria
                 FROM PostoAuto p
+                JOIN Garage g ON p.ID_Garage = g.ID_Garage
                 WHERE p.ID_Garage = $1
                 ORDER BY p.CodicePosto
             `;
@@ -251,8 +251,16 @@ router.get("/:id/posti", async (req, res) => {
                 WHERE pr.ID_Posto = p.ID_Posto 
                 AND pr.Stato = 'ATTIVA'
                 AND (pr.InizioSosta, pr.FineSosta) OVERLAPS ($2::timestamp, $3::timestamp)
-            ) AS is_occupato
+            ) AS is_occupato,
+            CASE 
+                WHEN p.IsDisabili THEN g.TariffaDisabili 
+                WHEN p.IsElettrica THEN g.TariffaElettrica 
+                WHEN p.TipoVeicolo = 'AUTO' THEN g.TariffaAuto 
+                WHEN p.TipoVeicolo = 'MOTO' THEN g.TariffaMoto 
+                WHEN p.TipoVeicolo = 'FURGONE' THEN g.TariffaFurgone 
+            END as tariffaoraria
             FROM PostoAuto p
+            JOIN Garage g ON p.ID_Garage = g.ID_Garage
             WHERE p.ID_Garage = $1
             ORDER BY p.CodicePosto
         `;
