@@ -1,4 +1,6 @@
 import { reactive } from 'vue'
+import { disconnectSocket } from '@/composables/useChat'
+
 
 export const authStore = reactive({
   utente: null,
@@ -181,6 +183,7 @@ async cancelBooking(codicePrenotazione) {
       console.error("Errore durante il logout lato server:", err);
     } finally {
       this.setUtente(null);
+      disconnectSocket(); //chiudo socket usata per inviare messaggi tra utenti
     }
   }
 })
