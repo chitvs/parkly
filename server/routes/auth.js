@@ -82,7 +82,7 @@ router.post('/login', async (req, res) => {
 
     try {
         const utente = await db.oneOrNone(
-            'SELECT * FROM Utente WHERE Email = $1 OR NomeUtente = $1', 
+            'SELECT * FROM Utente WHERE (Email = $1 OR NomeUtente = $1) AND IsAttivo = TRUE', 
             [identificatore]
         );
         
@@ -268,6 +268,35 @@ router.post('/logout', (req, res) => {
         res.clearCookie('connect.sid');
         res.json({ success: true, message: "Logout effettuato con successo" });
     });
+});
+
+// eliminazione account (soft-delete)
+router.delete('/delete-account', async (req, res) => {
+    // l'utente è loggato?
+    if (!req.session.utente || !req.session.utente.id) {
+        return res.status(401).json({ success: false, error: 'Non autorizzato' });
+    }
+
+    try {
+        const utenteId = req.session.utente.id;
+
+        // spengo l'utente nel db (soft-delete)
+        await db.none('UPDATE Utente SET IsAttivo = FALSE WHERE id_utente = $1', [utenteId]);
+
+        // distruggo la sessione corrente in modo che venga buttato fuori dall'app
+        req.session.destroy((err) => {
+            if (err) {
+                console.error("Errore distruzione sessione dopo eliminazione:", err);
+                return res.status(500).json({ success: false, error: "Impossibile disconnettere l'account" });
+            }
+            res.clearCookie('connect.sid');
+            res.json({ success: true, message: "Account eliminato con successo" });
+        });
+
+    } catch (err) {
+        console.error('Errore durante eliminazione account:', err);
+        res.status(500).json({ success: false, error: 'Errore interno del server' });
+    }
 });
 
 // Sincronizzazione del frontend con sessione reale sul server

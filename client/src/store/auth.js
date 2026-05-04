@@ -150,5 +150,29 @@ async updateProfile(payload) {
     } finally {
       this.setUtente(null);
     }
-  } 
+  },
+
+  async deleteAccount() {
+    try {
+      const res = await fetch('/api/auth/delete-account', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        // puliamo lo stato locale
+        this.utente = null;
+        // ripuliamo eventuali dati persistenti
+        localStorage.removeItem('utente');
+        return { success: true };
+      } else {
+        return { success: false, error: data.error };
+      }
+    } catch (error) {
+      console.error("Errore durante l'eliminazione dell'account:", error);
+      return { success: false, error: "Errore di connessione" };
+    }
+  }
 })
