@@ -11,8 +11,8 @@ import eyeUrl from '../assets/eye-gray.svg'
 import eyeClosedUrl from '../assets/eye-closed-gray.svg'
 
 // --- DATI PROFILO ---
-const originalData = ref({ nome: '', cognome: '', email: '', telefono: '', codiceFiscale: '', fotoProfilo_URL: '' })
-const formData = reactive({ nome: '', cognome: '', email: '', telefono: '', codiceFiscale: '', fotoProfilo_URL: '' })
+const originalData = ref({ nome: '', cognome: '', nomeUtente: '', email: '', telefono: '', codiceFiscale: '', fotoProfilo_URL: '' })
+const formData = reactive({ nome: '', cognome: '', nomeUtente: '', email: '', telefono: '', codiceFiscale: '', fotoProfilo_URL: '' })
 
 // --- DATI CAMBIO PASSWORD ---
 const pwdCurrent = ref('')
@@ -39,6 +39,7 @@ onMounted(async () => {
     const datiDalServer = {
       nome: userDb.nome || '',
       cognome: userDb.cognome || '',
+      nomeUtente: userDb.nomeutente || '',
       email: userDb.email || '',
       telefono: userDb.telefono || '',
       codiceFiscale: userDb.codicefiscale || '', 
@@ -59,6 +60,7 @@ onUnmounted(() => {
 const hasChanges = computed(() => {
   return formData.nome !== originalData.value.nome ||
          formData.cognome !== originalData.value.cognome ||
+         formData.nomeUtente !== originalData.value.nomeUtente ||
          formData.email !== originalData.value.email ||
          formData.telefono !== originalData.value.telefono ||
          formData.codiceFiscale !== originalData.value.codiceFiscale;
@@ -204,6 +206,11 @@ const submitChangePassword = async () => {
                 <label class="form-label fw-semibold">Cognome</label>
                 <input type="text" class="form-control" v-model="formData.cognome" required>
               </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Nome Utente</label>
+                <input type="text" class="form-control" v-model="formData.nomeUtente" required>
             </div>
 
             <div class="mb-3">

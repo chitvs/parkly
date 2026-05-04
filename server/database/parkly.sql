@@ -5,6 +5,7 @@ CREATE TABLE Utente (
     Nome VARCHAR(50) NOT NULL,
     Cognome VARCHAR(50) NOT NULL,
     CodiceFiscale VARCHAR(16) UNIQUE,
+    NomeUtente VARCHAR(50) NOT NULL UNIQUE,
     Email VARCHAR(100) NOT NULL UNIQUE,
     PasswordHash VARCHAR(255) NOT NULL,
     Telefono VARCHAR(20),

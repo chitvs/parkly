@@ -8,6 +8,7 @@ import eyeClosedUrl from '../assets/eye-closed-gray.svg'
 const nome = ref('')
 const cognome = ref('')
 const cf = ref('')
+const nomeUtente = ref('')
 const email = ref('')
 const telefono = ref('')
 const password = ref('')
@@ -26,6 +27,7 @@ const handleRegister = async () => {
   const payload = {
     nome: nome.value,
     cognome: cognome.value,
+    nomeUtente: nomeUtente.value,
     email: email.value,
     telefono: telefono.value || null,
     password: password.value,
@@ -81,6 +83,16 @@ const handleRegister = async () => {
                     required
                   />
                 </div>
+              </div>
+
+              <div class="mb-3">
+                <input
+                    type="text"
+                    class="form-control"
+                    placeholder="Nome Utente"
+                    v-model="nomeUtente"
+                    required
+                />
               </div>
 
               <div class="mb-3">

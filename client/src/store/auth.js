@@ -32,12 +32,12 @@ export const authStore = reactive({
   },
 
   // Logica Login centralizzata
-  async login(email, password) {
+  async login(identificatore, password) {
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ identificatore, password })
       });
 
       if (!response.ok) {

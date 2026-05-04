@@ -1,15 +1,15 @@
 -- UTENTI
-INSERT INTO Utente (Ruolo, Nome, Cognome, CodiceFiscale, Email, PasswordHash, Telefono) VALUES
-('GESTORE', 'Alessandro', 'Galli', 'GLLLSN70A01H501A', 'alessandro.g@garage.it', '$2b$10$WPKYQS3SIp5VEf4SKRKx3O5HVlY6XMOM1lle/fnGc2/ZKhek5VQu.', '3310000001'),
-('GESTORE', 'Roberta', 'Randi', 'RNDRRT75B41H501B', 'roberta.r@garage.it', '$2b$10$lN6k5YY30hrFMFHedDL9v.UFgP9VoXScHZbRRk9HmwkLNqnpEJBR2', '3310000002'),
-('GESTORE', 'Fabio', 'Santi', 'SNTFBA80C01H501C', 'fabio.s@garage.it', '$2b$10$vEVaU1KOg6DeaPoFWA0HBOZffryYgBkdZah.P/h4J6T9KaLQtuzue', '3310000003'),
-('GESTORE', 'Sonia', 'Fabbri', 'FBBSNO85D41H501D', 'sonia.f@garage.it', '$2b$10$xEdYdhxpEHU5KuYqGTDJs.y5C5eiicy9jy70qCM5z62/x86pV43MG', '3310000004'),
-('CLIENTE', 'Marco', 'Liberti', 'LBRMRC90E15H501E', 'marco.l@email.com', '$2b$10$WsxqnMAdJjFvYWsm0uPN6OuZ8xkaMibrt3FLvr33f4czAXyfxvc3i', '3400000001'),
-('CLIENTE', 'Chiara', 'Valenti', 'VLNCHR92F52H501F', 'chiara.v@email.com', '$2b$10$xxeT0orM5SGPJ67LL1oGgOVwuLYqdyo//nyw0CZHNz.8olX9nNXu2', '3400000002'),
-('CLIENTE', 'Paolo', 'Dessi', 'DSSPLA94G10H501G', 'paolo.d@email.com', '$2b$10$ISIhd1D5EU5GPKq3Tr2CIeAkJSATIDPfUSdBQoV05l14muNDSuOh2', '3400000003'),
-('CLIENTE', 'Simona', 'Reale', 'RLESNO96H50H501H', 'simona.r@email.com', '$2b$10$wrEc8cgwi3KysvKawcYUgePJbVFHwJUlIuropNQwDHL7sDuX8DYui', '3400000004'),
-('CLIENTE', 'Davide', 'Moro', 'MRODVD98L20H501I', 'davide.m@email.com', '$2b$10$nLxPdWaiThqojfaCZ5RgGeUq4viZBRg5.CO72k6uu3V1xFtAom6rm', '3400000005'),
-('CLIENTE', 'Giada', 'Serra', 'SRRGDA99M45H501L', 'giada.s@email.com', '$2b$10$LXSwRxWPIl0wRboIgW4NSuF3LQ/A6CvyRpVj8QD0Cw/0uWkVwQ.ty', '3400000006');
+INSERT INTO Utente (Ruolo, Nome, Cognome, NomeUtente, CodiceFiscale, Email, PasswordHash, Telefono) VALUES
+('GESTORE', 'Alessandro', 'Galli', 'agalli_gest', 'GLLLSN70A01H501A', 'alessandro.g@garage.it', '$2b$10$WPKYQS3SIp5VEf4SKRKx3O5HVlY6XMOM1lle/fnGc2/ZKhek5VQu.', '3310000001'),
+('GESTORE', 'Roberta', 'Randi', 'rrandi_gest', 'RNDRRT75B41H501B', 'roberta.r@garage.it', '$2b$10$lN6k5YY30hrFMFHedDL9v.UFgP9VoXScHZbRRk9HmwkLNqnpEJBR2', '3310000002'),
+('GESTORE', 'Fabio', 'Santi', 'fsanti_gest', 'SNTFBA80C01H501C', 'fabio.s@garage.it', '$2b$10$vEVaU1KOg6DeaPoFWA0HBOZffryYgBkdZah.P/h4J6T9KaLQtuzue', '3310000003'),
+('GESTORE', 'Sonia', 'Fabbri', 'sfabbri_gest', 'FBBSNO85D41H501D', 'sonia.f@garage.it', '$2b$10$xEdYdhxpEHU5KuYqGTDJs.y5C5eiicy9jy70qCM5z62/x86pV43MG', '3310000004'),
+('CLIENTE', 'Marco', 'Liberti', 'marcoliberti', 'LBRMRC90E15H501E', 'marco.l@email.com', '$2b$10$WsxqnMAdJjFvYWsm0uPN6OuZ8xkaMibrt3FLvr33f4czAXyfxvc3i', '3400000001'),
+('CLIENTE', 'Chiara', 'Valenti', 'chiaravale', 'VLNCHR92F52H501F', 'chiara.v@email.com', '$2b$10$xxeT0orM5SGPJ67LL1oGgOVwuLYqdyo//nyw0CZHNz.8olX9nNXu2', '3400000002'),
+('CLIENTE', 'Paolo', 'Dessi', 'paolodessi', 'DSSPLA94G10H501G', 'paolo.d@email.com', '$2b$10$ISIhd1D5EU5GPKq3Tr2CIeAkJSATIDPfUSdBQoV05l14muNDSuOh2', '3400000003'),
+('CLIENTE', 'Simona', 'Reale', 'simonareale', 'RLESNO96H50H501H', 'simona.r@email.com', '$2b$10$wrEc8cgwi3KysvKawcYUgePJbVFHwJUlIuropNQwDHL7sDuX8DYui', '3400000004'),
+('CLIENTE', 'Davide', 'Moro', 'davidemoro', 'MRODVD98L20H501I', 'davide.m@email.com', '$2b$10$nLxPdWaiThqojfaCZ5RgGeUq4viZBRg5.CO72k6uu3V1xFtAom6rm', '3400000005'),
+('CLIENTE', 'Giada', 'Serra', 'giadaserra', 'SRRGDA99M45H501L', 'giada.s@email.com', '$2b$10$LXSwRxWPIl0wRboIgW4NSuF3LQ/A6CvyRpVj8QD0Cw/0uWkVwQ.ty', '3400000006');
 
 INSERT INTO Garage (ID_Gestore, Nome, Descrizione, Indirizzo, Latitudine, Longitudine, AltezzaMassima, TariffaBase, OrarioApertura, OrarioChiusura, Is24h, MappaTestuale) VALUES
 (1, 'EUR business parking', 'Ampio parcheggio zona uffici EUR.', 'Viale Europa, 150, Roma', 41.8285, 12.4673, 2.50, 3.00, '08:00:00', '20:00:00', FALSE, E'E01:2x1-E02:2x1-E03:2x1-E04:2x1-E05:2x1\nX:10x1\nE06:2x1-E07:2x1-E08:2x1-E09:2x1-E10:2x1\nE11:2x1-E12:2x1-E13:2x1-E14:2x1-E15:2x1\nX:10x1\nE16:2x1-E17:2x1-E18:2x1-E19:2x1-E20:2x1'),
@@ -306,3 +306,12 @@ INSERT INTO Prenotazione (ID_Utente, ID_Posto, CodicePrenotazione, Targa, Note, 
 (6, 21, 'PR-I1O2P3A4', 'EF456GH', '', '2026-12-10 13:00:00', '2026-12-10 16:00:00', 22.50, 'ATTIVA'),
 (7, 41, 'PR-S5D6F7G8', 'IL789MN', '', '2026-12-13 15:00:00', '2026-12-13 16:00:00', 2.50, 'ATTIVA'),
 (8, 62, 'PR-H9J1K2L3', 'OP012QR', '', '2026-12-16 08:00:00', '2026-12-16 12:00:00', 22.00, 'ATTIVA');
+
+-- RECENSIONI
+INSERT INTO Recensione (ID_Prenotazione, ID_Utente, ID_Garage, VotoGenerale, VotoPosizione, VotoPrezzo, VotoPulizia, VotoSpazio, VotoSicurezza, Commento) VALUES
+(1, 5, 1, 5, 5, 4, 5, 5, 5, 'Posto perfetto, comodissimo per gli uffici. Ritornerò sicuramente!'),
+(2, 6, 2, 4, 5, 3, 5, 4, 5, 'Molto sicuro ma un po'' caro. Ottima la posizione per fare acquisti ai Parioli.'),
+(3, 7, 3, 5, 5, 5, 4, 5, 4, 'Comodissimo per prendere la metro, prezzo onesto e ampi spazi.'),
+(4, 8, 4, 3, 4, 4, 3, 4, 3, 'Spazioso per il mio furgone, ma l''illuminazione e la pulizia sono migliorabili.'),
+(5, 9, 5, 5, 5, 4, 5, 4, 5, 'Vicinissimo a San Pietro, personale cortese e facile da raggiungere.'),
+(6, 10, 6, 4, 5, 4, 3, 3, 4, 'Molto comodo per la movida serale, ma i posti auto sono un po'' stretti.');

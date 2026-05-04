@@ -1,17 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcrypt');
-const db = require('../database/db'); // Questo file usa in automatico DB_USER, DB_PASSWORD, ecc.
+const db = require('../database/db');
 const { isLoggato } = require('../middleware/authMiddleware');
-
-// --- NUOVE IMPORTAZIONI PER L'UPLOAD FOTO ---
 const multer = require('multer');
 const { createClient } = require('@supabase/supabase-js');
 
 // configura il client Supabase usando le variabili dell'environment
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
-// Configura Multer (handler per le foto prima di mandarle a Supabase)
+// configura Multer (handler per le foto prima di mandarle a Supabase)
 const upload = multer({ storage: multer.memoryStorage() });
 
 // Registrazione
@@ -19,6 +17,7 @@ router.post('/register', async (req, res) => {
     const { 
         nome, 
         cognome, 
+        nomeUtente,
         email, 
         password, 
         ruolo,
@@ -27,14 +26,17 @@ router.post('/register', async (req, res) => {
     } = req.body;
 
     try {
-        // l'email esiste?
-        const utenteEsistente = await db.oneOrNone('SELECT * FROM Utente WHERE Email = $1', [email]);
-    
+        // l'email o il nome utente esistono?
+        const utenteEsistente = await db.oneOrNone(
+            'SELECT * FROM Utente WHERE Email = $1 OR NomeUtente = $2', 
+            [email, nomeUtente]
+        );    
+
         // se l'email esiste, lancio un errore
         if (utenteEsistente) {
             return res.status(400).json({ 
                 success: false, 
-                error: 'Email già registrata' 
+                error: 'Email o Nome Utente già in uso'
             });
         }
 
@@ -43,13 +45,14 @@ router.post('/register', async (req, res) => {
 
         // salvataggio nel db
         const nuovoUtente = await db.one(
-            'INSERT INTO Utente (Nome, Cognome, Email, PasswordHash, Ruolo, Telefono, codiceFiscale) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id_utente, nome, email, ruolo    ',
-            [nome, cognome, email, passwordHash, ruolo || 'CLIENTE', telefono || null, codiceFiscale || null] // default CLIENTE se ruolo non specificato
+            'INSERT INTO Utente (Nome, Cognome, NomeUtente, Email, PasswordHash, Ruolo, Telefono, codiceFiscale) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id_utente, nome, nomeutente, email, ruolo',
+            [nome, cognome, nomeUtente, email, passwordHash, ruolo || 'CLIENTE', telefono || null, codiceFiscale || null] // default CLIENTE se ruolo non specificato
         );
 
         req.session.utente = {
             id: nuovoUtente.id_utente,
             nome: nuovoUtente.nome,
+            nomeUtente: nuovoUtente.nomeUtente,
             email: nuovoUtente.email,
             ruolo: nuovoUtente.ruolo
         };
@@ -72,17 +75,20 @@ router.post('/register', async (req, res) => {
 // Login
 router.post('/login', async (req, res) => {
     const { 
-        email, 
+        identificatore, // email o nomeutente 
         password 
     } = req.body;
 
     try {
-        const utente = await db.oneOrNone('SELECT * FROM Utente WHERE Email = $1', [email]);
+        const utente = await db.oneOrNone(
+            'SELECT * FROM Utente WHERE Email = $1 OR NomeUtente = $1', 
+            [identificatore]
+        );
         
         if (!utente) {
             return res.status(401).json({ 
                 success: false, 
-                error: 'Email non valida' 
+                error: 'Credenziali non valide' 
             });
         }
 
@@ -100,6 +106,7 @@ router.post('/login', async (req, res) => {
         req.session.utente = {
             id: utente.id_utente,
             nome: utente.nome,
+            nomeUtente: utente.nomeUtente,
             email: utente.email,
             ruolo: utente.ruolo,
             fotoProfilo_URL: utente.fotoprofilo_url 
@@ -172,7 +179,7 @@ router.get('/profile', async (req, res) => {
         // N.B: NON selezioniamo la password (PasswordHash) per sicurezza!
         
         const utente = await db.oneOrNone(
-            `SELECT id_utente, nome, cognome, email, telefono, codiceFiscale, fotoprofilo_url, ruolo 
+            `SELECT id_utente, nome, cognome, nomeutente, email, telefono, codiceFiscale, fotoprofilo_url, ruolo 
             FROM Utente WHERE id_utente = $1`, 
             [req.session.utente.id]
         );
@@ -204,33 +211,34 @@ router.put('/profile', async (req, res) => {
         });
     }
 
-    const { nome, cognome, email, telefono, codiceFiscale } = req.body;
+    const { nome, cognome, nomeUtente, email, telefono, codiceFiscale } = req.body;
 
     try {
-        // Controllo se l'utente sta cercando di usare un'email già presa da qualcun altro
-        const emailEsistente = await db.oneOrNone(
-            'SELECT id_utente FROM Utente WHERE Email = $1 AND id_utente != $2', 
-            [email, req.session.utente.id]
+        // Controllo se l'utente sta cercando di usare un'email già presa da qualcun altro, controllo anche il nome utente
+        const datiEsistenti = await db.oneOrNone(
+            'SELECT id_utente FROM Utente WHERE (Email = $1 OR NomeUtente = $2) AND id_utente != $3', 
+            [email, nomeUtente, req.session.utente.id]
         );
 
-        if (emailEsistente) {
+        if (datiEsistenti) {
             return res.status(400).json({ 
                 success: false, 
-                error: 'Questa email è già in uso da un altro account' 
+                error: 'Questa email o nome utente è già in uso da un altro account' 
             });
         }
 
         // Eseguo l'UPDATE nel database
         const utenteAggiornato = await db.one(
             `UPDATE Utente 
-             SET Nome = $1, Cognome = $2, Email = $3, Telefono = $4, codiceFiscale = $5 
-             WHERE id_utente = $6 
-             RETURNING id_utente, nome, email, ruolo`,
-            [nome, cognome, email, telefono || null, codiceFiscale || null, req.session.utente.id]
+             SET Nome = $1, Cognome = $2, NomeUtente = $3, Email = $4, Telefono = $5, codiceFiscale = $6 
+             WHERE id_utente = $7 
+             RETURNING id_utente, nome, nomeutente, email, ruolo`,
+            [nome, cognome, nomeUtente, email, telefono || null, codiceFiscale || null, req.session.utente.id]
         );
 
         // Aggiorno i dati salvati nella sessione (nel caso abbia cambiato nome o email)
         req.session.utente.nome = utenteAggiornato.nome;
+        req.session.utente.nomeUtente = utenteAggiornato.nomeutente;
         req.session.utente.email = utenteAggiornato.email;
 
         res.json({ 

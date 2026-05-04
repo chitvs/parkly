@@ -9,7 +9,7 @@ import eyeClosedUrl from '../assets/eye-closed-gray.svg'
 
 const router = useRouter()
 
-const loginEmail = ref('')
+const loginIdentificatore = ref('')
 const loginPassword = ref('')
 const isMenuOpen = ref(false)
 const isPasswordVisible = ref(false)
@@ -55,7 +55,7 @@ const closeLoginModal = () => {
 }
 
 const handleLogin = async () => {
-  const data = await authStore.login(loginEmail.value, loginPassword.value)
+  const data = await authStore.login(loginIdentificatore.value, loginPassword.value)
 
   if (data.success) {
     await closeLoginModal()
@@ -112,7 +112,7 @@ const handleLogout = async () => {
             style="width: 28px; height: 28px; object-fit: cover; border-color: #dee2e6;"
           >
           
-          <span>Ciao, <strong>{{ authStore.utente.nome }}</strong></span>
+          <span>Ciao, <strong>{{ authStore.utente.nomeUtente }}</strong></span>
           
         </button>
         
@@ -177,13 +177,13 @@ const handleLogout = async () => {
 
           <form @submit.prevent="handleLogin">
             <div class="mb-3">
-              <input
-                type="email"
-                class="form-control modal-input"
-                placeholder="Indirizzo Email"
-                v-model="loginEmail"
-                required
-              />
+                <input
+                    type="text"
+                    class="form-control modal-input"
+                    placeholder="Email o Nome Utente"
+                    v-model="loginIdentificatore"
+                    required
+                />
             </div>
             <div class="mb-3">
               <div class="input-group password-group">
