@@ -1,5 +1,3 @@
-// Usa sessione cookie (niente JWT), coerente con il resto del progetto
-
 import { ref, onUnmounted } from 'vue';
 import { io } from 'socket.io-client';
 
@@ -22,7 +20,7 @@ function getSocket() {
   return socketInstance;
 }
 
-// Chiama questo al logout per pulire la connessione
+// Chiamato al logout per pulire la connessione
 export function disconnectSocket() {
   if (socketInstance) {
     socketInstance.disconnect();
@@ -30,23 +28,24 @@ export function disconnectSocket() {
   }
 }
 
-// ─── Composable principale ────────────────────────────────────────────────────
+// Composable principale 
 export function useChat(idGarage, idDestinatario) {
   
 
   const messaggi = ref([]);
   const staCaricando = ref(false);
   const errore = ref(null);
-  const destinatarioStaScrivendo = ref(false);
+  
 
   let scrittura_timeout = null;
 
   const socket = getSocket();
 
-  // ── Carica storico via REST ───────────────────────────────────────────────
+  // Carica storico via REST 
   async function caricaStorico() {
     staCaricando.value = true;
     errore.value = null;
+    messaggi.value=[];
     try {
       const res = await fetch(`${SERVER_URL}/api/messaggi/${idGarage}`, {
         credentials: 'include', // invia cookie sessione
@@ -70,10 +69,7 @@ export function useChat(idGarage, idDestinatario) {
     });
   }
 
-  // ── Segnala "sta scrivendo" ───────────────────────────────────────────────
-  function segnalaScrittura() {
-    socket.emit('sta_scrivendo', { idDestinatario, idGarage });
-  }
+  
 
   // ── Listener: messaggio in arrivo dal destinatario ────────────────────────
   function onNuovoMessaggio(msg) {
@@ -93,29 +89,15 @@ export function useChat(idGarage, idDestinatario) {
     }
   }
 
-  // ── Listener: destinatario sta scrivendo ─────────────────────────────────
-  function onStaScrivendo({ idMittente, idGarage: gId }) {
-    if (
-      parseInt(idMittente) === parseInt(idDestinatario) &&
-      parseInt(gId) === parseInt(idGarage)
-    ) {
-      destinatarioStaScrivendo.value = true;
-      clearTimeout(scrittura_timeout);
-      scrittura_timeout = setTimeout(() => {
-        destinatarioStaScrivendo.value = false;
-      }, 2500);
-    }
-  }
+  
 
   socket.on('nuovo_messaggio', onNuovoMessaggio);
   socket.on('messaggio_inviato', onMessaggioInviato);
-  socket.on('utente_sta_scrivendo', onStaScrivendo);
+ 
 
   onUnmounted(() => {
     socket.off('nuovo_messaggio', onNuovoMessaggio);
     socket.off('messaggio_inviato', onMessaggioInviato);
-    socket.off('utente_sta_scrivendo', onStaScrivendo);
-    clearTimeout(scrittura_timeout);
   });
 
   caricaStorico();
@@ -124,9 +106,7 @@ export function useChat(idGarage, idDestinatario) {
     messaggi,
     staCaricando,
     errore,
-    destinatarioStaScrivendo,
     inviaMessaggio,
-    segnalaScrittura,
-    caricaStorico,
+    caricaStorico
   };
 }

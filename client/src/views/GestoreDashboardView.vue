@@ -375,17 +375,15 @@
 
     <Footer />
 
-    <!-- Popup Chat -->
-    <div v-if="chatSelezionata" class="chat-overlay" @click.self="chiudiChat">
-      <div class="chat-popup">
-        <button class="chat-popup__chiudi" @click="chiudiChat" title="Chiudi">✕</button>
-        <ChatBox
-          :id-garage="chatSelezionata.idGarage"
-          :id-destinatario="chatSelezionata.idDestinatario"
-          :nome-destinatario="chatSelezionata.nomeDestinatario"
-          ruolo-destinatario="Cliente"
-        />
-      </div>
+    <!-- Popup Chat fisso in basso a destra — identico a BookingsView -->
+    <div v-if="chatSelezionata" class="chat-popup-container">
+      <ChatBox
+        @chiudi="chiudiChat"
+        :idGarage="chatSelezionata.idGarage"
+        :idDestinatario="chatSelezionata.idDestinatario"
+        :nomeDestinatario="chatSelezionata.nomeDestinatario"
+        ruoloDestinatario="Cliente"
+      />
     </div>
 
   </div>
@@ -869,48 +867,24 @@ const navItems = [
   color: #fff;
 }
 
-/* ── Overlay popup ── */
-.chat-overlay {
+/* ── Popup Chat fisso in basso a destra — identico a BookingsView ── */
+.chat-popup-container {
   position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  bottom: 24px;
+  right: 24px;
+  width: 350px;
+  max-width: calc(100vw - 48px);
+  z-index: 9999;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 20px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  animation: slideUp 0.3s ease-out;
 }
 
-.chat-popup {
-  position: relative;
-  width: 100%;
-  max-width: 480px;
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
-  overflow: hidden;
-}
-
-.chat-popup__chiudi {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: 10;
-  background: rgba(255,255,255,0.2);
-  border: none;
-  color: #fff;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  font-size: 0.85rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s;
-}
-.chat-popup__chiudi:hover {
-  background: rgba(255,255,255,0.35);
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 @media (max-width: 900px) {

@@ -192,16 +192,12 @@ const chiudiChat = () => {
 
     <!-- Componente ChatBox montato come Popup fluttuante -->
     <div v-if="chatSelezionata" class="chat-popup-container">
-      <div class="chat-popup-close-bar">
-         <button @click="chiudiChat" class="btn btn-sm btn-danger rounded-pill fw-bold px-3">
-            Chiudi Chat X
-         </button>
-      </div>
       <ChatBox 
         :idGarage="chatSelezionata.idGarage"
         :idDestinatario="chatSelezionata.idDestinatario"
         :nomeDestinatario="chatSelezionata.nomeDestinatario"
         ruoloDestinatario="Gestore"
+        @chiudi="chiudiChat"
       />
     </div>
 
@@ -271,11 +267,6 @@ const chiudiChat = () => {
   animation: slideUp 0.3s ease-out;
 }
 
-.chat-popup-close-bar {
-  width: 100%;
-  display: flex;
-  justify-content: flex-end;
-}
 
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(20px); }
