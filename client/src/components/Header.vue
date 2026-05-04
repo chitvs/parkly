@@ -140,6 +140,11 @@ const handleLogout = async () => {
               I Tuoi Dati
             </RouterLink>
           </li>
+          <li>
+            <RouterLink class="dropdown-item" to="/portafoglio" @click="isMenuOpen = false">
+              Il Tuo Portafoglio
+            </RouterLink>
+          </li>
           <li><hr class="dropdown-divider"></li>
           <li>
             <a class="dropdown-item text-danger fw-bold" href="#" @click.prevent="handleLogout">

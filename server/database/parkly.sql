@@ -74,7 +74,7 @@ CREATE TABLE Prenotazione (
     CONSTRAINT CHK_DateSosta CHECK (FineSosta > InizioSosta)
 );
 
--- 5. RECENSIONE
+-- RECENSIONE
 CREATE TABLE Recensione (
     ID_Recensione SERIAL PRIMARY KEY,
     ID_Prenotazione INT NOT NULL UNIQUE, 
@@ -91,6 +91,17 @@ CREATE TABLE Recensione (
     FOREIGN KEY (ID_Prenotazione) REFERENCES Prenotazione(ID_Prenotazione) ON DELETE CASCADE,
     FOREIGN KEY (ID_Utente) REFERENCES Utente(ID_Utente) ON DELETE CASCADE,
     FOREIGN KEY (ID_Garage) REFERENCES Garage(ID_Garage) ON DELETE CASCADE
+);
+
+-- TRANSAZIONE
+CREATE TABLE Transazione (
+    ID_Transazione SERIAL PRIMARY KEY,
+    ID_Utente INT NOT NULL,
+    Tipo VARCHAR(20) CHECK (Tipo IN ('RICARICA', 'PRENOTAZIONE', 'RIMBORSO')) NOT NULL,
+    Importo DECIMAL(8, 2) NOT NULL,
+    Descrizione TEXT NOT NULL,
+    DataCreazione TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (ID_Utente) REFERENCES Utente(ID_Utente) ON DELETE CASCADE
 );
 
 /*

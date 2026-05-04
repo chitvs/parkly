@@ -179,7 +179,7 @@ router.get('/profile', async (req, res) => {
         // N.B: NON selezioniamo la password (PasswordHash) per sicurezza!
         
         const utente = await db.oneOrNone(
-            `SELECT id_utente, nome, cognome, nomeutente, email, telefono, codiceFiscale, fotoprofilo_url, ruolo 
+            `SELECT id_utente, nome, cognome, nomeutente, email, telefono, codiceFiscale, fotoprofilo_url, ruolo, saldo 
             FROM Utente WHERE id_utente = $1`, 
             [req.session.utente.id]
         );

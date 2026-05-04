@@ -2,6 +2,7 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { garageStore } from '../store/garage'
+import { authStore } from '../store/auth'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 import PlanimetriaGarage from '../components/PlanimetriaGarage.vue'
@@ -120,7 +121,13 @@ const gestisciPrenotazione = async () => {
     isPrenotando.value = false;
 
     if (res.success) {
+        if (authStore.utente) {
+            authStore.utente.saldo = parseFloat(authStore.utente.saldo) - parseFloat(prezzoTotale.value);
+            authStore.setUtente(authStore.utente);
+        }
+
         await aggiornaMappa()
+        
         messaggio.value = { tipo: 'success', testo: `Prenotazione avvenuta con successo! Il tuo codice è: ${res.prenotazione.codiceprenotazione}` }
         postoSelezionato.value = null
         targa.value = ''
@@ -274,7 +281,7 @@ const gestisciPrenotazione = async () => {
                             </div>
                         </div>
 
-                        <button class="btn fill" :disabled="!isMapConfirmed || !postoSelezionato || !targa || !isTargaValida""
+                        <button class="btn fill" :disabled="!isMapConfirmed || !postoSelezionato || !targa || !isTargaValida"
                             @click="gestisciPrenotazione">
                             Prenota ora
                         </button>

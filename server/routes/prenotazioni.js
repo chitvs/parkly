@@ -38,6 +38,8 @@ router.post('/', isLoggato, async (req, res) => {
                     g.Is24h,
                     g.OrarioApertura,
                     g.OrarioChiusura,
+                    g.Nome AS nome_garage,
+                    p.CodicePosto,
                     ($2::timestamp::time >= g.OrarioApertura AND $2::timestamp::time <= g.OrarioChiusura) AS inizio_valido,
                     ($3::timestamp::time >= g.OrarioApertura AND $3::timestamp::time <= g.OrarioChiusura) AS fine_valida
                 FROM Garage g
@@ -97,7 +99,17 @@ router.post('/', isLoggato, async (req, res) => {
                 WHERE ID_Utente = $2
             `, [prezzo_totale, id_utente]);
 
-            // inserimento nel db
+            // inserisco nel db la transazione
+            await t.none(`
+                INSERT INTO Transazione (ID_Utente, Tipo, Importo, Descrizione)
+                VALUES ($1, 'PRENOTAZIONE', $2, $3)
+            `, [
+                id_utente, 
+                -costoSosta, 
+                `Prenotazione ${checkOrari.nome_garage} - Posto ${checkOrari.codiceposto}`
+            ]);
+
+            // inserisco nel db la prenotazione
             return await t.one(`
                 INSERT INTO Prenotazione (ID_Utente, ID_Posto, CodicePrenotazione, Targa, Note, InizioSosta, FineSosta, PrezzoTotale)
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -190,26 +202,59 @@ router.put('/:codice/annulla', async (req, res) => {
         const codicePrenotazione = req.params.codice;
         const utenteId = req.session.utente.id;
         
-        // Eseguiamo l'UPDATE solo se lo stato è ancora 'ATTIVA' e se è del nostro utente
-        const result = await db.result(
-            `UPDATE Prenotazione 
-             SET Stato = 'ANNULLATA' 
-             WHERE CodicePrenotazione = $1 AND ID_Utente = $2 AND Stato = 'ATTIVA'`,
-            [codicePrenotazione, utenteId]
-        );
+        // eseguiamo tutto in una transazione per evitare di annullare senza rimborsare
+        const nuovoSaldo = await db.tx(async t => {
+            // troviamo la prenotazione e blocchiamo la riga per l'update
+            const prenotazione = await t.oneOrNone(`
+                SELECT ID_Prenotazione, PrezzoTotale, Stato 
+                FROM Prenotazione 
+                WHERE CodicePrenotazione = $1 AND ID_Utente = $2 AND Stato = 'ATTIVA'
+                FOR UPDATE
+            `, [codicePrenotazione, utenteId]);
 
-        // db.result ci dice quante righe sono state modificate
-        if (result.rowCount === 0) {
-            return res.status(400).json({ 
-                success: false, 
-                error: 'Prenotazione non trovata o già annullata.' 
-            });
-        }
+            if (!prenotazione) {
+                throw { status: 400, message: 'Prenotazione non trovata o già annullata.' };
+            }
 
-        res.json({ success: true, messaggio: 'Prenotazione annullata con successo' });
+            // Aggiorniamo lo stato in ANNULLATA
+            await t.none(`
+                UPDATE Prenotazione 
+                SET Stato = 'ANNULLATA' 
+                WHERE ID_Prenotazione = $1
+            `, [prenotazione.id_prenotazione]);
+
+            // riaccreditiamo i soldi al cliente
+            const utente = await t.one(`
+                UPDATE Utente 
+                SET Saldo = Saldo + $1 
+                WHERE ID_Utente = $2
+                RETURNING Saldo
+            `, [prenotazione.prezzototale, utenteId]);
+
+            // salvo la transazione nel db
+            await t.none(`
+                INSERT INTO Transazione (ID_Utente, Tipo, Importo, Descrizione)
+                VALUES ($1, 'RIMBORSO', $2, $3)
+            `, [
+                utenteId, 
+                prenotazione.prezzototale, 
+                `Rimborso prenotazione annullata (${codicePrenotazione})`
+            ]);
+
+            return utente.saldo;
+        });
+
+        res.json({ 
+            success: true, 
+            messaggio: 'Prenotazione annullata e importo rimborsato con successo',
+            nuovoSaldo: nuovoSaldo
+        });
 
     } catch (err) {
         console.error('Errore annullamento prenotazione:', err);
+        if (err.status) {
+            return res.status(err.status).json({ success: false, error: err.message });
+        }
         res.status(500).json({ success: false, error: 'Errore interno del server' });
     }
 });

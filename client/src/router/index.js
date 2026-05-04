@@ -29,6 +29,12 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/portafoglio',
+      name: 'portafoglio',
+      component: () => import('../views/WalletView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/garage',
       name: 'garage',
       component: () => import('../views/GarageView.vue'),

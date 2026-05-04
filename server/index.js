@@ -10,6 +10,7 @@ const authRoutes = require('./routes/auth');
 const garagesRoutes = require('./routes/garage');
 const prenotazioniRoutes = require('./routes/prenotazioni');
 const recensioniRoutes = require('./routes/recensioni');
+const walletRoutes = require('./routes/wallet');
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -44,6 +45,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/garage', garagesRoutes);
 app.use('/api/prenotazioni', prenotazioniRoutes);
 app.use('/api/recensioni', recensioniRoutes);
+app.use('/api/wallet', walletRoutes);
 
 // TEST DB
 app.get('/test-db', (req, res) => {
