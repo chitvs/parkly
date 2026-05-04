@@ -132,6 +132,18 @@ const gestisciPrenotazione = async () => {
     }
 }
 
+const commentiEspansi = ref(new Set())
+
+const toggleCommento = (index) => {
+    const nuovoSet = new Set(commentiEspansi.value)
+    if (nuovoSet.has(index)) {
+        nuovoSet.delete(index)
+    } else {
+        nuovoSet.add(index)
+    }
+    commentiEspansi.value = nuovoSet
+}
+
 const formattaDataRecensione = (dataString) => {
     if (!dataString) return ''
     const data = new Date(dataString)
@@ -353,32 +365,32 @@ const distribuzioneVoti = computed(() => {
                                 <div class="category-item">
                                     <span class="cat-label"><i class="bi bi-geo-alt"></i> Posizione</span>
                                     <span class="cat-val">{{ Number(garageStore.currentGarage.mediaposizione).toFixed(1)
-                                        }}</span>
+                                    }}</span>
                                 </div>
                                 <div class="category-item">
                                     <span class="cat-label"><i class="bi bi-tag"></i> Qualità/Prezzo</span>
                                     <span class="cat-val">{{ Number(garageStore.currentGarage.mediaprezzo).toFixed(1)
-                                        }}</span>
+                                    }}</span>
                                 </div>
                                 <div class="category-item">
                                     <span class="cat-label"><i class="bi bi-stars"></i> Pulizia</span>
                                     <span class="cat-val">{{ Number(garageStore.currentGarage.mediapulizia).toFixed(1)
-                                        }}</span>
+                                    }}</span>
                                 </div>
                                 <div class="category-item">
                                     <span class="cat-label"><i class="bi bi-car-front"></i> Spazio Manovra</span>
                                     <span class="cat-val">{{ Number(garageStore.currentGarage.mediaspazio).toFixed(1)
-                                        }}</span>
+                                    }}</span>
                                 </div>
                                 <div class="category-item">
                                     <span class="cat-label"><i class="bi bi-shield-check"></i> Sicurezza</span>
                                     <span class="cat-val">{{ Number(garageStore.currentGarage.mediasicurezza).toFixed(1)
-                                        }}</span>
+                                    }}</span>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Inizio Blocco Commenti Singoli (ORA È SOTTO!) -->
+                        <!-- Blocco Commenti -->
                         <div class="user-comments-section mt-5 pt-4 border-top">
                             <div class="comments-grid">
                                 <div v-for="(recensione, index) in garageStore.recensioni" :key="index"
@@ -394,7 +406,7 @@ const distribuzioneVoti = computed(() => {
                                         <!-- Nome e Info -->
                                         <div class="user-info">
                                             <h4 class="user-name">{{ recensione.nome }} {{ recensione.inizialecognome
-                                                }}.</h4>
+                                            }}.</h4>
                                         </div>
                                     </div>
 
@@ -407,17 +419,23 @@ const distribuzioneVoti = computed(() => {
                                         </div>
                                         <span class="meta-dot">·</span>
                                         <span class="comment-date">{{ formattaDataRecensione(recensione.datacreazione)
-                                            }}</span>
+                                        }}</span>
                                     </div>
 
                                     <!-- Testo Recensione -->
-                                    <p class="comment-text" v-if="recensione.commento">{{ recensione.commento }}</p>
+                                    <p class="comment-text"
+                                        :class="{ 'comment-text--expanded': commentiEspansi.has(index) }"
+                                        v-if="recensione.commento">{{ recensione.commento }}</p>
                                     <p class="comment-text text-muted fst-italic" v-else>Nessun commento testuale
                                         lasciato.</p>
+
+                                    <button v-if="recensione.commento && recensione.commento.length > 180"
+                                        class="mostra-altro-btn" @click="toggleCommento(index)">
+                                        {{ commentiEspansi.has(index) ? 'Mostra meno' : 'Mostra altro' }}
+                                    </button>
                                 </div>
                             </div>
                         </div>
-                        <!-- Fine Blocco Commenti Singoli -->
 
                     </div>
 
@@ -783,7 +801,10 @@ const distribuzioneVoti = computed(() => {
     max-width: 1200px;
     margin: 0 auto 40px;
     width: calc(100% - 64px);
-    /* Allinea col padding della grid */
+}
+
+.reviews-section .card-body {
+    padding: 32px 48px;
 }
 
 .overall-rating-header {
@@ -815,7 +836,6 @@ const distribuzioneVoti = computed(() => {
 
 .star--on {
     color: #f59e0b;
-    /* Colore giallo che usi in BookingsView */
     filter: drop-shadow(0 3px 10px rgba(245, 158, 11, 0.45));
 }
 
@@ -937,6 +957,7 @@ const distribuzioneVoti = computed(() => {
 .comment-card {
     display: flex;
     flex-direction: column;
+    min-width: 0;
 }
 
 .comment-header {
@@ -1009,10 +1030,36 @@ const distribuzioneVoti = computed(() => {
     font-size: 1rem;
     line-height: 1.6;
     color: #334155;
-    margin: 0;
-    /* Limita il testo a 4 righe, aggiungendo i puntini di sospensione per commenti molto lunghi */
+    margin: 0 0 8px;
     display: -webkit-box;
+    line-clamp: 3;
+    -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    word-break: break-word;
+}
+
+.comment-text--expanded {
+    line-clamp: unset;
+    -webkit-line-clamp: unset;
+    overflow: visible;
+}
+
+.mostra-altro-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-dark);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    align-self: flex-start;
+    transition: opacity 0.15s;
+}
+
+.mostra-altro-btn:hover {
+    opacity: 0.6;
 }
 </style>
