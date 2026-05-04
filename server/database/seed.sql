@@ -315,3 +315,14 @@ INSERT INTO Recensione (ID_Prenotazione, ID_Utente, ID_Garage, VotoGenerale, Vot
 (4, 8, 4, 3, 4, 4, 3, 4, 3, 'Spazioso per il mio furgone, ma l''illuminazione e la pulizia sono migliorabili.'),
 (5, 9, 5, 5, 5, 4, 5, 4, 5, 'Vicinissimo a San Pietro, personale cortese e facile da raggiungere.'),
 (6, 10, 6, 4, 5, 4, 3, 3, 4, 'Molto comodo per la movida serale, ma i posti auto sono un po'' stretti.');
+
+-- AGGIORNAMENTO MEDIE GARAGE (eseguito post-inserimento recensioni)
+UPDATE Garage g
+SET 
+    MediaGenerale = COALESCE((SELECT ROUND(AVG(VotoGenerale), 2) FROM Recensione WHERE ID_Garage = g.ID_Garage), 0.00),
+    MediaPosizione = COALESCE((SELECT ROUND(AVG(VotoPosizione), 2) FROM Recensione WHERE ID_Garage = g.ID_Garage), 0.00),
+    MediaPrezzo = COALESCE((SELECT ROUND(AVG(VotoPrezzo), 2) FROM Recensione WHERE ID_Garage = g.ID_Garage), 0.00),
+    MediaPulizia = COALESCE((SELECT ROUND(AVG(VotoPulizia), 2) FROM Recensione WHERE ID_Garage = g.ID_Garage), 0.00),
+    MediaSpazio = COALESCE((SELECT ROUND(AVG(VotoSpazio), 2) FROM Recensione WHERE ID_Garage = g.ID_Garage), 0.00),
+    MediaSicurezza = COALESCE((SELECT ROUND(AVG(VotoSicurezza), 2) FROM Recensione WHERE ID_Garage = g.ID_Garage), 0.00),
+    NumeroRecensioni = (SELECT COUNT(*) FROM Recensione WHERE ID_Garage = g.ID_Garage);
