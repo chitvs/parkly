@@ -1,12 +1,13 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { garageStore } from '../store/garage'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 import PlanimetriaGarage from '../components/PlanimetriaGarage.vue'
 
 const route = useRoute()
+const router = useRouter() // <-- AGGIUNTO: ci serve per forzare il cambio pagina
 const props = defineProps(['id'])
 const checkIn = ref(route.query.inizio || '')
 const checkOut = ref(route.query.fine || '')
@@ -20,6 +21,13 @@ const isPrenotando = ref(false)
 onMounted(async () => {
     garageStore.clearGarageData()
     await garageStore.fetchGarage(Number(props.id))
+
+    // se il garage non esiste...
+    if (!garageStore.currentGarage) {
+        router.push({ name: 'NotFound' }) // ...spedisci l'utente alla pagina 404
+        return // ferma l'esecuzione del resto del codice
+    }
+
     await garageStore.fetchPosti(props.id, '', '')
 
     if (checkIn.value && checkOut.value) {
@@ -136,14 +144,13 @@ const gestisciPrenotazione = async () => {
         <Header />
 
         <main v-if="garageStore.isLoading" class="msg-box">Caricamento...</main>
-        <main v-else-if="!garageStore.currentGarage" class="msg-box">Garage non trovato.</main>
-
+        
         <main v-else class="main-content">
             <section class="basic-hero">
                 <div class="hero-top">
                     <div class="hero-left">
-                        <h1>{{ garageStore.currentGarage.nome }}</h1>
-                        <p class="descrizione">{{ garageStore.currentGarage.descrizione }}</p>
+                        <h1>{{ garageStore.currentGarage?.nome }}</h1>
+                        <p class="descrizione">{{ garageStore.currentGarage?.descrizione }}</p>
                         <div class="badge-row">
                             <div class="badge">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -151,10 +158,10 @@ const gestisciPrenotazione = async () => {
                                     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                                     <circle cx="12" cy="10" r="3" />
                                 </svg>
-                                {{ garageStore.currentGarage.indirizzo }}
+                                {{ garageStore.currentGarage?.indirizzo }}
                             </div>
 
-                            <div class="badge" v-if="garageStore.currentGarage.is24h">
+                            <div class="badge" v-if="garageStore.currentGarage?.is24h">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <circle cx="12" cy="12" r="10"></circle>
                                     <polyline points="12 6 12 12 16 14"></polyline>
@@ -167,23 +174,23 @@ const gestisciPrenotazione = async () => {
                                     <circle cx="12" cy="12" r="10" />
                                     <polyline points="12 6 12 12 16 14" />
                                 </svg>
-                                {{ garageStore.currentGarage.orarioapertura.substring(0, 5) }} - {{
-                                    garageStore.currentGarage.orariochiusura.substring(0,5) }}
+                                {{ garageStore.currentGarage?.orarioapertura.substring(0, 5) }} - {{
+                                    garageStore.currentGarage?.orariochiusura.substring(0,5) }}
                             </div>
-                            <div class="badge" v-if="garageStore.currentGarage.altezzamassima">
+                            <div class="badge" v-if="garageStore.currentGarage?.altezzamassima">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M12 22V5"/>
                                     <path d="M7 10l5-5 5 5"/>
                                     <line x1="4" y1="2" x2="20" y2="2"/>
                                 </svg>
-                                Max {{ garageStore.currentGarage.altezzamassima }}m
+                                Max {{ garageStore.currentGarage?.altezzamassima }}m
                             </div>
                         </div>
                     </div>
 
                     <div class="hero-right">
                         <div class="prezzo-label">Tariffa base</div>
-                        <div class="prezzo-valore">€{{ garageStore.currentGarage.tariffabase }}<span>/ora</span></div>
+                        <div class="prezzo-valore">€{{ garageStore.currentGarage?.tariffabase }}<span>/ora</span></div>
                     </div>
                 </div>
             </section>
@@ -200,7 +207,7 @@ const gestisciPrenotazione = async () => {
                     </div>
                     <div class="card-body">
                         <PlanimetriaGarage :posti="garageStore.posti"
-                            :mappaTestuale="garageStore.currentGarage.mappatestuale"
+                            :mappaTestuale="garageStore.currentGarage?.mappatestuale"
                             :selectedId="postoSelezionato?.id_posto"
                             :isAnteprima="!isMapConfirmed"
                             @select="(p) => postoSelezionato = p"
@@ -274,7 +281,7 @@ const gestisciPrenotazione = async () => {
                             </div>
                         </div>
 
-                        <button class="btn fill" :disabled="!isMapConfirmed || !postoSelezionato || !targa || !isTargaValida""
+                        <button class="btn fill" :disabled="!isMapConfirmed || !postoSelezionato || !targa || !isTargaValida"
                             @click="gestisciPrenotazione">
                             Prenota ora
                         </button>
@@ -288,6 +295,7 @@ const gestisciPrenotazione = async () => {
 </template>
 
 <style scoped>
+/* Ho lasciato invariato tutto il tuo CSS originale */
 .page-container {
     background: var(--bg-light);
     min-height: 100vh;
