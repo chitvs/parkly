@@ -106,7 +106,7 @@ router.post('/login', async (req, res) => {
         req.session.utente = {
             id: utente.id_utente,
             nome: utente.nome,
-            nomeUtente: utente.nomeUtente,
+            nomeUtente: utente.nomeutente,
             email: utente.email,
             ruolo: utente.ruolo,
             fotoProfilo_URL: utente.fotoprofilo_url 

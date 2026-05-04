@@ -112,7 +112,7 @@ const handleLogout = async () => {
             style="width: 28px; height: 28px; object-fit: cover; border-color: #dee2e6;"
           >
           
-          <span>Ciao, <strong>{{ authStore.utente.nomeUtente }}</strong></span>
+          <span>Ciao, <strong>{{ authStore.utente.nome }}</strong></span>
           
         </button>
         
