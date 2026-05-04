@@ -58,6 +58,11 @@ router.post('/', isLoggato, async (req, res) => {
                 }
             }
 
+            // blocchiamo il posto auto per la durata di questa transazione.
+            // Se un altro utente tenta di prenotare lo stesso posto contemporaneamente,
+            // il DB lo metterà in "pausa" finché noi non abbiamo finito.
+            await t.one('SELECT 1 FROM PostoAuto WHERE ID_Posto = $1 FOR UPDATE', [id_posto]);
+
             // controllo disponibilità
             const occupato = await t.oneOrNone(`
                 SELECT ID_Prenotazione FROM Prenotazione 
