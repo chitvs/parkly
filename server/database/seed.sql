@@ -414,12 +414,12 @@ INSERT INTO Prenotazione (ID_Utente, ID_Posto, CodicePrenotazione, Targa, Note, 
 
 -- TRANSAZIONI
 INSERT INTO Transazione (ID_Utente, Tipo, Importo, Descrizione) VALUES
-(5, 'RICARICA', 50.00, 'Ricarica'),
-(6, 'RICARICA', 50.00, 'Ricarica'),
-(7, 'RICARICA', 50.00, 'Ricarica'),
-(8, 'RICARICA', 50.00, 'Ricarica'),
-(9, 'RICARICA', 50.00, 'Ricarica'),
-(10, 'RICARICA', 50.00, 'Ricarica'),
+(5, 'RICARICA', 1000.00, 'Ricarica'),
+(6, 'RICARICA', 1000.00, 'Ricarica'),
+(7, 'RICARICA', 1000.00, 'Ricarica'),
+(8, 'RICARICA', 1000.00, 'Ricarica'),
+(9, 'RICARICA', 1000.00, 'Ricarica'),
+(10, 'RICARICA', 1000.00, 'Ricarica'),
 (5, 'PRENOTAZIONE', -5.00, 'Pagamento prenotazione PR-M01A111'),
 (6, 'PRENOTAZIONE', -24.00, 'Pagamento prenotazione PR-M02B222'),
 (7, 'PRENOTAZIONE', -31.50, 'Pagamento prenotazione PR-M03C333'),
@@ -720,3 +720,11 @@ SET
     MediaSpazio = COALESCE((SELECT ROUND(AVG(VotoSpazio), 2) FROM Recensione WHERE ID_Garage = g.ID_Garage), 0.00),
     MediaSicurezza = COALESCE((SELECT ROUND(AVG(VotoSicurezza), 2) FROM Recensione WHERE ID_Garage = g.ID_Garage), 0.00),
     NumeroRecensioni = (SELECT COUNT(*) FROM Recensione WHERE ID_Garage = g.ID_Garage);
+
+-- AGGIORNAMENTO SALDO (eseguito post-inserimento transazioni)
+UPDATE Utente u
+SET Saldo = COALESCE((
+    SELECT SUM(Importo) 
+    FROM Transazione 
+    WHERE ID_Utente = u.ID_Utente
+), 0.00);
