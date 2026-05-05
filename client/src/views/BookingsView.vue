@@ -130,7 +130,9 @@ const categories = [
 
               <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
                 <div>
-                  <h5 class="fw-bold mb-0 text-dark">{{ booking.nomegarage }}</h5>
+                  <router-link :to="`/garage/${booking.id_garage}`" class="text-decoration-none">
+                    <h5 class="fw-bold mb-0 text-dark garage-title-link">{{ booking.nomegarage }}</h5>
+                  </router-link>
                   <small class="text-muted"><i class="bi bi-geo-alt-fill me-1"></i>{{ booking.indirizzo }}</small>
                 </div>
                 <div class="d-flex align-items-center gap-2">
@@ -673,7 +675,7 @@ const categories = [
 
 .btn-edit-icon {
   background: transparent;
-  color: var(--primary-blue, #00408A); 
+  color: var(--primary-blue, #00408A);
   border: 1.5px solid var(--primary-blue, #00408A);
   width: 32px;
   height: 32px;
@@ -683,13 +685,13 @@ const categories = [
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  padding: 0; 
+  padding: 0;
 }
 
 .btn-edit-icon:hover {
-  background: var(--primary-blue, #00408A);  
-  border-color: var(--primary-blue, #00408A); 
-  color: white; 
+  background: var(--primary-blue, #00408A);
+  border-color: var(--primary-blue, #00408A);
+  color: white;
   transform: translateY(-1px);
 }
 
@@ -756,6 +758,15 @@ const categories = [
 
 .cat-star:active {
   transform: scale(0.85);
+}
+
+.garage-title-link {
+  transition: color 0.2s ease;
+}
+
+.garage-title-link:hover {
+  color: var(--primary-blue, #00408A) !important;
+  text-decoration: underline;
 }
 
 @keyframes popIn {
