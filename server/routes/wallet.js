@@ -10,8 +10,11 @@ router.post('/ricarica', async (req, res) => {
 
     const { importo } = req.body;
 
-    if (!importo || isNaN(importo) || importo < 5) {
-        return res.status(400).json({ success: false, error: 'Importo non valido (minimo 5€)' });
+    if (!importo || isNaN(importo) || importo < 5 || importo > 1000) {
+        return res.status(400).json({ 
+            success: false, 
+            error: 'Importo non valido. Minimo 5,00 €, Massimo 1.000,00 € per singola transazione.' 
+        });
     }
 
     try {

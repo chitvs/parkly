@@ -96,13 +96,25 @@ const formattaData = (dataString) => {
     return new Date(dataString).toLocaleDateString('it-IT', opzioni)
 }
 
+const limitaImporto = () => {
+    // se l'utente digita un numero maggiore di 1000, lo forziamo a 1000
+    if (formRicarica.importo > 1000) {
+        formRicarica.importo = 1000
+    }
+}
+
 // submit e validazioni
 const handleRicarica = async () => {
     messaggio.value = null
 
     // validazione Importo
-    if (formRicarica.importo <= 0 || formRicarica.importo < 5) {
-        messaggio.value = { tipo: 'error', testo: "L'importo minimo per la ricarica è di 5,00 €." }
+    if (formRicarica.importo < 5) {
+        messaggio.value = { tipo: 'error', testo: "L'importo minimo per la ricarica è di 5,00€." }
+        return
+    }
+
+    if (formRicarica.importo > 1000) {
+        messaggio.value = { tipo: 'error', testo: "Non puoi ricaricare più di 1.000,00€ in una singola transazione." }
         return
     }
 
@@ -115,13 +127,22 @@ const handleRicarica = async () => {
 
     // validazione scadenza carta
     if (formRicarica.scadenza.length === 5) {
-        const [mese, anno] = formRicarica.scadenza.split('/')
-        const dataOggi = new Date()
-        const meseAttuale = dataOggi.getMonth() + 1 // I mesi in JS partono da 0
-        const annoAttuale = parseInt(dataOggi.getFullYear().toString().slice(-2)) // es. 2024 -> 24
+        const [meseStr, annoStr] = formRicarica.scadenza.split('/')
+        
+        // controlliamo che mese e anno siano effettivamente numeri validi
+        const numMese = parseInt(meseStr, 10)
+        const numAnno = parseInt(annoStr, 10)
 
-        const numMese = parseInt(mese, 10)
-        const numAnno = parseInt(anno, 10)
+        // un mese deve essere tra 1 e 12
+        if (isNaN(numMese) || numMese < 1 || numMese > 12 || isNaN(numAnno)) {
+            messaggio.value = { tipo: 'error', testo: "Mese o anno di scadenza non validi." }
+            return
+        }
+
+        const dataOggi = new Date()
+        const meseAttuale = dataOggi.getMonth() + 1 // i mesi in JS partono da 0
+        // prendi le ultime due cifre dell'anno corrente e convertile in numero in modo sicuro
+        const annoAttuale = dataOggi.getFullYear() % 100 
 
         // controlla se l'anno è passato, oppure se è l'anno corrente ma il mese è passato
         if (numAnno < annoAttuale || (numAnno === annoAttuale && numMese < meseAttuale)) {
@@ -197,9 +218,18 @@ const handleRicarica = async () => {
 
                             <div class="form-group highlight-box">
                                 <label>Importo da ricaricare (€)</label>
-                                <input type="number" step="0.01" min="5" max="1000" class="amount-input"
-                                    v-model="formRicarica.importo" placeholder="es. 50.00" required>
-                                <small class="hint-text">Importo minimo: 5,00 €</small>
+                                <input 
+                                    type="number" 
+                                    step="0.01" 
+                                    min="5" 
+                                    max="1000" 
+                                    class="amount-input"
+                                    v-model="formRicarica.importo" 
+                                    @input="limitaImporto"
+                                    placeholder="es. 50.00" 
+                                    required
+                                >
+                                <small class="hint-text">Importo minimo: 5,00 € | Massimo: 1.000,00 €</small>
                             </div>
 
                             <h3 class="section-subtitle">Dati Carta</h3>
