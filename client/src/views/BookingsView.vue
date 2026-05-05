@@ -80,11 +80,11 @@ watch(showReviewModal, (val) => {
 })
 
 const categories = [
-  { id: 'posizione', label: 'Posizione', icon: '📍' },
-  { id: 'qualitaPrezzo', label: 'Qualità / Prezzo', icon: '💰' },
-  { id: 'pulizia', label: 'Pulizia', icon: '✨' },
-  { id: 'spazio', label: 'Spazio Manovra', icon: '🚗' },
-  { id: 'sicurezza', label: 'Sicurezza', icon: '🔒' },
+  { id: 'posizione', label: 'Posizione', icon: 'bi bi-geo-alt' },
+  { id: 'qualitaPrezzo', label: 'Prezzo', icon: 'bi bi-tag' },
+  { id: 'pulizia', label: 'Pulizia', icon: 'bi bi-stars' },
+  { id: 'spazio', label: 'Spazio di manovra', icon: 'bi bi-car-front' },
+  { id: 'sicurezza', label: 'Sicurezza', icon: 'bi bi-shield-check' },
 ]
 </script>
 
@@ -249,7 +249,7 @@ const categories = [
               <div class="cat-list">
                 <div v-for="cat in categories" :key="cat.id" class="cat-row">
                   <div class="cat-label">
-                    <span class="cat-icon">{{ cat.icon }}</span>
+                    <i :class="['cat-icon', cat.icon]"></i>
                     <span>{{ cat.label }}</span>
                   </div>
                   <div class="cat-stars">

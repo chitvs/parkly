@@ -464,7 +464,7 @@ const distribuzioneVoti = computed(() => {
                                     }}</span>
                                 </div>
                                 <div class="category-item">
-                                    <span class="cat-label"><i class="bi bi-tag"></i> Qualità/Prezzo</span>
+                                    <span class="cat-label"><i class="bi bi-tag"></i> Prezzo</span>
                                     <span class="cat-val">{{ Number(garageStore.currentGarage.mediaprezzo).toFixed(1)
                                     }}</span>
                                 </div>
@@ -474,7 +474,7 @@ const distribuzioneVoti = computed(() => {
                                     }}</span>
                                 </div>
                                 <div class="category-item">
-                                    <span class="cat-label"><i class="bi bi-car-front"></i> Spazio Manovra</span>
+                                    <span class="cat-label"><i class="bi bi-car-front"></i> Spazio di manovra</span>
                                     <span class="cat-val">{{ Number(garageStore.currentGarage.mediaspazio).toFixed(1)
                                     }}</span>
                                 </div>
