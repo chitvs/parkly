@@ -1,5 +1,6 @@
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { authStore } from '../store/auth.js'
 import * as bootstrap from 'bootstrap'
 
@@ -10,9 +11,11 @@ import Footer from '../components/Footer.vue'
 import eyeUrl from '../assets/eye-gray.svg'
 import eyeClosedUrl from '../assets/eye-closed-gray.svg'
 
+const router = useRouter()
+
 // --- DATI PROFILO ---
-const originalData = ref({ nome: '', cognome: '', email: '', telefono: '', codiceFiscale: '', fotoProfilo_URL: '' })
-const formData = reactive({ nome: '', cognome: '', email: '', telefono: '', codiceFiscale: '', fotoProfilo_URL: '' })
+const originalData = ref({ nome: '', cognome: '', nomeUtente: '', email: '', telefono: '', codiceFiscale: '', fotoProfilo_URL: '' })
+const formData = reactive({ nome: '', cognome: '', nomeUtente: '', email: '', telefono: '', codiceFiscale: '', fotoProfilo_URL: '' })
 
 // --- DATI CAMBIO PASSWORD ---
 const pwdCurrent = ref('')
@@ -39,6 +42,7 @@ onMounted(async () => {
     const datiDalServer = {
       nome: userDb.nome || '',
       cognome: userDb.cognome || '',
+      nomeUtente: userDb.nomeutente || '',
       email: userDb.email || '',
       telefono: userDb.telefono || '',
       codiceFiscale: userDb.codicefiscale || '', 
@@ -59,6 +63,7 @@ onUnmounted(() => {
 const hasChanges = computed(() => {
   return formData.nome !== originalData.value.nome ||
          formData.cognome !== originalData.value.cognome ||
+         formData.nomeUtente !== originalData.value.nomeUtente ||
          formData.email !== originalData.value.email ||
          formData.telefono !== originalData.value.telefono ||
          formData.codiceFiscale !== originalData.value.codiceFiscale;
@@ -108,6 +113,24 @@ const handleFileUpload = async (event) => {
     alert("Errore durante il caricamento dell'immagine.");
   }
 }
+
+// logica per l'eliminazione dell'account
+const handleDeleteAccount = async () => {
+  const confermato = window.confirm(
+    "Sei sicuro di voler eliminare il tuo account? Questa azione è irreversibile e perderai l'accesso al tuo saldo residuo."
+  );
+
+  if (confermato) {
+    const response = await authStore.deleteAccount();
+    if (response.success) {
+      alert("Account eliminato con successo. Ci dispiace vederti andare via!");
+      router.push('/'); // Rimanda alla home
+    } else {
+      alert(response.error || "Errore durante l'eliminazione dell'account.");
+    }
+  }
+};
+
 // Funzione per aprire il modal del cambio password
 const openPwdModal = () => {
   if (modalPwdInstance) {
@@ -207,6 +230,11 @@ const submitChangePassword = async () => {
             </div>
 
             <div class="mb-3">
+                <label class="form-label fw-semibold">Nome Utente</label>
+                <input type="text" class="form-control" v-model="formData.nomeUtente" required>
+            </div>
+
+            <div class="mb-3">
               <label class="form-label fw-semibold">Indirizzo Email</label>
               <input type="email" class="form-control" v-model="formData.email" required>
             </div>
@@ -244,6 +272,15 @@ const submitChangePassword = async () => {
             </div>
             
           </form>
+
+          <div class="mt-5 border-top pt-4 text-center">
+            <p class="text-muted small mb-3">
+              Una volta eliminato l'account, non potrai più recuperarlo. Tutte le tue sessioni verranno chiuse e perderai l'accesso al tuo saldo residuo.
+            </p>
+            <button @click="handleDeleteAccount" class="btn btn-outline-danger px-4 py-2 fw-semibold" style="border-radius: 12px;">
+              Elimina Account
+            </button>
+          </div>
 
         </div>
       </div>
@@ -354,6 +391,7 @@ input[type="file"].form-control-sm { height: auto; padding: 8px 12px; font-size:
 .btn-primary:disabled { background-color: #cccccc; cursor: not-allowed; opacity: 0.7; }
 
 .btn-outline-secondary { border-radius: 12px; height: 55px; font-weight: 600; font-size: 16px; display: flex; align-items: center;}
+.btn-outline-danger:hover { color: white !important; }
 
 /* --- STILI MODAL --- */
 .parkly-modal { border-radius: 24px; border: none; box-shadow: 0 15px 50px rgba(0, 0, 0, 0.2); }
