@@ -52,10 +52,19 @@ const router = createRouter({
       // solo chi è loggato ed è un gestore
       meta: { requiresAuth: true, role: 'GESTORE' }
     },
+    // --- GESTIONE ERRORI 404 ---
     {
-      path: '/:pathMatch(.*)*',
-      redirect: '/',
+      // Rotta esplicita per redirect forzati (es. quando il garage non esiste nel DB)
+      path: '/404',
+      name: 'NotFound',
+      component: () => import('../views/NotFoundView.vue'),
     },
+    {
+      // Rotta catch-all: carica la 404 senza cambiare l'URL sbagliato digitato dall'utente
+      path: '/:pathMatch(.*)*',
+      component: () => import('../views/NotFoundView.vue'),
+    },
+    // -------------------------------------
   ],
 })
 
