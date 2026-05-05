@@ -16,9 +16,12 @@ const {
   selectedBookingForReview,
   recensioneForm,
   isStep2Complete,
+  isEditing,
   iniziaRecensione,
+  apriModifica,
   chiudiModale,
-  inviaRecensione
+  inviaRecensione,
+  eliminaRecensione
 } = useRecensione()
 
 onMounted(async () => {
@@ -73,6 +76,13 @@ const handleCancelBooking = async (codice) => {
 const chiudiEAggiorna = async () => {
   chiudiModale()
   await caricaPrenotazioni()
+}
+
+const handleElimina = async () => {
+  const success = await eliminaRecensione()
+  if (success) {
+    await caricaPrenotazioni()
+  }
 }
 
 watch(showReviewModal, (val) => {
@@ -145,9 +155,14 @@ const categories = [
                   </div>
 
                   <div v-else-if="booking.stato === 'CONCLUSA' && booking.ha_recensito"
-                    class="d-flex align-items-center ms-3 border-start ps-3 text-success">
-                    <i class="bi bi-check-circle-fill me-2 fs-5"></i>
-                    <span class="small fw-bold text-uppercase">Recensita</span>
+                    class="d-flex align-items-center gap-2 ms-3 border-start ps-3">
+                    <span class="text-success d-flex align-items-center me-1">
+                      <i class="bi bi-check-circle-fill me-1 fs-5"></i>
+                      <span class="small fw-bold text-uppercase d-none d-sm-inline">Recensita</span>
+                    </span>
+                    <button class="btn-edit-icon" title="Modifica Recensione" @click="apriModifica(booking)">
+                      <i class="bi bi-pencil"></i>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -213,7 +228,7 @@ const categories = [
 
             <div v-if="currentStep === 1" class="review-body">
               <span class="garage-chip">{{ selectedBookingForReview?.nomegarage }}</span>
-              <h3 class="modal-title">Com'è andata la sosta?</h3>
+              <h3 class="modal-title">{{ isEditing ? 'Modifica la tua recensione' : 'Com\'è andata la sosta?' }}</h3>
               <p class="modal-sub">Condividi la tua esperienza con la community Parkly</p>
 
               <div class="big-stars">
@@ -232,10 +247,17 @@ const categories = [
                 </textarea>
               </div>
 
-              <button class="cta-btn" :disabled="recensioneForm.votoGenerale === 0" @click="currentStep = 2">
-                Continua
-                <i class="bi bi-arrow-right"></i>
-              </button>
+              <div class="d-flex gap-2">
+                <button v-if="isEditing" class="cta-btn cta-btn--danger-ghost" @click="handleElimina"
+                  title="Elimina recensione">
+                  <i class="bi bi-trash"></i>
+                </button>
+
+                <button class="cta-btn" :disabled="recensioneForm.votoGenerale === 0" @click="currentStep = 2">
+                  Continua
+                  <i class="bi bi-arrow-right"></i>
+                </button>
+              </div>
             </div>
 
             <div v-if="currentStep === 2" class="review-body">
@@ -267,10 +289,6 @@ const categories = [
             </div>
 
             <div v-if="currentStep === 3" class="review-body review-body--success">
-              <div class="success-ring-wrap">
-                <div class="success-halo"></div>
-                <div class="success-emoji">⭐</div>
-              </div>
               <h3 class="modal-title">Grazie mille!</h3>
               <p class="modal-sub">La tua recensione è stata pubblicata e aiuterà gli altri utenti di Parkly a scegliere
                 meglio.</p>
@@ -613,6 +631,25 @@ const categories = [
 .cta-btn--ghost:hover {
   background: rgba(0, 64, 138, 0.05);
   border-color: rgba(0, 64, 138, 0.35);
+  color: white;
+  box-shadow: none;
+  transform: none;
+}
+
+.cta-btn--danger-ghost {
+  background: transparent;
+  color: #dc3545;
+  border: 1.5px solid rgba(220, 53, 69, 0.2);
+  width: auto;
+  padding-left: 18px;
+  padding-right: 18px;
+  flex-shrink: 0;
+}
+
+.cta-btn.cta-btn--danger-ghost:hover:not(:disabled) {
+  background: #dc3545;
+  border-color: rgba(220, 53, 69, 0.5);
+  color: #ffffff;
   box-shadow: none;
   transform: none;
 }
@@ -632,6 +669,28 @@ const categories = [
 
 .back-btn:hover {
   color: #0f172a;
+}
+
+.btn-edit-icon {
+  background: transparent;
+  color: var(--primary-blue, #00408A); 
+  border: 1.5px solid var(--primary-blue, #00408A);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0; 
+}
+
+.btn-edit-icon:hover {
+  background: var(--primary-blue, #00408A);  
+  border-color: var(--primary-blue, #00408A); 
+  color: white; 
+  transform: translateY(-1px);
 }
 
 .cat-list {
@@ -697,58 +756,6 @@ const categories = [
 
 .cat-star:active {
   transform: scale(0.85);
-}
-
-.success-ring-wrap {
-  position: relative;
-  width: 96px;
-  height: 96px;
-  margin: 0 auto 1.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.success-halo {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: conic-gradient(rgba(0, 64, 138, 0.12),
-      rgba(245, 158, 11, 0.18),
-      rgba(0, 64, 138, 0.08),
-      rgba(245, 158, 11, 0.14));
-  animation: haloSpin 6s linear infinite, haloPulse 2.5s ease-in-out infinite;
-}
-
-.success-emoji {
-  font-size: 3.2rem;
-  position: relative;
-  animation: popIn 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  filter: drop-shadow(0 4px 12px rgba(245, 158, 11, 0.5));
-}
-
-@keyframes haloSpin {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes haloPulse {
-
-  0%,
-  100% {
-    opacity: 0.6;
-    transform: scale(1) rotate(0deg);
-  }
-
-  50% {
-    opacity: 1;
-    transform: scale(1.08) rotate(180deg);
-  }
 }
 
 @keyframes popIn {

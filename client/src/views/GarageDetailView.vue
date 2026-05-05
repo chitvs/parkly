@@ -528,8 +528,7 @@ const distribuzioneVoti = computed(() => {
                                     <p class="comment-text"
                                         :class="{ 'comment-text--expanded': commentiEspansi.has(index) }"
                                         v-if="recensione.commento">{{ recensione.commento }}</p>
-                                    <p class="comment-text text-muted fst-italic" v-else>Nessun commento testuale
-                                        lasciato.</p>
+                                    <p class="comment-text text-muted fst-italic" v-else></p>
 
                                     <button v-if="recensione.commento && recensione.commento.length > 180"
                                         class="mostra-altro-btn" @click="toggleCommento(index)">

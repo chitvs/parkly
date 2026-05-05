@@ -6,6 +6,7 @@ export function useRecensione() {
   const showReviewModal = ref(false)
   const currentStep = ref(1)
   const selectedBookingForReview = ref(null)
+  const isEditing = ref(false) 
 
   // 2. Dati del form
   const recensioneForm = ref({
@@ -30,8 +31,8 @@ export function useRecensione() {
   // 4. Azioni
   const iniziaRecensione = (booking, starValue) => {
     selectedBookingForReview.value = booking
+    isEditing.value = false
     
-    // Reset del form in caso fosse stato chiuso a metà
     recensioneForm.value = {
       votoGenerale: starValue,
       commento: '',
@@ -42,12 +43,38 @@ export function useRecensione() {
     showReviewModal.value = true
   }
 
+  // Apre la modale pre-compilando i dati
+  const apriModifica = async (booking) => {
+    selectedBookingForReview.value = booking
+    isEditing.value = true
+    currentStep.value = 1
+    showReviewModal.value = true
+
+    // Recuperiamo i dati preesistenti dal server
+    const response = await recensioniStore.getReview(booking.id_prenotazione)
+    
+    if (response.success && response.data) {
+      const rec = response.data
+      recensioneForm.value = {
+        votoGenerale: rec.votogenerale,
+        commento: rec.commento || '',
+        posizione: rec.votoposizione,
+        qualitaPrezzo: rec.votoprezzo,
+        pulizia: rec.votopulizia,
+        spazio: rec.votospazio,
+        sicurezza: rec.votosicurezza
+      }
+    } else {
+      alert("Impossibile caricare i dati della recensione.")
+      chiudiModale()
+    }
+  }
+
   const chiudiModale = () => {
     showReviewModal.value = false
   }
 
-const inviaRecensione = async () => {
-    // Mappatura dei dati per il backend
+  const inviaRecensione = async () => {
     const payload = {
       id_prenotazione: selectedBookingForReview.value.id_prenotazione,
       id_utente: selectedBookingForReview.value.id_utente,
@@ -61,8 +88,10 @@ const inviaRecensione = async () => {
       commento: recensioneForm.value.commento
     }
 
-    // Chiamiamo il nuovo store
-    const response = await recensioniStore.postReview(payload)
+    // Scegliamo dinamicamente il metodo da chiamare
+    const response = isEditing.value 
+      ? await recensioniStore.updateReview(payload) 
+      : await recensioniStore.postReview(payload)
 
     if (response.success) {
       currentStep.value = 3
@@ -71,15 +100,34 @@ const inviaRecensione = async () => {
     }
   }
 
-  // Esponiamo le cose che serviranno alla View
+  // Elimina la recensione corrente
+  const eliminaRecensione = async () => {
+    const conferma = confirm("Sei sicuro di voler eliminare definitivamente questa recensione?")
+    if (!conferma) return false
+
+    const { id_prenotazione, id_utente, id_garage } = selectedBookingForReview.value
+    const response = await recensioniStore.deleteReview(id_prenotazione, id_utente, id_garage)
+
+    if (response.success) {
+      chiudiModale()
+      return true
+    } else {
+      alert(response.error || "Errore durante l'eliminazione.")
+      return false
+    }
+  }
+
   return {
     showReviewModal,
     currentStep,
     selectedBookingForReview,
     recensioneForm,
     isStep2Complete,
+    isEditing, 
     iniziaRecensione,
+    apriModifica, 
     chiudiModale,
-    inviaRecensione
+    inviaRecensione,
+    eliminaRecensione
   }
 }
