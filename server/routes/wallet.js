@@ -23,7 +23,7 @@ router.post('/ricarica', async (req, res) => {
 
             await t.none(
                 `INSERT INTO Transazione (ID_Utente, Tipo, Importo, Descrizione) 
-                 VALUES ($1, 'RICARICA', $2, 'Ricarica Saldo Portafoglio')`,
+                 VALUES ($1, 'RICARICA', $2, 'Ricarica')`,
                 [req.session.utente.id, importo]
             );
 
