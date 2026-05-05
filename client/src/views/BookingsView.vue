@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { prenotazioniStore } from '../store/prenotazioni.js'
 import { useRecensione } from '../composables/useRecensione.js'
 
@@ -9,6 +9,15 @@ import Footer from '../components/Footer.vue'
 
 const bookings = ref([])
 const isLoading = ref(true)
+
+// variabili per i filtri e l'ordinamento
+const filtroStato = ref('') // '' = Tutte, 'ATTIVA', 'CONCLUSA', 'ANNULLATA'
+const filtroGarage = ref('') // '' = Tutti, oppure l'id_garage
+const ordinamento = ref('creazione_desc') // default: data creazione più recente
+
+// variabili per la paginazione
+const paginaCorrente = ref(1)
+const elementiPerPagina = 5
 
 const {
   showReviewModal,
@@ -38,6 +47,69 @@ const caricaPrenotazioni = async () => {
   }
   isLoading.value = false
 }
+
+// estrae la lista dei garage in cui l'utente ha prenotato almeno una volta
+const garageDisponibili = computed(() => {
+  const map = new Map()
+  bookings.value.forEach(b => {
+    if (!map.has(b.id_garage)) {
+      map.set(b.id_garage, b.nomegarage)
+    }
+  })
+  return Array.from(map, ([id, nome]) => ({ id, nome }))
+})
+
+// applica i filtri e l'ordinamento scelti
+const prenotazioniFiltrate = computed(() => {
+  // filtriamo
+  let risultato = bookings.value.filter(b => {
+    const matchStato = filtroStato.value === '' || b.stato === filtroStato.value
+    const matchGarage = filtroGarage.value === '' || String(b.id_garage) === String(filtroGarage.value)
+    return matchStato && matchGarage
+  })
+
+  // ordiniamo
+  risultato.sort((a, b) => {
+    const dataA_creazione = new Date(a.datacreazione).getTime()
+    const dataB_creazione = new Date(b.datacreazione).getTime()
+    const dataA_inizio = new Date(a.iniziososta).getTime()
+    const dataB_inizio = new Date(b.iniziososta).getTime()
+
+    switch (ordinamento.value) {
+      case 'creazione_desc':
+        return dataB_creazione - dataA_creazione // più recenti prima
+      case 'creazione_asc':
+        return dataA_creazione - dataB_creazione // più vecchie prima
+      case 'cronologico_desc':
+        return dataB_inizio - dataA_inizio // soste più lontane nel tempo prima
+      case 'cronologico_asc':
+        return dataA_inizio - dataB_inizio // soste più imminenti prima
+      default:
+        return 0
+    }
+  })
+
+  return risultato
+})
+
+// logica di Paginazione calcolata sull'array filtrato
+const totalePagine = computed(() => Math.ceil(prenotazioniFiltrate.value.length / elementiPerPagina))
+
+const prenotazioniPaginate = computed(() => {
+  const inizio = (paginaCorrente.value - 1) * elementiPerPagina
+  return prenotazioniFiltrate.value.slice(inizio, inizio + elementiPerPagina)
+})
+
+const cambiaPagina = (pag) => {
+  if (pag >= 1 && pag <= totalePagine.value) {
+    paginaCorrente.value = pag
+  }
+}
+
+// resetta la pagina a 1 ogni volta che cambia un filtro o l'ordinamento
+watch([filtroStato, filtroGarage, ordinamento], () => {
+  paginaCorrente.value = 1
+})
 
 const formatDate = (dateString) => {
   if (!dateString) return ''
@@ -110,6 +182,36 @@ const categories = [
         </div>
       </div>
 
+      <div class="row mb-4 g-3 align-items-center bg-white p-3 rounded-3 shadow-sm border" v-if="bookings.length > 0">
+        <div class="col-12 col-md-4">
+          <label class="form-label text-muted small fw-bold text-uppercase mb-1">Stato Prenotazione</label>
+          <select class="form-select" v-model="filtroStato">
+            <option value="">Tutte</option>
+            <option value="ATTIVA">Attive</option>
+            <option value="CONCLUSA">Concluse</option>
+            <option value="ANNULLATA">Annullate</option>
+          </select>
+        </div>
+
+        <div class="col-12 col-md-4">
+          <label class="form-label text-muted small fw-bold text-uppercase mb-1">Filtra per Garage</label>
+          <select class="form-select" v-model="filtroGarage">
+            <option value="">Tutti i garage</option>
+            <option v-for="g in garageDisponibili" :key="g.id" :value="g.id">{{ g.nome }}</option>
+          </select>
+        </div>
+
+        <div class="col-12 col-md-4">
+          <label class="form-label text-muted small fw-bold text-uppercase mb-1">Ordina per</label>
+          <select class="form-select" v-model="ordinamento">
+            <option value="creazione_desc">Data Creazione (Più recenti)</option>
+            <option value="creazione_asc">Data Creazione (Meno recenti)</option>
+            <option value="cronologico_asc">Arrivo (Imminenti)</option>
+            <option value="cronologico_desc">Arrivo (Più lontani)</option>
+          </select>
+        </div>
+      </div>
+
       <div v-if="isLoading" class="text-center py-5">
         <div class="spinner-border text-primary" role="status">
           <span class="visually-hidden">Caricamento...</span>
@@ -123,8 +225,14 @@ const categories = [
         <router-link to="/ricerca" class="btn btn-primary mt-3 px-4 py-2">Trova Parcheggio</router-link>
       </div>
 
+      <div v-else-if="prenotazioniFiltrate.length === 0" class="text-center py-5 empty-state">
+        <h5 class="fw-bold text-muted">Nessun risultato</h5>
+        <p class="text-muted">Nessuna prenotazione corrisponde ai filtri selezionati.</p>
+        <button class="btn btn-outline-primary mt-2" @click="filtroStato=''; filtroGarage=''; ordinamento='creazione_desc'">Resetta Filtri</button>
+      </div>
+
       <div v-else class="row g-4">
-        <div class="col-12" v-for="(booking, index) in bookings" :key="index">
+        <div class="col-12" v-for="(booking, index) in prenotazioniPaginate" :key="index">
           <div class="card booking-card border-0 shadow-sm">
             <div class="card-body p-4">
 
@@ -207,6 +315,22 @@ const categories = [
             </div>
           </div>
         </div>
+
+        <div class="col-12 mt-4" v-if="totalePagine > 1">
+          <div class="pagination-horizontal">
+            <button class="page-btn" :disabled="paginaCorrente === 1"
+              @click="cambiaPagina(paginaCorrente - 1)">«</button>
+
+            <div class="page-numbers">
+              <span v-for="p in totalePagine" :key="p" class="page-dot"
+                :class="{ active: paginaCorrente === p }" @click="cambiaPagina(p)">{{ p }}</span>
+            </div>
+
+            <button class="page-btn" :disabled="paginaCorrente === totalePagine"
+              @click="cambiaPagina(paginaCorrente + 1)">»</button>
+          </div>
+        </div>
+
       </div>
     </main>
 
@@ -769,19 +893,70 @@ const categories = [
   text-decoration: underline;
 }
 
-@keyframes popIn {
-  0% {
-    transform: scale(0);
-    opacity: 0;
-  }
+/* Stili Paginazione Orizzontale */
+.pagination-horizontal {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
 
-  60% {
-    transform: scale(1.18);
-  }
+.page-btn {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #64748b;
+    font-weight: bold;
+    transition: all 0.2s ease;
+}
 
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
+.page-btn:hover:not(:disabled) {
+    background: #f8fafc;
+    border-color: var(--primary-blue, #00408A);
+    color: var(--primary-blue, #00408A);
+}
+
+.page-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: #f1f5f9;
+}
+
+.page-numbers {
+    display: flex;
+    gap: 6px;
+}
+
+.page-dot {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    background: white;
+    border: 1px solid #e2e8f0;
+    transition: all 0.2s ease;
+}
+
+.page-dot:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+.page-dot.active {
+    background: var(--primary-blue, #00408A);
+    color: white;
+    border-color: var(--primary-blue, #00408A);
 }
 </style>
