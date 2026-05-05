@@ -38,15 +38,6 @@ const formatDate = (dateString) => {
   }).format(date)
 }
 
-// Funzione helper per assegnare il colore al badge in base allo stato
-const getStatusBadgeClass = (stato) => {
-  switch(stato) {
-    case 'ATTIVA': return 'bg-success' // Verde
-    case 'CONCLUSA': return 'bg-secondary' // Grigio
-    case 'ANNULLATA': return 'bg-danger' // Rosso
-    default: return 'bg-primary'
-  }
-}
 
 // funzione per cancellare le prenotazioni
 const handleCancelBooking = async (codice) => {
@@ -119,21 +110,41 @@ const chiudiChat = () => {
                   <h5 class="fw-bold mb-0 text-dark">{{ booking.nomegarage }}</h5>
                   <small class="text-muted"><i class="bi bi-geo-alt-fill me-1"></i>{{ booking.indirizzo }}</small>
                 </div>
-                <div class="d-flex align-items-center gap-2">
+                <div class="action-group d-flex align-items-center gap-2">
   
-                  <span class="badge rounded-pill px-3 py-2 text-uppercase fw-semibold" :class="getStatusBadgeClass(booking.stato)">
+                  <!-- Badge Stato  -->
+                  <span class="custom-badge" :class="'badge-' + booking.stato.toLowerCase()">
                     {{ booking.stato }}
                   </span>
-                  
+
+                  <!-- Pulsante Annulla  -->
                   <button 
                       v-if="booking.stato === 'ATTIVA'" 
                       @click="handleCancelBooking(booking.codiceprenotazione)" 
-                      class="btn btn-outline-danger btn-sm rounded-circle d-flex align-items-center justify-content-center fw-bold fs-5"
-                      style="width: 32px; height: 32px; padding-bottom: 4px;"
+                      class="custom-btn btn-cancel"
                       title="Annulla Prenotazione"
                   >
-                  &times; </button>
-  
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 6L6 18M6 6l12 12"/>
+                  </svg>
+                  Annulla
+                  </button>
+                  <!-- Pulsante Chat -->
+                  <button 
+                    v-if="booking.stato === 'ATTIVA'" 
+                    @click="apriChat(booking)" 
+                    class="custom-btn btn-chat"
+                    title="Contatta il gestore"
+                  >
+                    <!--pallino notifica-->
+                    <span v-if="booking.nonLetti > 0" class="chat-notification-dot"></span>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                      </svg>
+                        Contatta
+                  </button>
                 </div>
               </div>
 
@@ -169,15 +180,6 @@ const chiudiChat = () => {
                 <div class="col-md-2 text-md-end text-start mt-3 mt-md-0">
                   <span class="d-block text-muted small fw-semibold text-uppercase mb-1">Totale</span>
                   <span class="fw-bold fs-4 text-success mb-2 d-block">€ {{ Number(booking.prezzototale).toFixed(2) }}</span>
-                  
-                  <!-- Pulsante per aprire la chat -->
-                  <button 
-                    v-if="booking.stato === 'ATTIVA'" 
-                    @click="apriChat(booking)" 
-                    class="btn btn-outline-primary btn-sm w-100 fw-semibold"
-                  >
-                    💬 Contatta
-                  </button>
 
                 </div>
 
@@ -266,7 +268,92 @@ const chiudiChat = () => {
   gap: 8px;
   animation: slideUp 0.3s ease-out;
 }
+/* --- UNITÀ STILISTICA: BADGE E PULSANTI --- */
+.action-group {
+  flex-wrap: wrap; /* Evita che si schiaccino su schermi molto piccoli */
+}
 
+/* Base comune per altezza, font e bordi */
+.custom-badge, .custom-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.4rem 0.85rem;
+  border-radius: 8px; 
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  height: 36px; /* Forza la stessa altezza per tutti gli elementi */
+}
+
+/* --- 1. Badge di Stato --- */
+.custom-badge {
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
+  cursor: default;
+  border-radius: 99px; /* Raggio leggermente diverso perchè lo stato non è un bottone*/
+
+}
+.badge-attiva {
+  background-color: #137333;
+  color: #ffffff;
+  border-color: #137333;
+}
+.badge-conclusa {
+  background-color: #4a4d51;
+  color: #ffffff;
+  border-color: #4a4d51;
+}
+.badge-annullata {
+  background-color: #c5221f;
+  color: #ffffff;
+  border-color: #c5221f;
+}
+
+/* --- 2. Pulsante Chat --- */
+.btn-chat {
+  background-color: #e0f0ff;
+  color: var(--primary-blue, #00408A);
+  border-color: #b3d7ff;
+  cursor: pointer;
+  gap: 0.4rem;
+  position: relative;
+}
+.btn-chat:hover {
+  background-color: var(--primary-blue, #00408A);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 64, 138, 0.15);
+}
+.chat-notification-dot {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 12px;
+  height: 12px;
+  background-color: #ef4444; /* Rosso vibrante */
+  border: 2px solid #ffffff; /* Bordo bianco per staccarlo dallo sfondo */
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+  z-index: 2;
+}
+
+/* --- 3. Pulsante Annulla --- */
+.btn-cancel {
+  background-color: white;
+  color: #c5221f;
+  border-color: #fad2cf;
+  cursor: pointer;
+  gap: 0.3rem;
+}
+.btn-cancel:hover {
+  background-color: #c5221f;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(197, 34, 31, 0.15);
+}
 
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(20px); }
