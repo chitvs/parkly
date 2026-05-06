@@ -1,6 +1,6 @@
 -- UTENTI
 INSERT INTO Utente (Ruolo, Nome, Cognome, NomeUtente, CodiceFiscale, Email, PasswordHash, Telefono) VALUES
-('GESTORE', 'Alessandro', 'Galli', 'agalli_gest', 'GLLLSN70A01H501A', 'alessandro.g@garage.it', '$2b$10$WPKYQS3SIp5VEf4SKRKx3O5HVlY6XMOM1lle/fnGc2/ZKhek5VQu.', '3310000001'),
+('GESTORE', 'Alessandro', 'Galli', 'aleg', 'GLLLSN70A01H501A', 'alessandro.g@garage.it', '$2b$10$WPKYQS3SIp5VEf4SKRKx3O5HVlY6XMOM1lle/fnGc2/ZKhek5VQu.', '3310000001'),
 ('GESTORE', 'Roberta', 'Randi', 'rrandi_gest', 'RNDRRT75B41H501B', 'roberta.r@garage.it', '$2b$10$lN6k5YY30hrFMFHedDL9v.UFgP9VoXScHZbRRk9HmwkLNqnpEJBR2', '3310000002'),
 ('GESTORE', 'Fabio', 'Santi', 'fsanti_gest', 'SNTFBA80C01H501C', 'fabio.s@garage.it', '$2b$10$vEVaU1KOg6DeaPoFWA0HBOZffryYgBkdZah.P/h4J6T9KaLQtuzue', '3310000003'),
 ('GESTORE', 'Sonia', 'Fabbri', 'sfabbri_gest', 'FBBSNO85D41H501D', 'sonia.f@garage.it', '$2b$10$xEdYdhxpEHU5KuYqGTDJs.y5C5eiicy9jy70qCM5z62/x86pV43MG', '3310000004'),
