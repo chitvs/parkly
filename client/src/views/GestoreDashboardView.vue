@@ -10,33 +10,20 @@
     </div>
 
     <div v-else class="dashboard-layout">
-
       <aside class="sidebar">
         <div class="sidebar-brand">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg>
           <span>Area Gestore</span>
         </div>
-
         <nav class="sidebar-nav">
-          <a
-            v-for="item in navItems"
-            :key="item.id"
-            href="#"
-            :class="['nav-item', { active: vistaAttiva === item.id }]"
-            @click.prevent="vistaAttiva = item.id"
-          >
+          <a v-for="item in navItems" :key="item.id" href="#" :class="['nav-item', { active: vistaAttiva === item.id }]" @click.prevent="vistaAttiva = item.id">
             <span class="nav-icon" v-html="item.icon"></span>
             <span class="nav-label">{{ item.label }}</span>
             <span v-if="vistaAttiva === item.id" class="nav-indicator"></span>
           </a>
         </nav>
-
         <div class="sidebar-user">
-          <img
-            :src="authStore.utente?.fotoProfilo_URL || '/default-avatar.png'"
-            alt="Avatar"
-            class="sidebar-avatar"
-          />
+          <img :src="authStore.utente?.fotoProfilo_URL || '/default-avatar.png'" alt="Avatar" class="sidebar-avatar" />
           <div class="sidebar-user-info">
             <span class="sidebar-user-name">{{ authStore.utente?.nome }} {{ authStore.utente?.cognome }}</span>
             <span class="sidebar-user-role">Gestore</span>
@@ -45,7 +32,6 @@
       </aside>
 
       <main class="main-content">
-
         <div v-if="isLoading" class="loading-state">
           <div class="spinner"></div>
           <span>Caricamento dati...</span>
@@ -54,216 +40,76 @@
         <template v-else>
 
           <section v-if="vistaAttiva === 'statistiche'" class="vista fade-in">
-            <div class="page-header">
-              <div>
-                <h1>Dashboard</h1>
-                <p class="subtitle">Panoramica dei tuoi parcheggi</p>
-              </div>
-            </div>
-
+            <div class="page-header"><div><h1>Dashboard</h1><p class="subtitle">Panoramica dei tuoi parcheggi</p></div></div>
             <div class="stats-grid">
-              <div class="stat-card">
-                <div class="stat-icon stat-icon--blue">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg>
-                </div>
-                <div class="stat-body">
-                  <span class="stat-label">Garage Totali</span>
-                  <span class="stat-value">{{ mieiGarage.length }}</span>
-                </div>
-              </div>
-
-              <div class="stat-card">
-                <div class="stat-icon stat-icon--green">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                </div>
-                <div class="stat-body">
-                  <span class="stat-label">Guadagno del Mese</span>
-                  <span class="stat-value">€ {{ guadagnoMese }}</span>
-                </div>
-              </div>
-
-              <div class="stat-card">
-                <div class="stat-icon stat-icon--amber">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                </div>
-                <div class="stat-body">
-                  <span class="stat-label">Prenotazioni Attive</span>
-                  <span class="stat-value">{{ prenotazioniAttive }}</span>
-                </div>
-              </div>
+              <div class="stat-card"><div class="stat-icon stat-icon--blue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg></div><div class="stat-body"><span class="stat-label">Garage Totali</span><span class="stat-value">{{ mieiGarage.length }}</span></div></div>
+              <div class="stat-card"><div class="stat-icon stat-icon--green"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div class="stat-body"><span class="stat-label">Guadagno del Mese</span><span class="stat-value">€ {{ guadagnoMese }}</span></div></div>
+              <div class="stat-card"><div class="stat-icon stat-icon--amber"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div class="stat-body"><span class="stat-label">Prenotazioni Attive</span><span class="stat-value">{{ prenotazioniAttive }}</span></div></div>
             </div>
           </section>
 
           <section v-if="vistaAttiva === 'garage'" class="vista fade-in">
-            <div class="page-header">
-              <div>
-                <h1>I tuoi garage</h1>
-                <p class="subtitle">Gestisci tutti i parcheggi registrati</p>
-              </div>
-            </div>
-
+            <div class="page-header"><div><h1>I tuoi garage</h1><p class="subtitle">Gestisci tutti i parcheggi registrati</p></div></div>
             <div class="table-card">
               <table class="parkly-table">
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Nome Garage</th>
-                    <th>Indirizzo</th>
-                    <th>Tariffa Base</th>
-                    <th>Stato</th>
-                  </tr>
-                </thead>
+                <thead><tr><th>ID</th><th>Nome Garage</th><th>Indirizzo</th><th>Tariffa Base</th><th>Stato</th></tr></thead>
                 <tbody>
                   <tr v-for="garage in mieiGarage" :key="garage.id_garage">
                     <td class="td-muted">#{{ garage.id_garage }}</td>
-                    <td class="td-bold">
-                  <RouterLink 
-                  :to="`/garage/${garage.id_garage}`" 
-                  class="garage-link">
-                  {{ garage.nome }}
-                </RouterLink>
-                </td>
-                    <td class="td-muted">{{ garage.indirizzo }}</td>
-                    <td>€ {{ garage.tariffabase }}/h</td>
-                    <td>
-                      <span :class="['badge', garage.isattivo ? 'badge--green' : 'badge--red']">
-                        {{ garage.isattivo ? 'Attivo' : 'Inattivo' }}
-                      </span>
-                    </td>
+                    <td class="td-bold"><RouterLink :to="`/garage/${garage.id_garage}`" class="garage-link">{{ garage.nome }}</RouterLink></td>
+                    <td class="td-muted">{{ garage.indirizzo }}</td><td>€ {{ garage.tariffabase }}/h</td>
+                    <td><span :class="['badge', garage.isattivo ? 'badge--green' : 'badge--red']">{{ garage.isattivo ? 'Attivo' : 'Inattivo' }}</span></td>
                   </tr>
-                  <tr v-if="mieiGarage.length === 0">
-                    <td colspan="5" class="td-empty">Nessun garage trovato.</td>
-                  </tr>
+                  <tr v-if="mieiGarage.length === 0"><td colspan="5" class="td-empty">Nessun garage trovato.</td></tr>
                 </tbody>
               </table>
             </div>
           </section>
 
           <section v-if="vistaAttiva === 'stato'" class="vista fade-in">
-            <div class="page-header">
-              <div>
-                <h1>Stato Corrente</h1>
-                <p class="subtitle">Occupazione in tempo reale dei tuoi garage</p>
-              </div>
-            </div>
-
+            <div class="page-header"><div><h1>Stato Corrente</h1><p class="subtitle">Occupazione in tempo reale dei tuoi garage</p></div></div>
             <div class="filter-card">
               <h3 style="font-size: 0.9rem; margin-bottom: 12px; color: #333;">Filtra per Orario Sosta</h3>
               <div class="form-row form-row--2col" style="margin-bottom: 0;">
-                <div class="form-group">
-                  <label class="form-label">Inizio Sosta</label>
-                  <input type="datetime-local" class="form-input" v-model="filtroInizio">
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Fine Sosta</label>
-                  <input type="datetime-local" class="form-input" v-model="filtroFine">
-                </div>
+                <div class="form-group"><label class="form-label">Inizio Sosta</label><input type="datetime-local" class="form-input" v-model="filtroInizio"></div>
+                <div class="form-group"><label class="form-label">Fine Sosta</label><input type="datetime-local" class="form-input" v-model="filtroFine"></div>
               </div>
-              <button class="btn-primary" style="margin-top: 16px; width: 100%;" @click="aggiornaMappaOrari">
-                Verifica Disponibilità
-              </button>
+              <button class="btn-primary" style="margin-top: 16px; width: 100%;" @click="aggiornaMappaOrari">Verifica Disponibilità</button>
             </div>
             
             <div class="stato-grid">
               <div v-for="garage in mieiGarage" :key="garage.id_garage" class="stato-card">
                 <div class="stato-card-header">
                   <span class="stato-nome">{{ garage.nome }}</span>
-                  <span :class="['badge', garage.isattivo ? 'badge--green' : 'badge--red']">
-                    {{ garage.isattivo ? 'Attivo' : 'Inattivo' }}
-                  </span>
+                  <span :class="['badge', garage.isattivo ? 'badge--green' : 'badge--red']">{{ garage.isattivo ? 'Attivo' : 'Inattivo' }}</span>
                 </div>
                 <p class="stato-indirizzo">{{ garage.indirizzo }}</p>
-
                 <div class="occupancy-wrap">
-                  <div class="occupancy-bar">
-                    <div
-                      class="occupancy-fill"
-                      :style="{ width: getOccupancy(garage.id_garage) + '%' }"
-                      :class="{ 'fill-warn': getOccupancy(garage.id_garage) > 80 }"
-                    ></div>
-                  </div>
+                  <div class="occupancy-bar"><div class="occupancy-fill" :style="{ width: getOccupancy(garage.id_garage) + '%' }" :class="{ 'fill-warn': getOccupancy(garage.id_garage) > 80 }"></div></div>
                   <span class="occupancy-pct">{{ getOccupancy(garage.id_garage) }}%</span>
                 </div>
-
                 <div class="stato-meta">
-                  <span>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                    {{ garage.is24h ? 'Aperto 24h' : `${garage.orarioapertura?.substring(0,5)} - ${garage.orariochiusura?.substring(0,5)}` }}
-                  </span>
+                  <span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> {{ garage.is24h ? 'Aperto 24h' : `${garage.orarioapertura?.substring(0,5)} - ${garage.orariochiusura?.substring(0,5)}` }}</span>
                   <span>€ {{ garage.tariffabase }}/h</span>
                 </div>
-
                 <div class="planimetria-wrapper">
-                  <PlanimetriaGarage
-                    :key="'mappa-' + garage.id_garage + '-' + reRenderKey"
-                    :posti="postiPerGarage[garage.id_garage] || []"
-                    :mappaTestuale="garage.mappatestuale"
-                  />
+                  <PlanimetriaGarage :key="'mappa-' + garage.id_garage + '-' + reRenderKey" :posti="postiPerGarage[garage.id_garage] || []" :mappaTestuale="garage.mappatestuale" />
                 </div>
-
-              </div>
-            </div>
-
-            <div v-if="allerteStato.length > 0" class="section-header" style="margin-top: 32px;">
-              <h2>Allerte</h2>
-            </div>
-            <div v-for="allerta in allerteStato" :key="allerta.id" :class="['allerta-card', allerta.tipo === 'warning' ? 'allerta--warn' : 'allerta--danger']">
-              <div class="allerta-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-              </div>
-              <div>
-                <p class="allerta-title">{{ allerta.titolo }}</p>
-                <p class="allerta-msg">{{ allerta.messaggio }}</p>
-              </div>
-            </div>
-
-            <div v-if="allerteStato.length === 0 && mieiGarage.length > 0" class="allerta-card allerta--ok" style="margin-top: 24px;">
-              <div class="allerta-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-              </div>
-              <div>
-                <p class="allerta-title">Tutto regolare</p>
-                <p class="allerta-msg">Tutti i garage operano nei limiti normali.</p>
               </div>
             </div>
           </section>
 
           <section v-if="vistaAttiva === 'storico'" class="vista fade-in">
-            <div class="page-header">
-              <div>
-                <h1>Storico Prenotazioni</h1>
-                <p class="subtitle">Tutte le prenotazioni dei tuoi garage</p>
-              </div>
-            </div>
-
+            <div class="page-header"><div><h1>Storico Prenotazioni</h1><p class="subtitle">Tutte le prenotazioni dei tuoi garage</p></div></div>
             <div class="table-card">
               <table class="parkly-table">
-                <thead>
-                  <tr>
-                    <th>Codice</th>
-                    <th>Garage</th>
-                    <th>Targa</th>
-                    <th>Inizio</th>
-                    <th>Fine</th>
-                    <th>Importo</th>
-                    <th>Stato</th>
-                  </tr>
-                </thead>
+                <thead><tr><th>Codice</th><th>Garage</th><th>Targa</th><th>Inizio</th><th>Fine</th><th>Importo</th><th>Stato</th></tr></thead>
                 <tbody>
                   <tr v-for="p in storicoPrenotazioni" :key="p.id_prenotazione">
-                    <td><span class="targa-badge">{{ p.codiceprenotazione }}</span></td>
-                    <td class="td-bold">{{ p.nome_garage }}</td>
-                    <td><span class="targa-badge">{{ p.targa }}</span></td>
-                    <td class="td-muted">{{ formatData(p.iniziososta) }}</td>
-                    <td class="td-muted">{{ formatData(p.finesosta) }}</td>
-                    <td class="td-bold td-blue">€ {{ p.prezzototale }}</td>
-                    <td>
-                      <span :class="['badge', statoBadge(p.stato)]">{{ p.stato }}</span>
-                    </td>
+                    <td><span class="targa-badge">{{ p.codiceprenotazione }}</span></td><td class="td-bold">{{ p.nome_garage }}</td><td><span class="targa-badge">{{ p.targa }}</span></td><td class="td-muted">{{ formatData(p.iniziososta) }}</td><td class="td-muted">{{ formatData(p.finesosta) }}</td><td class="td-bold td-blue">€ {{ p.prezzototale }}</td>
+                    <td><span :class="['badge', statoBadge(p.stato)]">{{ p.stato }}</span></td>
                   </tr>
-                  <tr v-if="storicoPrenotazioni.length === 0">
-                    <td colspan="7" class="td-empty">Nessuna prenotazione trovata.</td>
-                  </tr>
+                  <tr v-if="storicoPrenotazioni.length === 0"><td colspan="7" class="td-empty">Nessuna prenotazione trovata.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -273,45 +119,122 @@
             <div class="page-header">
               <div>
                 <h1>Pubblica un Garage</h1>
-                <p class="subtitle">Compila i dettagli per attivarlo nel sistema</p>
+                <p class="subtitle">Disegna visivamente la planimetria per creare il garage perfetto</p>
               </div>
             </div>
 
-            <div class="form-card">
+            <div class="info-box">
+              <h3 class="info-box-title">💡 Guida alla pubblicazione</h3>
+              <ul class="info-box-list">
+                <li><strong>📍 Mappa e Coordinate:</strong> Cerca il tuo indirizzo per avvicinarti, poi <strong>clicca sulla mappa interattiva</strong> per posizionare il pin esattamente sopra il tuo garage con precisione al millimetro.</li>
+                <li><strong>🚗 Posti Smart:</strong> Nel Codice Posto, inizia con <strong>M</strong> (Moto), <strong>F</strong> (Furgone), <strong>E</strong> (Elettrico) o <strong>D</strong> (Disabili). Il sistema configurerà il resto per te.</li>
+                <li><strong>🎨 Planimetria:</strong> Una volta creati i posti, selezionali dalla tavolozza e clicca sulla griglia a scacchiera per posizionarli.</li>
+              </ul>
+            </div>
+
+            <div class="form-card" style="max-width: 900px;">
               <form @submit.prevent="salvaNuovoGarage">
 
+                <div class="section-header"><h2>1. Informazioni Generali e Posizione</h2></div>
                 <div class="form-row">
                   <div class="form-group">
-                    <label class="form-label">Nome del Garage</label>
+                    <label class="form-label">Nome del Garage *</label>
                     <input type="text" :class="['form-input', {'input-error': erroriValidazione.nome}]" v-model="nuovoGarage.nome" placeholder="Es. Garage Roma Centro">
                     <span v-if="erroriValidazione.nome" class="form-error-text">{{ erroriValidazione.nome }}</span>
                   </div>
                 </div>
 
-                <div class="form-row">
+                <div class="form-row form-row--3col">
+                  <div class="form-group" style="grid-column: span 2;">
+                    <label class="form-label">Via / Piazza *</label>
+                    <input type="text" :class="['form-input', {'input-error': erroriValidazione.via}]" v-model="nuovoGarage.via" placeholder="Es. Via Roma">
+                  </div>
                   <div class="form-group">
-                    <label class="form-label">Indirizzo Completo</label>
-                    <input type="text" :class="['form-input', {'input-error': erroriValidazione.indirizzo}]" v-model="nuovoGarage.indirizzo" placeholder="Es. Via Roma 10, Roma">
-                    <span v-if="erroriValidazione.indirizzo" class="form-error-text">{{ erroriValidazione.indirizzo }}</span>
+                    <label class="form-label">Civico *</label>
+                    <input type="text" :class="['form-input', {'input-error': erroriValidazione.civico}]" v-model="nuovoGarage.civico" placeholder="Es. 10">
+                  </div>
+                </div>
+
+                <div class="form-row form-row--3col">
+                  <div class="form-group">
+                    <label class="form-label">CAP *</label>
+                    <input type="text" :class="['form-input', {'input-error': erroriValidazione.cap}]" v-model="nuovoGarage.cap" placeholder="Es. 00100">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Città *</label>
+                    <input type="text" :class="['form-input', {'input-error': erroriValidazione.citta}]" v-model="nuovoGarage.citta" placeholder="Es. Roma">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Provincia (Sigla) *</label>
+                    <input type="text" :class="['form-input', {'input-error': erroriValidazione.provincia}]" v-model="nuovoGarage.provincia" placeholder="Es. RM" maxlength="2">
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group" style="flex-direction: row; gap: 10px; align-items: center;">
+                    <button type="button" class="btn-secondary" style="padding: 0 20px;" @click="calcolaCoordinate" :disabled="calcolandoCoordinate">
+                      {{ calcolandoCoordinate ? 'Ricerca in corso...' : '📍 Trova zona sulla mappa' }}
+                    </button>
+                    <span class="form-hint">Cerca per avvicinarti, poi <strong>clicca sulla mappa</strong> per la precisione massima.</span>
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div id="mappa-garage" style="height: 350px; width: 100%; border-radius: 8px; border: 1px solid #ccc; z-index: 1;"></div>
+                  <span v-if="erroriValidazione.coordinate" class="form-error-text" style="display:block; margin-top:8px;">{{ erroriValidazione.coordinate }}</span>
+                </div>
+
+                <div class="form-row form-row--2col">
+                  <div class="form-group">
+                    <label class="form-label">Latitudine (Selezionata)</label>
+                    <input type="text" class="form-input" :value="nuovoGarage.latitudine" disabled placeholder="Clicca sulla mappa">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Longitudine (Selezionata)</label>
+                    <input type="text" class="form-input" :value="nuovoGarage.longitudine" disabled placeholder="Clicca sulla mappa">
                   </div>
                 </div>
 
                 <div class="form-row">
                   <div class="form-group">
                     <label class="form-label">Descrizione</label>
-                    <input type="text" class="form-input" v-model="nuovoGarage.descrizione" placeholder="Breve descrizione del garage">
+                    <input type="text" class="form-input" v-model="nuovoGarage.descrizione" placeholder="Breve descrizione del garage (opzionale)">
                   </div>
                 </div>
 
-                <div class="form-row form-row--2col">
+                <div class="section-header" style="margin-top: 30px;"><h2>2. Tariffario Orario e Orari</h2></div>
+                <div class="form-row form-row--3col">
                   <div class="form-group">
-                    <label class="form-label">Tariffa Base (€/h)</label>
+                    <label class="form-label">Tariffa Auto (€/h) *</label>
                     <input type="number" step="0.50" :class="['form-input', {'input-error': erroriValidazione.tariffabase}]" v-model="nuovoGarage.tariffabase" min="0">
                     <span v-if="erroriValidazione.tariffabase" class="form-error-text">{{ erroriValidazione.tariffabase }}</span>
                   </div>
                   <div class="form-group">
+                    <label class="form-label">Tariffa Moto (€/h)</label>
+                    <input type="number" step="0.50" :class="['form-input', {'input-error': erroriValidazione.tariffamoto}]" v-model="nuovoGarage.tariffamoto" min="0" placeholder="Opzionale">
+                    <span v-if="erroriValidazione.tariffamoto" class="form-error-text">{{ erroriValidazione.tariffamoto }}</span>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Tariffa Furgone (€/h)</label>
+                    <input type="number" step="0.50" :class="['form-input', {'input-error': erroriValidazione.tariffafurgone}]" v-model="nuovoGarage.tariffafurgone" min="0" placeholder="Opzionale">
+                    <span v-if="erroriValidazione.tariffafurgone" class="form-error-text">{{ erroriValidazione.tariffafurgone }}</span>
+                  </div>
+                </div>
+
+                <div class="form-row form-row--3col">
+                  <div class="form-group">
+                    <label class="form-label">Tariffa Elettrica (€/h)</label>
+                    <input type="number" step="0.50" :class="['form-input', {'input-error': erroriValidazione.tariffaelettrica}]" v-model="nuovoGarage.tariffaelettrica" min="0" placeholder="Opzionale">
+                    <span v-if="erroriValidazione.tariffaelettrica" class="form-error-text">{{ erroriValidazione.tariffaelettrica }}</span>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Tariffa Disabili (€/h)</label>
+                    <input type="number" step="0.50" :class="['form-input', {'input-error': erroriValidazione.tariffadisabili}]" v-model="nuovoGarage.tariffadisabili" min="0" placeholder="Opzionale">
+                    <span v-if="erroriValidazione.tariffadisabili" class="form-error-text">{{ erroriValidazione.tariffadisabili }}</span>
+                  </div>
+                  <div class="form-group">
                     <label class="form-label">Altezza Massima (m)</label>
-                    <input type="number" step="0.10" class="form-input" v-model="nuovoGarage.altezzamassima" min="0">
+                    <input type="number" step="0.10" class="form-input" v-model="nuovoGarage.altezzamassima" min="0" placeholder="Opzionale">
                   </div>
                 </div>
 
@@ -325,27 +248,105 @@
                     <input type="time" class="form-input" v-model="nuovoGarage.orariochiusura" :disabled="nuovoGarage.is24h">
                   </div>
                 </div>
-
                 <div class="form-row">
                   <label class="checkbox-label">
-                    <input type="checkbox" v-model="nuovoGarage.is24h" class="checkbox-input">
-                    <span>Aperto 24 ore su 24</span>
+                    <input type="checkbox" v-model="nuovoGarage.is24h" class="checkbox-input"> <span>Aperto 24 ore su 24</span>
                   </label>
                 </div>
 
-                <div class="form-row">
+                <hr style="margin: 30px 0; border: none; border-top: 1px solid #E8E8E8;">
+
+                <div class="section-header"><h2>3. Crea i Posti Auto</h2></div>
+
+                <div class="posto-creator">
                   <div class="form-group">
-                    <label class="form-label">Codice Planimetria</label>
-                    <textarea 
-                      :class="['form-input', 'form-textarea', {'input-error': erroriValidazione.mappatestuale}]" 
-                      v-model="nuovoGarage.mappatestuale" 
-                    ></textarea>
-                    <span class="form-hint">Incolla qui la stringa testuale che definisce la griglia del parcheggio.</span>
-                    <span v-if="erroriValidazione.mappatestuale" class="form-error-text">{{ erroriValidazione.mappatestuale }}</span>
+                    <label class="form-label">Codice</label>
+                    <input type="text" class="form-input" v-model="nuovoPosto.codice" placeholder="Es. M01" @input="autoCompilaPosto" @keyup.enter="aggiungiPostoConfigurato">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Veicolo</label>
+                    <select class="form-input" v-model="nuovoPosto.tipo">
+                      <option value="AUTO">Auto (L:2 A:1)</option>
+                      <option value="MOTO">Moto (L:1 A:1)</option>
+                      <option value="FURGONE">Furgone (L:2 A:2)</option>
+                    </select>
+                  </div>
+                  <div class="form-group check-group">
+                    <label class="checkbox-label"><input type="checkbox" v-model="nuovoPosto.isElettrica" class="checkbox-input"> Elettrica</label>
+                    <label class="checkbox-label"><input type="checkbox" v-model="nuovoPosto.isDisabili" class="checkbox-input"> Disabili</label>
+                    <label class="checkbox-label"><input type="checkbox" v-model="nuovoPosto.isCoperto" class="checkbox-input"> Coperto</label>
+                  </div>
+                  <div class="form-group" style="justify-content: flex-end;">
+                    <button type="button" class="btn-secondary" @click="aggiungiPostoConfigurato">+ Aggiungi</button>
                   </div>
                 </div>
 
-                <div v-if="erroreForm" class="form-error">{{ erroreForm }}</div>
+                <div class="posti-list" v-if="postiConfigurati.length > 0">
+                  <span v-for="(posto, index) in postiConfigurati" :key="index" class="posto-tag">
+                    <strong>{{ posto.codice }}</strong> ({{ posto.tipo }})
+                    <span v-if="posto.isElettrica" title="Elettrica">⚡</span>
+                    <span v-if="posto.isDisabili" title="Disabili">♿</span>
+                    <span v-if="posto.isCoperto" title="Coperto">🏠</span>
+                    <button type="button" @click="rimuoviPostoConfigurato(index)">&times;</button>
+                  </span>
+                </div>
+
+                <hr style="margin: 30px 0; border: none; border-top: 1px solid #E8E8E8;">
+
+                <div class="section-header"><h2>4. Disegna la Planimetria</h2></div>
+                
+                <div class="form-row form-row--2col">
+                  <div class="form-group">
+                    <label class="form-label">Larghezza (Unità)</label>
+                    <input type="number" class="form-input" v-model.number="dimensioniMappa.colonne" @change="ridimensionaGriglia" min="2" max="30">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Altezza (Unità)</label>
+                    <input type="number" class="form-input" v-model.number="dimensioniMappa.righe" @change="ridimensionaGriglia" min="2" max="30">
+                  </div>
+                </div>
+
+                <div class="tavolozza" v-if="postiConfigurati.length > 0">
+                  <span class="tavolozza-label">Strumento attivo:</span>
+                  <button type="button" class="tool-btn btn-gomma" :class="{active: strumentoAttivo === 'GOMMA'}" @click="strumentoAttivo = 'GOMMA'">
+                    🧽 Gomma
+                  </button>
+                  <button type="button" 
+                          v-for="posto in postiConfigurati" :key="posto.codice"
+                          class="tool-btn"
+                          :class="[posto.tipo.toLowerCase(), {
+                            active: strumentoAttivo?.codice === posto.codice,
+                            disabled: codiciPosizionati.has(posto.codice)
+                          }]"
+                          :disabled="codiciPosizionati.has(posto.codice)"
+                          @click="selezionaStrumento(posto)">
+                    {{ posto.codice }} ({{ posto.tipo }})
+                  </button>
+                </div>
+
+                <div class="canvas-wrapper">
+                  <div class="canvas-griglia" :style="{ gridTemplateColumns: `repeat(${dimensioniMappa.colonne}, 35px)` }">
+                    <template v-for="(riga, r) in griglia" :key="'r-'+r">
+                      <div v-for="(cella, c) in riga" :key="'c-'+r+'-'+c" 
+                           class="cella-canvas"
+                           :class="{ 'occupata': cella, 'root': cella?.isRoot }"
+                           @click="clickCella(r, c)">
+                        <span v-if="cella?.isRoot">{{ cella.codice }}</span>
+                        <span v-else-if="!cella" class="cella-empty-dot">·</span>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+
+                <div v-if="stringaMappaGenerata" class="anteprima-mappa">
+                  <h4>Anteprima Reale per i Clienti</h4>
+                  <PlanimetriaGarage :posti="postiConvertitiPerAnteprima" :mappaTestuale="stringaMappaGenerata" :isAnteprima="true" />
+                </div>
+                <span v-if="erroriValidazione.mappatestuale" class="form-error-text" style="display:block; margin-top:10px;">
+                  {{ erroriValidazione.mappatestuale }}
+                </span>
+
+                <div v-if="erroreForm" class="form-error" style="margin-top: 20px;">{{ erroreForm }}</div>
 
                 <div class="form-actions">
                   <button type="submit" class="btn-primary" :disabled="staSalvando">
@@ -366,14 +367,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { authStore } from '../store/auth.js'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 import PlanimetriaGarage from '../components/PlanimetriaGarage.vue'
 
 const isGestore = computed(() => authStore.utente?.ruolo === 'GESTORE')
-
 const vistaAttiva = ref('statistiche')
 const isLoading   = ref(false)
 const staSalvando = ref(false)
@@ -386,49 +386,304 @@ const allerteStato          = ref([])
 const occupazioneGarage     = ref({})
 const postiPerGarage        = ref({})
 
-// CHIAVE PER FORZARE L'AGGIORNAMENTO DELLA MAPPA
 const reRenderKey = ref(0)
-
 const filtroInizio = ref('')
 const filtroFine = ref('')
 
+const calcolandoCoordinate = ref(false)
+
 const nuovoGarage = ref({
-  nome: '', indirizzo: '', descrizione: '',
-  tariffabase: null, altezzamassima: null,
+  nome: '', descrizione: '',
+  via: '', civico: '', cap: '', citta: '', provincia: '',
+  latitudine: null, longitudine: null,
+  tariffabase: null, 
+  tariffamoto: null, 
+  tariffafurgone: null, 
+  tariffaelettrica: null, 
+  tariffadisabili: null,
+  altezzamassima: null,
   orarioapertura: '08:00', orariochiusura: '20:00',
-  is24h: false, mappatestuale: ''
+  is24h: false
+})
+
+const nuovoPosto = ref({ codice: '', tipo: 'AUTO', isDisabili: false, isElettrica: false, isCoperto: true })
+const postiConfigurati = ref([])
+
+const dimensioniMappa = ref({ righe: 6, colonne: 12 })
+const griglia = ref([])
+const strumentoAttivo = ref(null) 
+
+const MAPPA_DIMENSIONI = {
+  'MOTO': { w: 1, h: 1 },
+  'AUTO': { w: 2, h: 1 },
+  'FURGONE': { w: 2, h: 2 }
+}
+
+// ==== LOGICA MAPPA INTERATTIVA (LEAFLET) ====
+let mapInstance = null;
+let markerInstance = null;
+
+const loadLeaflet = () => {
+  return new Promise((resolve) => {
+    if (window.L) return resolve();
+    const css = document.createElement('link');
+    css.rel = 'stylesheet';
+    css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    document.head.appendChild(css);
+
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    script.onload = resolve;
+    document.head.appendChild(script);
+  });
+};
+
+const initMap = () => {
+  if (mapInstance) mapInstance.remove();
+  
+  // Coordinate di default (Centro di Roma) se non ne abbiamo
+  const defaultLat = nuovoGarage.value.latitudine || 41.9028;
+  const defaultLng = nuovoGarage.value.longitudine || 12.4964;
+  
+  mapInstance = L.map('mappa-garage').setView([defaultLat, defaultLng], 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '© OpenStreetMap'
+  }).addTo(mapInstance);
+
+  mapInstance.on('click', (e) => {
+    const lat = parseFloat(e.latlng.lat.toFixed(6));
+    const lng = parseFloat(e.latlng.lng.toFixed(6));
+    nuovoGarage.value.latitudine = lat;
+    nuovoGarage.value.longitudine = lng;
+    erroriValidazione.value.coordinate = null;
+    updateMarker(lat, lng);
+  });
+
+  if (nuovoGarage.value.latitudine && nuovoGarage.value.longitudine) {
+    updateMarker(nuovoGarage.value.latitudine, nuovoGarage.value.longitudine);
+  }
+};
+
+const updateMarker = (lat, lng) => {
+  if (markerInstance) mapInstance.removeLayer(markerInstance);
+  markerInstance = L.marker([lat, lng]).addTo(mapInstance);
+  mapInstance.setView([lat, lng], 18); // Zoom forte per fargli vedere l'edificio
+};
+
+// Quando l'utente apre il tab "Aggiungi", carichiamo la mappa visiva
+watch(vistaAttiva, async (newVal) => {
+  if (newVal === 'aggiungi') {
+    await loadLeaflet();
+    await nextTick();
+    initMap();
+  }
+});
+
+const calcolaCoordinate = async () => {
+  const { via, civico, citta, provincia, cap } = nuovoGarage.value;
+  if (!via || !civico || !citta || !provincia) {
+    alert("Compila Via, Civico, Città e Provincia prima di cercare la zona.");
+    return;
+  }
+  
+  calcolandoCoordinate.value = true;
+  try {
+    const addressStr = `${via} ${civico}, ${citta}, ${provincia}, Italy`;
+    const query = encodeURIComponent(addressStr);
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`);
+    const data = await res.json();
+    
+    if (data && data.length > 0) {
+      const lat = parseFloat(data[0].lat);
+      const lon = parseFloat(data[0].lon);
+      nuovoGarage.value.latitudine = lat;
+      nuovoGarage.value.longitudine = lon;
+      erroriValidazione.value.coordinate = null; 
+      updateMarker(lat, lon);
+    } else {
+      alert("Zona non trovata in automatico. Naviga manualmente sulla mappa e clicca sul tuo garage.");
+    }
+  } catch (err) {
+    console.error("Errore geocoding:", err);
+  } finally {
+    calcolandoCoordinate.value = false;
+  }
+}
+// ============================================
+
+const autoCompilaPosto = () => {
+  const cod = nuovoPosto.value.codice.toUpperCase();
+  if (cod.startsWith('M')) nuovoPosto.value.tipo = 'MOTO';
+  else if (cod.startsWith('F')) nuovoPosto.value.tipo = 'FURGONE';
+  else nuovoPosto.value.tipo = 'AUTO';
+
+  nuovoPosto.value.isElettrica = cod.startsWith('E');
+  nuovoPosto.value.isDisabili = cod.startsWith('D');
+}
+
+const ridimensionaGriglia = () => {
+  const nuova = []
+  for (let r = 0; r < dimensioniMappa.value.righe; r++) {
+    const riga = []
+    for (let c = 0; c < dimensioniMappa.value.colonne; c++) {
+      riga.push(griglia.value[r]?.[c] || null)
+    }
+    nuova.push(riga)
+  }
+  griglia.value = nuova
+}
+
+onMounted(() => {
+  ridimensionaGriglia()
+  caricaDati()
+})
+
+const codiciPosizionati = computed(() => {
+  const codici = new Set()
+  griglia.value.forEach(riga => {
+    riga.forEach(cella => {
+      if (cella && cella.isRoot) codici.add(cella.codice)
+    })
+  })
+  return codici
+})
+
+const aggiungiPostoConfigurato = () => {
+  const cod = nuovoPosto.value.codice.trim().toUpperCase()
+  if (!cod) return
+  if (postiConfigurati.value.find(p => p.codice === cod)) {
+    alert("Codice posto già esistente!")
+    return
+  }
+  postiConfigurati.value.push({
+    codice: cod,
+    tipo: nuovoPosto.value.tipo,
+    isElettrica: nuovoPosto.value.isElettrica,
+    isDisabili: nuovoPosto.value.isDisabili,
+    isCoperto: nuovoPosto.value.isCoperto
+  })
+  nuovoPosto.value = { codice: '', tipo: 'AUTO', isDisabili: false, isElettrica: false, isCoperto: true }
+}
+
+const selezionaStrumento = (posto) => {
+  const dim = MAPPA_DIMENSIONI[posto.tipo]
+  strumentoAttivo.value = { ...posto, w: dim.w, h: dim.h }
+}
+
+const rimuoviItemIn = (r, c) => {
+  const cella = griglia.value[r][c]
+  if (!cella) return
+  const rootR = cella.rootR
+  const rootC = cella.rootC
+  const rootCella = griglia.value[rootR][rootC]
+
+  for (let i = 0; i < rootCella.h; i++) {
+    for (let j = 0; j < rootCella.w; j++) {
+      if (griglia.value[rootR + i] && griglia.value[rootR + i][rootC + j] !== undefined) {
+         griglia.value[rootR + i][rootC + j] = null
+      }
+    }
+  }
+}
+
+const rimuoviPostoConfigurato = (index) => {
+  const cod = postiConfigurati.value[index].codice
+  postiConfigurati.value.splice(index, 1)
+  for (let r = 0; r < dimensioniMappa.value.righe; r++) {
+    for (let c = 0; c < dimensioniMappa.value.colonne; c++) {
+      const cella = griglia.value[r][c]
+      if (cella && cella.codice === cod && cella.isRoot) {
+        rimuoviItemIn(r, c)
+      }
+    }
+  }
+}
+
+const clickCella = (r, c) => {
+  if (strumentoAttivo.value === 'GOMMA') {
+    rimuoviItemIn(r, c)
+    return
+  }
+  if (!strumentoAttivo.value) return
+
+  const p = strumentoAttivo.value
+  if (codiciPosizionati.value.has(p.codice)) {
+    alert('Posto già posizionato sulla griglia. Usa la gomma per rimuoverlo prima di spostarlo.')
+    return
+  }
+
+  if (r + p.h > dimensioniMappa.value.righe || c + p.w > dimensioniMappa.value.colonne) {
+    alert('Spazio insufficiente: uscirai dai bordi della planimetria.')
+    return
+  }
+
+  for (let i = 0; i < p.h; i++) {
+    for (let j = 0; j < p.w; j++) {
+      if (griglia.value[r + i][c + j] !== null) {
+        alert('Spazio occupato da un altro veicolo.')
+        return
+      }
+    }
+  }
+
+  for (let i = 0; i < p.h; i++) {
+    for (let j = 0; j < p.w; j++) {
+      griglia.value[r + i][c + j] = {
+        isRoot: i === 0 && j === 0,
+        codice: p.codice,
+        tipo: p.tipo,
+        w: p.w,
+        h: p.h,
+        rootR: r,
+        rootC: c
+      }
+    }
+  }
+  strumentoAttivo.value = null
+}
+
+const stringaMappaGenerata = computed(() => {
+  if (!griglia.value.length) return ''
+  let righeStr = []
+  for (let r = 0; r < dimensioniMappa.value.righe; r++) {
+    let celleStr = []
+    for (let c = 0; c < dimensioniMappa.value.colonne; c++) {
+      const cella = griglia.value[r][c]
+      if (!cella) celleStr.push('X:1x1') 
+      else if (cella.isRoot) celleStr.push(`${cella.codice}:${cella.w}x${cella.h}`) 
+    }
+    if (celleStr.length > 0) righeStr.push(celleStr.join('-'))
+  }
+  const mappaFinale = righeStr.join('\n')
+  return mappaFinale.replace(/X:1x1(-X:1x1)*\n/g, '').trim() === 'X:1x1' ? '' : mappaFinale
+})
+
+const postiConvertitiPerAnteprima = computed(() => {
+  return postiConfigurati.value.map(p => ({
+    codiceposto: p.codice,
+    tipoveicolo: p.tipo,
+    iselettrica: p.isElettrica,
+    isdisabili: p.isDisabili,
+    iscoperto: p.isCoperto,
+    is_occupato: false 
+  }))
 })
 
 const guadagnoMese = computed(() => {
   const ora = new Date()
   return storicoPrenotazioni.value
-    .filter(p => {
-      if (p.stato === 'ANNULLATA') return false
-      const d = new Date(p.iniziososta)
-      return d.getMonth() === ora.getMonth() && d.getFullYear() === ora.getFullYear()
-    })
-    .reduce((acc, p) => acc + parseFloat(p.prezzototale || 0), 0)
-    .toFixed(2)
+    .filter(p => p.stato !== 'ANNULLATA' && new Date(p.iniziososta).getMonth() === ora.getMonth() && new Date(p.iniziososta).getFullYear() === ora.getFullYear())
+    .reduce((acc, p) => acc + parseFloat(p.prezzototale || 0), 0).toFixed(2)
 })
-
-const prenotazioniAttive = computed(() =>
-  storicoPrenotazioni.value.filter(p => p.stato === 'ATTIVA').length
-)
-
+const prenotazioniAttive = computed(() => storicoPrenotazioni.value.filter(p => p.stato === 'ATTIVA').length)
 const getOccupancy = (idGarage) => occupazioneGarage.value[idGarage] ?? 0
-
 const formatData = (iso) => {
   if (!iso) return '-'
   const d = new Date(iso)
-  return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: '2-digit' })
-       + ' ' + d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+  return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: '2-digit' }) + ' ' + d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
 }
-
-const statoBadge = (stato) => {
-  if (stato === 'ATTIVA')    return 'badge--green'
-  if (stato === 'ANNULLATA') return 'badge--red'
-  return 'badge--gray'
-}
+const statoBadge = (stato) => stato === 'ATTIVA' ? 'badge--green' : (stato === 'ANNULLATA' ? 'badge--red' : 'badge--gray')
 
 const caricaDati = async () => {
   if (!isGestore.value) return
@@ -445,51 +700,29 @@ const caricaGarage = async () => {
   if (!res.ok) return
   const data = await res.json()
   mieiGarage.value = data
-
   await Promise.all(data.map(async (g) => {
     try {
       const r = await fetch(`/api/garage/${g.id_garage}/posti`, { credentials: 'include' })
-      if (r.ok) {
-        const resPosti = await r.json()
-        postiPerGarage.value[g.id_garage] = resPosti.posti 
-      }
-    } catch { /* ignora */ }
-
+      if (r.ok) postiPerGarage.value[g.id_garage] = (await r.json()).posti 
+    } catch { }
     try {
       const r = await fetch(`/api/garage/${g.id_garage}/occupazione`, { credentials: 'include' })
-      if (r.ok) {
-        const { percentuale } = await r.json()
-        occupazioneGarage.value[g.id_garage] = Math.round(percentuale)
-      }
-    } catch { /* ignora */ }
+      if (r.ok) occupazioneGarage.value[g.id_garage] = Math.round((await r.json()).percentuale)
+    } catch { }
   }))
-  
-  // Aggiorna la mappa appena caricata
   reRenderKey.value++
 }
 
 const aggiornaMappaOrari = async () => {
-  if (!filtroInizio.value || !filtroFine.value) {
-    alert("Inserisci sia l'orario di inizio che di fine!");
-    return;
-  }
-
-  const inizioIso = new Date(filtroInizio.value).toISOString();
-  const fineIso = new Date(filtroFine.value).toISOString();
-
+  if (!filtroInizio.value || !filtroFine.value) return alert("Inserisci orario di inizio e di fine!");
+  const iIso = new Date(filtroInizio.value).toISOString();
+  const fIso = new Date(filtroFine.value).toISOString();
   await Promise.all(mieiGarage.value.map(async (g) => {
     try {
-      const r = await fetch(`/api/garage/${g.id_garage}/posti?inizio=${inizioIso}&fine=${fineIso}`, { credentials: 'include' });
-      if (r.ok) {
-        const data = await r.json();
-        postiPerGarage.value[g.id_garage] = data.posti;
-      }
-    } catch (e) {
-      console.error("Errore nell'aggiornamento mappa:", e);
-    }
+      const r = await fetch(`/api/garage/${g.id_garage}/posti?inizio=${iIso}&fine=${fIso}`, { credentials: 'include' });
+      if (r.ok) postiPerGarage.value[g.id_garage] = (await r.json()).posti;
+    } catch (e) { console.error(e); }
   }));
-
-  // QUESTO E' IL SEGRETO: Forza Vue a cancellare e ridisegnare la mappa
   reRenderKey.value++;
 }
 
@@ -497,7 +730,6 @@ const caricaStorico = async () => {
   const res = await fetch('/api/prenotazioni/prenotazioni-gestore', { credentials: 'include' })
   if (res.ok) storicoPrenotazioni.value = await res.json()
 }
-
 const caricaStato = async () => {
   const res = await fetch('/api/garage/stato-garages-gestore', { credentials: 'include' })
   if (res.ok) allerteStato.value = await res.json()
@@ -506,20 +738,48 @@ const caricaStato = async () => {
 const validaForm = () => {
   const errori = {}
   
-  if (!nuovoGarage.value.nome || !nuovoGarage.value.nome.trim()) {
-    errori.nome = "Il nome del garage è obbligatorio."
-  }
-  
-  if (!nuovoGarage.value.indirizzo || !nuovoGarage.value.indirizzo.trim()) {
-    errori.indirizzo = "L'indirizzo è obbligatorio."
+  if (!nuovoGarage.value.nome || !nuovoGarage.value.nome.trim()) errori.nome = "Obbligatorio."
+  if (!nuovoGarage.value.via || !nuovoGarage.value.via.trim()) errori.via = "Obbligatorio."
+  if (!nuovoGarage.value.civico || !nuovoGarage.value.civico.trim()) errori.civico = "Obbligatorio."
+  if (!nuovoGarage.value.cap || !nuovoGarage.value.cap.trim()) errori.cap = "Obbligatorio."
+  if (!nuovoGarage.value.citta || !nuovoGarage.value.citta.trim()) errori.citta = "Obbligatorio."
+  if (!nuovoGarage.value.provincia || !nuovoGarage.value.provincia.trim()) errori.provincia = "Obbligatorio."
+
+  if (!nuovoGarage.value.latitudine || !nuovoGarage.value.longitudine) {
+    errori.coordinate = "Clicca sulla mappa per catturare le coordinate esatte."
   }
   
   if (!nuovoGarage.value.tariffabase || nuovoGarage.value.tariffabase <= 0) {
-    errori.tariffabase = "Inserisci una tariffa base maggiore di 0."
+    errori.tariffabase = "La tariffa auto è obbligatoria e > 0."
   }
   
-  if (!nuovoGarage.value.mappatestuale || !nuovoGarage.value.mappatestuale.trim()) {
-    errori.mappatestuale = "Devi incollare la stringa della planimetria per creare il garage."
+  const tipiPresenti = new Set();
+  let necessitaElettrica = false;
+  let necessitaDisabili = false;
+
+  for (const posto of postiConfigurati.value) {
+    tipiPresenti.add(posto.tipo);
+    if (posto.isElettrica) necessitaElettrica = true;
+    if (posto.isDisabili) necessitaDisabili = true;
+  }
+
+  if (tipiPresenti.has('MOTO') && (!nuovoGarage.value.tariffamoto || nuovoGarage.value.tariffamoto <= 0)) {
+    errori.tariffamoto = "Hai creato posti MOTO, la tariffa è obbligatoria!";
+  }
+  if (tipiPresenti.has('FURGONE') && (!nuovoGarage.value.tariffafurgone || nuovoGarage.value.tariffafurgone <= 0)) {
+    errori.tariffafurgone = "Hai creato posti FURGONE, la tariffa è obbligatoria!";
+  }
+  if (necessitaElettrica && (!nuovoGarage.value.tariffaelettrica || nuovoGarage.value.tariffaelettrica <= 0)) {
+    errori.tariffaelettrica = "Hai creato posti ELETTRICI, la tariffa è obbligatoria!";
+  }
+  if (necessitaDisabili && (!nuovoGarage.value.tariffadisabili || nuovoGarage.value.tariffadisabili <= 0)) {
+    errori.tariffadisabili = "Hai creato posti DISABILI, la tariffa è obbligatoria!";
+  }
+
+  if (postiConfigurati.value.length === 0) {
+    errori.mappatestuale = "Devi configurare almeno un posto auto."
+  } else if (codiciPosizionati.value.size < postiConfigurati.value.length) {
+    errori.mappatestuale = "Devi posizionare TUTTI i posti creati sulla scacchiera prima di poter pubblicare."
   }
 
   erroriValidazione.value = errori
@@ -528,28 +788,44 @@ const validaForm = () => {
 
 const salvaNuovoGarage = async () => {
   erroreForm.value = ''
-
   if (!validaForm()) {
-    erroreForm.value = "Attenzione: controlla i campi evidenziati in rosso e riprova."
+    erroreForm.value = "Controlla i campi in rosso e assicurati di aver posizionato tutti i posti."
     return
   }
 
   staSalvando.value = true
+
+  const indirizzoCompleto = `${nuovoGarage.value.via.trim()} ${nuovoGarage.value.civico.trim()}, ${nuovoGarage.value.cap.trim()} ${nuovoGarage.value.citta.trim()} (${nuovoGarage.value.provincia.trim().toUpperCase()})`;
+
+  const payload = {
+    ...nuovoGarage.value,
+    indirizzo: indirizzoCompleto,
+    mappatestuale: stringaMappaGenerata.value,
+    posti: postiConfigurati.value
+  }
+
   try {
     const res = await fetch('/api/garage/garages-gestore', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(nuovoGarage.value)
+      body: JSON.stringify(payload)
     })
+    
     if (res.ok) {
-      nuovoGarage.value = {
-        nome: '', indirizzo: '', descrizione: '',
-        tariffabase: null, altezzamassima: null,
-        orarioapertura: '08:00', orariochiusura: '20:00',
-        is24h: false, mappatestuale: ''
+      nuovoGarage.value = { 
+        nome: '', descrizione: '',
+        via: '', civico: '', cap: '', citta: '', provincia: '',
+        latitudine: null, longitudine: null,
+        tariffabase: null, tariffamoto: null, tariffafurgone: null, tariffaelettrica: null, tariffadisabili: null, 
+        altezzamassima: null, orarioapertura: '08:00', orariochiusura: '20:00', is24h: false 
       }
+      postiConfigurati.value = []
+      dimensioniMappa.value = { righe: 6, colonne: 12 }
+      ridimensionaGriglia()
       erroriValidazione.value = {}
+      if (markerInstance) mapInstance.removeLayer(markerInstance);
+      
       await caricaGarage()
       vistaAttiva.value = 'statistiche'
     } else {
@@ -563,161 +839,53 @@ const salvaNuovoGarage = async () => {
   }
 }
 
-onMounted(caricaDati)
-
 const navItems = [
-  { id: 'statistiche', label: 'Statistiche',    icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>' },
-  { id: 'garage',      label: 'I miei Garage',  icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>' },
-  { id: 'stato',       label: 'Stato Corrente', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>' },
-  { id: 'storico',     label: 'Storico',         icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>' },
-  { id: 'aggiungi',    label: 'Aggiungi Garage', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' },
+  { id: 'statistiche', label: 'Statistiche', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>' },
+  { id: 'garage', label: 'I miei Garage', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>' },
+  { id: 'stato', label: 'Stato Corrente', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>' },
+  { id: 'storico', label: 'Storico', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>' },
+  { id: 'aggiungi', label: 'Aggiungi Garage', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' },
 ]
 </script>
 
 <style scoped>
-/* NUOVI STILI PER GLI ERRORI E LA TEXTAREA */
-.input-error {
-  border-color: #C0392B !important;
-  background-color: #FDEDEC !important;
-}
-.form-error-text {
-  color: #C0392B;
-  font-size: 0.8rem;
-  font-weight: 600;
-  margin-top: 4px;
-}
-.form-textarea {
-  min-height: 120px;
-  resize: vertical;
-  padding-top: 12px;
-  font-family: monospace;
-}
+.info-box { background: #EBF3FF; border: 1px solid #BADCFF; border-radius: 12px; padding: 20px; margin-bottom: 24px;}
+.info-box-title { color: #00408A; font-size: 1.1rem; font-weight: 700; margin: 0 0 12px 0;}
+.info-box-list { margin: 0; padding-left: 20px; color: #00408A; font-size: 0.9rem;}
+.info-box-list li { margin-bottom: 8px;}
 
-/* IL TUO CSS ORIGINALE INTATTO */
-.garage-link {
-  color: #0066CC;
-  text-decoration: none;
-  font-weight: 600;
-  transition: color 0.15s;
-}
-.garage-link:hover {
-  color: #00204A;
-  text-decoration: underline;
-}
-.page-wrapper {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  background-color: var(--bg-light, #F5F5F3);
-  font-family: 'Inter', -apple-system, sans-serif;
-}
+.garage-link { color: #0066CC; text-decoration: none; font-weight: 600; transition: color 0.15s; }
+.garage-link:hover { color: #00204A; text-decoration: underline; }
+.page-wrapper { display: flex; flex-direction: column; min-height: 100vh; background-color: var(--bg-light, #F5F5F3); font-family: 'Inter', -apple-system, sans-serif; }
 .dashboard-layout { display: flex; flex: 1; }
-
-.access-denied {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 80px 20px;
-  color: #aaa;
-  text-align: center;
-}
+.access-denied { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 80px 20px; color: #aaa; text-align: center; }
 .access-denied svg { color: #ddd; }
 .access-denied h2  { font-size: 1.4rem; color: #444; margin: 0; }
 .access-denied p   { font-size: 0.9rem; color: #888; max-width: 380px; margin: 0; }
-.btn-back {
-  margin-top: 8px;
-  display: inline-block;
-  padding: 10px 24px;
-  background: #0066CC;
-  color: #fff;
-  border-radius: 8px;
-  text-decoration: none;
-  font-size: 0.875rem;
-  font-weight: 600;
-  transition: background 0.15s;
-}
+.btn-back { margin-top: 8px; display: inline-block; padding: 10px 24px; background: #0066CC; color: #fff; border-radius: 8px; text-decoration: none; font-size: 0.875rem; font-weight: 600; transition: background 0.15s; }
 .btn-back:hover { background: #00204A; }
-
-.sidebar {
-  width: 240px;
-  min-width: 240px;
-  background-color: var(--deep-blue, #00204A);
-  display: flex;
-  flex-direction: column;
-  padding: 28px 16px 20px;
-}
-.sidebar-brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: rgba(255,255,255,0.9);
-  font-size: 0.95rem;
-  font-weight: 600;
-  padding: 0 8px 20px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-  margin-bottom: 12px;
-}
+.sidebar { width: 240px; min-width: 240px; background-color: var(--deep-blue, #00204A); display: flex; flex-direction: column; padding: 28px 16px 20px; }
+.sidebar-brand { display: flex; align-items: center; gap: 10px; color: rgba(255,255,255,0.9); font-size: 0.95rem; font-weight: 600; padding: 0 8px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 12px; }
 .sidebar-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
-.nav-item {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  color: rgba(255,255,255,0.5);
-  text-decoration: none;
-  font-size: 0.875rem;
-  font-weight: 500;
-  transition: background 0.15s, color 0.15s;
-}
+.nav-item { position: relative; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; color: rgba(255,255,255,0.5); text-decoration: none; font-size: 0.875rem; font-weight: 500; transition: background 0.15s, color 0.15s; }
 .nav-item:hover  { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.85); }
 .nav-item.active { background: rgba(255,255,255,0.1); color: #fff; }
 .nav-indicator   { position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 3px; height: 18px; background: #0066CC; border-radius: 0 2px 2px 0; }
 .nav-icon        { display: flex; align-items: center; flex-shrink: 0; }
-
-.sidebar-user {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 8px 0;
-  border-top: 1px solid rgba(255,255,255,0.08);
-  margin-top: 16px;
-}
+.sidebar-user { display: flex; align-items: center; gap: 10px; padding: 14px 8px 0; border-top: 1px solid rgba(255,255,255,0.08); margin-top: 16px; }
 .sidebar-avatar    { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 1.5px solid rgba(255,255,255,0.15); flex-shrink: 0; }
 .sidebar-user-info { display: flex; flex-direction: column; gap: 1px; overflow: hidden; }
 .sidebar-user-name { font-size: 0.82rem; font-weight: 600; color: rgba(255,255,255,0.9); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sidebar-user-role { font-size: 0.7rem; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.06em; }
-
 .main-content { flex: 1; padding: 40px 48px; overflow-y: auto; }
-
-.loading-state {
-  display: flex; flex-direction: column; align-items: center;
-  justify-content: center; gap: 16px; min-height: 300px;
-  color: #aaa; font-size: 0.875rem;
-}
-.spinner {
-  width: 32px; height: 32px;
-  border: 3px solid #E8E8E8;
-  border-top-color: #0066CC;
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-}
+.loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; min-height: 300px; color: #aaa; font-size: 0.875rem; }
+.spinner { width: 32px; height: 32px; border: 3px solid #E8E8E8; border-top-color: #0066CC; border-radius: 50%; animation: spin 0.7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-
 .vista { animation: fadeIn 0.25s ease; }
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 .page-header { margin-bottom: 32px; }
 .page-header h1 { font-size: 1.6rem; font-weight: 700; color: var(--deep-blue, #00204A); letter-spacing: -0.5px; margin: 0 0 4px; }
 .subtitle { font-size: 0.875rem; color: #888; margin: 0; }
-
 .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 40px; }
 .stat-card { background: #fff; border: 0.5px solid #E8E8E8; border-radius: 12px; padding: 20px; display: flex; align-items: center; gap: 16px; }
 .stat-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -727,10 +895,8 @@ const navItems = [
 .stat-body  { display: flex; flex-direction: column; gap: 2px; }
 .stat-label { font-size: 0.72rem; color: #999; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
 .stat-value { font-size: 1.5rem; font-weight: 700; color: var(--deep-blue, #00204A); letter-spacing: -0.5px; line-height: 1; }
-
 .section-header { margin-bottom: 12px; }
 .section-header h2 { font-size: 1rem; font-weight: 600; color: var(--deep-blue, #00204A); }
-
 .table-card { background: #fff; border: 0.5px solid #E8E8E8; border-radius: 12px; overflow: hidden; }
 .parkly-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
 .parkly-table thead tr { background: #FAFAFA; border-bottom: 0.5px solid #EFEFEF; }
@@ -743,13 +909,11 @@ const navItems = [
 .td-bold  { font-weight: 600; color: #222; }
 .td-blue  { color: #0066CC; }
 .td-empty { text-align: center; padding: 40px; color: #ccc; font-size: 0.85rem; }
-
 .badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
 .badge--green { background: #EAFAF1; color: #1E8449; }
 .badge--red   { background: #FDEDEC; color: #C0392B; }
 .badge--gray  { background: #F0F0F0; color: #888; }
 .targa-badge  { display: inline-block; background: #F5F5F5; border: 0.5px solid #E0E0E0; border-radius: 4px; padding: 2px 8px; font-size: 0.78rem; font-weight: 600; font-family: 'Courier New', monospace; color: #444; letter-spacing: 0.06em; }
-
 .stato-grid { display: flex; flex-direction: column; gap: 24px; }
 .stato-card { background: #fff; border: 0.5px solid #E8E8E8; border-radius: 12px; padding: 24px; width: 100%; box-sizing: border-box; }
 .stato-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
@@ -762,22 +926,8 @@ const navItems = [
 .occupancy-pct   { font-size: 0.78rem; color: #888; font-weight: 600; min-width: 34px; text-align: right; }
 .stato-meta      { display: flex; justify-content: space-between; font-size: 0.75rem; color: #aaa; }
 .stato-meta span { display: flex; align-items: center; gap: 4px; }
-
-.planimetria-wrapper {
-  margin-top: 16px;
-  border-top: 1px solid #f0f0f0;
-  padding-top: 12px;
-  overflow-x: auto;
-}
-
-.filter-card {
-  background: #fff;
-  border: 0.5px solid #E8E8E8;
-  border-radius: 12px;
-  padding: 20px;
-  margin-bottom: 24px;
-}
-
+.planimetria-wrapper { margin-top: 16px; border-top: 1px solid #f0f0f0; padding-top: 12px; overflow-x: auto; }
+.filter-card { background: #fff; border: 0.5px solid #E8E8E8; border-radius: 12px; padding: 20px; margin-bottom: 24px; }
 .allerta-card { display: flex; align-items: flex-start; gap: 16px; padding: 20px 24px; border-radius: 12px; margin-bottom: 12px; border: 0.5px solid transparent; }
 .allerta--ok     { background: #EAFAF1; border-color: #A9DFBF; }
 .allerta--ok .allerta-icon { color: #27AE60; }
@@ -788,21 +938,15 @@ const navItems = [
 .allerta-icon  { display: flex; align-items: center; margin-top: 1px; flex-shrink: 0; }
 .allerta-title { font-size: 0.9rem; font-weight: 600; color: #222; margin: 0 0 4px; }
 .allerta-msg   { font-size: 0.85rem; color: #666; margin: 0; line-height: 1.5; }
-
-.form-card { background: #fff; border: 0.5px solid #E8E8E8; border-radius: 12px; padding: 32px; max-width: 620px; }
+.form-card { background: #fff; border: 0.5px solid #E8E8E8; border-radius: 12px; padding: 32px; }
 .form-row       { margin-bottom: 20px; }
 .form-row--2col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+.form-row--3col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 20px; }
 .form-group     { display: flex; flex-direction: column; gap: 6px; }
 .form-label     { font-size: 0.75rem; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 0.06em; }
-.form-input {
-  height: 48px; border: 0.5px solid #E0E0E0; border-radius: 8px;
-  padding: 0 14px; font-size: 0.9rem; color: #222; background: #FAFAFA;
-  outline: none; font-family: inherit; transition: border-color 0.15s, background 0.15s;
-  width: 100%; box-sizing: border-box;
-}
+.form-input { height: 48px; border: 0.5px solid #E0E0E0; border-radius: 8px; padding: 0 14px; font-size: 0.9rem; color: #222; background: #FAFAFA; outline: none; font-family: inherit; transition: border-color 0.15s, background 0.15s; width: 100%; box-sizing: border-box; }
 .form-input:focus    { border-color: #0066CC; background: #fff; box-shadow: 0 0 0 3px rgba(0,102,204,0.08); }
 .form-input:disabled { opacity: 0.4; cursor: not-allowed; }
-.form-input--file    { height: auto; padding: 10px 14px; cursor: pointer; }
 .form-hint { font-size: 0.78rem; color: #aaa; }
 .checkbox-label { display: flex; align-items: center; gap: 10px; font-size: 0.875rem; color: #444; cursor: pointer; }
 .checkbox-input { width: 16px; height: 16px; accent-color: #0066CC; cursor: pointer; }
@@ -811,12 +955,49 @@ const navItems = [
 .btn-primary { background: #0066CC; color: #fff; border: none; border-radius: 8px; height: 48px; padding: 0 32px; font-size: 0.9rem; font-weight: 600; cursor: pointer; font-family: inherit; transition: background 0.15s, transform 0.1s; }
 .btn-primary:hover:not(:disabled) { background: #00204A; transform: translateY(-1px); }
 .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
+.input-error { border-color: #C0392B !important; background-color: #FDEDEC !important; }
+.form-error-text { color: #C0392B; font-size: 0.8rem; font-weight: 600; margin-top: 4px; }
+
+/* STILI DEL NUOVO CANVAS E POSTI */
+.posto-creator { display: grid; grid-template-columns: 2fr 2fr 3fr auto; gap: 12px; align-items: flex-end; background: #FAFBFF; border: 1px solid #D6E4F0; padding: 16px; border-radius: 8px; margin-bottom: 16px;}
+.check-group { display: flex; flex-direction: row; gap: 12px; align-items: center; padding-bottom: 12px;}
+.btn-secondary { background: #fff; border: 1px solid #0066CC; color: #0066CC; height: 48px; padding: 0 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;}
+.btn-secondary:hover:not(:disabled) { background: #0066CC; color: #fff;}
+.btn-secondary:disabled { border-color: #ccc; color: #ccc; cursor: not-allowed; }
+
+.tavolozza { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 16px; padding: 12px; background: #fdfdfd; border: 1px solid #eee; border-radius: 8px;}
+.tavolozza-label { font-size: 0.8rem; font-weight: 600; color: #666; margin-right: 8px; }
+.tool-btn { padding: 6px 12px; border: 2px solid transparent; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.8rem; transition: all 0.2s; background: #EBF3FF; color: #00408A;}
+.tool-btn:hover { filter: brightness(0.95); }
+.tool-btn.active { border-color: #00408A; box-shadow: 0 0 0 3px rgba(0,64,138,0.2); }
+.tool-btn.disabled { opacity: 0.4; cursor: not-allowed; text-decoration: line-through; }
+.btn-gomma { background: #FDEDEC; color: #C0392B; }
+.btn-gomma.active { border-color: #C0392B; box-shadow: 0 0 0 3px rgba(192,57,43,0.2); }
+
+.canvas-wrapper { overflow-x: auto; padding-bottom: 10px; }
+.canvas-griglia { display: grid; gap: 2px; width: fit-content; background: #e0e0e0; border: 2px solid #ccc; padding: 2px; }
+.cella-canvas { height: 35px; background: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; user-select: none; transition: background 0.1s;}
+.cella-canvas:hover { background: #f0f0f0; }
+.cella-canvas.occupata { background: #BADCFF; }
+.cella-canvas.root { background: #0066CC; color: white; font-weight: bold; font-size: 0.75rem; border-radius: 2px; }
+.cella-empty-dot { color: #ccc; font-weight: bold; }
+
+.anteprima-mappa { background: #fff; border: 1px solid #E8E8E8; padding: 20px; border-radius: 8px; margin-top: 30px; overflow-x: auto;}
+.anteprima-mappa h4 { margin: 0 0 16px; font-size: 1rem; color: #222;}
+.posti-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px;}
+.posto-tag { display: inline-flex; align-items: center; gap: 8px; background: #EBF3FF; border: 1px solid #BADCFF; padding: 6px 12px; border-radius: 999px; font-size: 0.85rem; color: #00408A;}
+.posto-tag button { background: transparent; border: none; font-size: 1.2rem; line-height: 1; color: #00408A; cursor: pointer; padding: 0;}
+
+/* FIX LEAFLET Z-INDEX ISSUES OVERLAPPING HEADER */
+.leaflet-container { z-index: 1 !important; }
 
 @media (max-width: 900px) {
   .sidebar { display: none; }
   .main-content { padding: 24px 20px; }
   .stats-grid { grid-template-columns: 1fr; }
   .form-row--2col { grid-template-columns: 1fr; }
-  .stato-grid { display: flex; flex-direction: column; gap: 24px; }
+  .form-row--3col { grid-template-columns: 1fr; }
+  .posto-creator { grid-template-columns: 1fr; }
+  .check-group { flex-direction: column; align-items: flex-start;}
 }
 </style>
