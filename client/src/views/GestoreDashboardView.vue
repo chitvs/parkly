@@ -11,7 +11,17 @@
 
     <div v-else class="dashboard-layout">
 
-      <aside class="sidebar">
+      <!-- INIZIO AGGIUNTA: Sfondo scuro per il menu mobile -->
+      <div v-if="menuAperto" class="mobile-overlay" @click="menuAperto = false"></div>
+      <!-- FINE AGGIUNTA -->
+
+      <!-- MODIFICA QUI: Aggiunta la classe dinamica per l'apertura -->
+      <aside :class="['sidebar', { 'sidebar-mobile-open': menuAperto }]">
+        
+        <!-- INIZIO AGGIUNTA: Tasto chiusura visibile solo su mobile -->
+        <button class="close-sidebar-btn" @click="menuAperto = false">✕</button>
+        <!-- FINE AGGIUNTA -->
+
         <div class="sidebar-brand">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg>
           <span>Area Gestore</span>
@@ -23,8 +33,9 @@
             :key="item.id"
             href="#"
             :class="['nav-item', { active: vistaAttiva === item.id }]"
-            @click.prevent="vistaAttiva = item.id"
+            @click.prevent="vistaAttiva = item.id; menuAperto = false"
           >
+            <!-- MODIFICA QUI: Aggiunto menuAperto = false al click -->
             <span class="nav-icon" v-html="item.icon"></span>
             <span class="nav-label">{{ item.label }}</span>
             <span v-if="vistaAttiva === item.id" class="nav-indicator"></span>
@@ -45,6 +56,19 @@
       </aside>
 
       <main class="main-content">
+
+        <!-- INIZIO AGGIUNTA: Il bottone Hamburger per il telefono -->
+        <div class="mobile-header-bar">
+          <button class="hamburger-btn" @click="menuAperto = true">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+          <span class="mobile-page-title">{{ navItems.find(i => i.id === vistaAttiva)?.label }}</span>
+        </div>
+        <!-- FINE AGGIUNTA -->
 
         <div v-if="isLoading" class="loading-state">
           <div class="spinner"></div>
@@ -375,6 +399,9 @@ import PlanimetriaGarage from '../components/PlanimetriaGarage.vue'
 const isGestore = computed(() => authStore.utente?.ruolo === 'GESTORE')
 
 const vistaAttiva = ref('statistiche')
+// INIZIO AGGIUNTA
+const menuAperto = ref(false)
+// FINE AGGIUNTA
 const isLoading   = ref(false)
 const staSalvando = ref(false)
 const erroreForm  = ref('')
@@ -812,8 +839,71 @@ const navItems = [
 .btn-primary:hover:not(:disabled) { background: #00204A; transform: translateY(-1px); }
 .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
 
+/* INIZIO AGGIUNTE CSS PER IL MENU MOBILE */
+.mobile-header-bar { display: none; }
+.mobile-overlay { display: none; }
+.close-sidebar-btn { display: none; }
+/* FINE AGGIUNTE CSS */
+
 @media (max-width: 900px) {
-  .sidebar { display: none; }
+  /* MODIFICA QUI: Rende la sidebar un menu a comparsa invece di nasconderla */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: -260px;
+    height: 100vh;
+    z-index: 2000;
+    transition: left 0.3s ease;
+    box-shadow: 4px 0 15px rgba(0,0,0,0.2);
+  }
+  .sidebar.sidebar-mobile-open {
+    left: 0;
+  }
+  
+  .mobile-header-bar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #E8E8E8;
+  }
+  .hamburger-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--deep-blue, #00204A);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+  }
+  .mobile-page-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--deep-blue, #00204A);
+  }
+  .mobile-overlay {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0,0,0,0.6);
+    z-index: 1999;
+  }
+  .close-sidebar-btn {
+    display: block;
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.7);
+    font-size: 1.4rem;
+    cursor: pointer;
+  }
+
   .main-content { padding: 24px 20px; }
   .stats-grid { grid-template-columns: 1fr; }
   .form-row--2col { grid-template-columns: 1fr; }

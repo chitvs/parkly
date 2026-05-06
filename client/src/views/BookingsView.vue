@@ -12,7 +12,6 @@ const isLoading = ref(true)
 
 // variabili per i filtri e l'ordinamento
 const filtroStato = ref('') // '' = Tutte, 'ATTIVA', 'CONCLUSA', 'ANNULLATA'
-const filtroGarage = ref('') // '' = Tutti, oppure l'id_garage
 const ordinamento = ref('creazione_desc') // default: data creazione più recente
 
 // variabili per la paginazione
@@ -48,24 +47,11 @@ const caricaPrenotazioni = async () => {
   isLoading.value = false
 }
 
-// estrae la lista dei garage in cui l'utente ha prenotato almeno una volta
-const garageDisponibili = computed(() => {
-  const map = new Map()
-  bookings.value.forEach(b => {
-    if (!map.has(b.id_garage)) {
-      map.set(b.id_garage, b.nomegarage)
-    }
-  })
-  return Array.from(map, ([id, nome]) => ({ id, nome }))
-})
-
 // applica i filtri e l'ordinamento scelti
 const prenotazioniFiltrate = computed(() => {
-  // filtriamo
+  // filtriamo solo per stato
   let risultato = bookings.value.filter(b => {
-    const matchStato = filtroStato.value === '' || b.stato === filtroStato.value
-    const matchGarage = filtroGarage.value === '' || String(b.id_garage) === String(filtroGarage.value)
-    return matchStato && matchGarage
+    return filtroStato.value === '' || b.stato === filtroStato.value
   })
 
   // ordiniamo
@@ -106,8 +92,8 @@ const cambiaPagina = (pag) => {
   }
 }
 
-// resetta la pagina a 1 ogni volta che cambia un filtro o l'ordinamento
-watch([filtroStato, filtroGarage, ordinamento], () => {
+// resetta la pagina a 1 ogni volta che cambia il filtro o l'ordinamento
+watch([filtroStato, ordinamento], () => {
   paginaCorrente.value = 1
 })
 
@@ -183,7 +169,8 @@ const categories = [
       </div>
 
       <div class="row mb-4 g-3 align-items-center bg-white p-3 rounded-3 shadow-sm border" v-if="bookings.length > 0">
-        <div class="col-12 col-md-4">
+        <!-- MODIFICATO: ora è col-md-6 invece di 4 -->
+        <div class="col-12 col-md-6">
           <label class="form-label text-muted small fw-bold text-uppercase mb-1">Stato Prenotazione</label>
           <select class="form-select" v-model="filtroStato">
             <option value="">Tutte</option>
@@ -193,15 +180,8 @@ const categories = [
           </select>
         </div>
 
-        <div class="col-12 col-md-4">
-          <label class="form-label text-muted small fw-bold text-uppercase mb-1">Filtra per Garage</label>
-          <select class="form-select" v-model="filtroGarage">
-            <option value="">Tutti i garage</option>
-            <option v-for="g in garageDisponibili" :key="g.id" :value="g.id">{{ g.nome }}</option>
-          </select>
-        </div>
-
-        <div class="col-12 col-md-4">
+        <!-- MODIFICATO: ora è col-md-6 invece di 4 -->
+        <div class="col-12 col-md-6">
           <label class="form-label text-muted small fw-bold text-uppercase mb-1">Ordina per</label>
           <select class="form-select" v-model="ordinamento">
             <option value="creazione_desc">Data Creazione (Più recenti)</option>
@@ -228,7 +208,7 @@ const categories = [
       <div v-else-if="prenotazioniFiltrate.length === 0" class="text-center py-5 empty-state">
         <h5 class="fw-bold text-muted">Nessun risultato</h5>
         <p class="text-muted">Nessuna prenotazione corrisponde ai filtri selezionati.</p>
-        <button class="btn btn-outline-primary mt-2" @click="filtroStato=''; filtroGarage=''; ordinamento='creazione_desc'">Resetta Filtri</button>
+        <button class="btn btn-outline-primary mt-2" @click="filtroStato=''; ordinamento='creazione_desc'">Resetta Filtri</button>
       </div>
 
       <div v-else class="row g-4">
@@ -236,14 +216,14 @@ const categories = [
           <div class="card booking-card border-0 shadow-sm">
             <div class="card-body p-4">
 
-              <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+              <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom booking-header-row">
                 <div>
                   <router-link :to="`/garage/${booking.id_garage}`" class="text-decoration-none">
                     <h5 class="fw-bold mb-0 text-dark garage-title-link">{{ booking.nomegarage }}</h5>
                   </router-link>
                   <small class="text-muted"><i class="bi bi-geo-alt-fill me-1"></i>{{ booking.indirizzo }}</small>
                 </div>
-                <div class="d-flex align-items-center gap-2">
+                <div class="d-flex align-items-center gap-2 booking-actions-row">
                   <span class="badge rounded-pill px-3 py-2 text-uppercase fw-semibold"
                     :class="getStatusBadgeClass(booking.stato)">
                     {{ booking.stato }}
@@ -256,7 +236,7 @@ const categories = [
                   </button>
 
                   <div v-if="booking.stato === 'CONCLUSA' && !booking.ha_recensito"
-                    class="d-flex align-items-center ms-3 border-start ps-3">
+                    class="d-flex align-items-center ms-3 border-start ps-3 review-box">
                     <span class="text-muted small fw-semibold me-2 d-none d-sm-inline">Com'è andata?</span>
                     <div class="d-flex gap-1 trigger-stars">
                       <i v-for="star in 5" :key="star" class="bi bi-star text-warning cursor-pointer fs-5"
@@ -265,7 +245,7 @@ const categories = [
                   </div>
 
                   <div v-else-if="booking.stato === 'CONCLUSA' && booking.ha_recensito"
-                    class="d-flex align-items-center gap-2 ms-3 border-start ps-3">
+                    class="d-flex align-items-center gap-2 ms-3 border-start ps-3 reviewed-box">
                     <span class="text-success d-flex align-items-center me-1">
                       <i class="bi bi-check-circle-fill me-1 fs-5"></i>
                       <span class="small fw-bold text-uppercase d-none d-sm-inline">Recensita</span>
@@ -958,5 +938,33 @@ const categories = [
     background: var(--primary-blue, #00408A);
     color: white;
     border-color: var(--primary-blue, #00408A);
+}
+
+/* =========================================
+   📱 SOLO PER TELEFONO (Ottimizzato)
+========================================= */
+@media (max-width: 768px) {
+    /* Blocca lo scorrimento orizzontale generale (il "gioco" destra/sinistra) */
+    .page-wrapper {
+        max-width: 100vw;
+        overflow-x: hidden;
+    }
+
+    /* Permette all'intestazione della card di andare a capo dolcemente se non c'è spazio */
+    .booking-header-row {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    /* Rimpicciolisce un pochino le stelline per farle entrare meglio nella riga */
+    .trigger-stars i {
+        font-size: 1.1rem !important; /* Questo riduce le stelle rispetto al fs-5 di Bootstrap */
+    }
+
+    /* Riduce i margini della zona recensione per recuperare millimetri preziosi */
+    .review-box, .reviewed-box {
+        margin-left: 0.5rem !important;
+        padding-left: 0.5rem !important;
+    }
 }
 </style>

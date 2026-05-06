@@ -1061,4 +1061,78 @@ const handleSuggestionSelected = (place) => {
         box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
     }
 }
+
+/* =========================================
+   📱 SOLO PER TELEFONO (Ottimizzato)
+========================================= */
+@media (max-width: 768px) {
+    .page-body {
+        flex-direction: column !important;
+        padding: 0 1rem !important;
+        align-items: center !important;
+        max-width: 100% !important;
+    }
+    .sidebar {
+        width: 100% !important;
+        position: static !important;
+    }
+    .zone-results {
+        width: 100% !important;
+    }
+    .garage-card {
+        flex-direction: column !important;
+        height: auto !important;
+    }
+    .gcard-thumb {
+        width: 100% !important;
+        height: 120px !important;
+    }
+    .gcard-right {
+        width: 100% !important;
+        border-left: none !important;
+        border-top: 1px solid #f1f5f9 !important;
+        flex-direction: row !important; 
+        text-align: left !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        padding: 12px 16px !important;
+    }
+    .price-value {
+        margin-bottom: 0 !important;
+        font-size: 1.2rem !important;
+    }
+    .fs-body {
+        flex-direction: column-reverse !important; 
+    }
+    .fs-right-half { 
+        width: 100% !important;
+        height: 40vh !important; 
+    }
+    .fs-left-half { 
+        display: block !important;
+        width: 100% !important;
+        height: 60vh !important; 
+        border-right: none !important;
+        overflow-y: auto !important; 
+    }
+    .fs-col-filters,
+    .fs-col-cards {
+        display: block !important;
+        width: 100% !important;
+        height: auto !important; 
+    }
+    .fs-scroll-content {
+        overflow: visible !important;
+        height: auto !important;
+    }
+    .fs-floating-search {
+        width: calc(100vw - 80px) !important;
+        padding: 8px 15px !important;
+    }
+    .fs-map-controls {
+        top: 10px !important;
+        left: 10px !important;
+        right: 10px !important;
+    }
+}
 </style>

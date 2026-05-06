@@ -1206,4 +1206,61 @@ const distribuzioneVoti = computed(() => {
     }
 }
 
+/* =========================================
+   📱 SOLO PER TELEFONO (Ottimizzato)
+========================================= */
+@media (max-width: 768px) {
+    /* Previene lo scorrimento orizzontale generale */
+    .page-container {
+        max-width: 100vw;
+        overflow-x: hidden;
+    }
+
+    /* 1. Hero Section: incolonna testo e tariffe */
+    .hero-top {
+        flex-direction: column;
+        padding: 0 16px;
+    }
+    
+    .hero-right {
+        width: 100%;
+        align-items: flex-start;
+        text-align: left;
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .special-line {
+        justify-content: flex-start;
+    }
+
+    /* 2. Sezione Recensioni: riduce i padding enormi che sfondano lo schermo */
+    .reviews-section {
+        width: 100%;
+        margin: 0;
+        border-radius: 0;
+    }
+
+    .reviews-section .card-body {
+        padding: 24px 16px;
+    }
+
+    /* 3. Riepilogo Recensioni (Scaletta + Categorie): incolonna */
+    .reviews-breakdown {
+        flex-direction: column;
+        gap: 32px;
+    }
+
+    .rating-ladder {
+        width: 100%;
+        flex: auto; /* Sovrascrive il flex rigido da PC */
+    }
+
+    /* 4. Griglia Commenti: una colonna sola invece di due */
+    .comments-grid {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+}
 </style>
