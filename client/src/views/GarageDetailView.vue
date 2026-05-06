@@ -2,6 +2,8 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { garageStore } from '../store/garage'
+import { authStore } from '../store/auth'
+import 'bootstrap-icons/font/bootstrap-icons.css'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 import PlanimetriaGarage from '../components/PlanimetriaGarage.vue'
@@ -13,6 +15,7 @@ const checkIn = ref(route.query.inizio || '')
 const checkOut = ref(route.query.fine || '')
 const targa = ref('')
 const note = ref('')
+const codiceDisabilita = ref('')
 const postoSelezionato = ref(null)
 const messaggio = ref(null)
 const isMapConfirmed = ref(false)
@@ -29,6 +32,7 @@ onMounted(async () => {
     }
 
     await garageStore.fetchPosti(props.id, '', '')
+    await garageStore.fetchRecensioni(props.id)
 
     if (checkIn.value && checkOut.value) {
         await aggiornaMappa()
@@ -39,6 +43,37 @@ watch([checkIn, checkOut], () => {
     isMapConfirmed.value = false
     postoSelezionato.value = null
 })
+
+// calcolo delle tariffe dinamiche per veicolo
+const tariffePerVeicolo = computed(() => {
+    const posti = garageStore.posti;
+    if (!posti || !posti.length) return {};
+    
+    const minPrices = {};
+    posti.forEach(p => {
+        if (p.isdisabili || p.iselettrica) return; 
+
+        const tipo = p.tipoveicolo;
+        const prezzo = Number(p.tariffaoraria);
+        
+        if (!minPrices[tipo] || prezzo < minPrices[tipo]) {
+            minPrices[tipo] = prezzo;
+        }
+    });
+    return minPrices;
+});
+
+// tariffa speciale Disabili
+const tariffaDisabili = computed(() => {
+    const posto = garageStore.posti?.find(p => p.isdisabili);
+    return posto ? Number(posto.tariffaoraria).toFixed(2) : null;
+});
+
+// tariffa speciale Elettrica
+const tariffaElettrica = computed(() => {
+    const posto = garageStore.posti?.find(p => p.iselettrica && !p.isdisabili);
+    return posto ? Number(posto.tariffaoraria).toFixed(2) : null;
+});
 
 const formattaTarga = () => {
     // rimuove qualsiasi carattere che non sia lettera o numero e converte in maiuscolo
@@ -52,6 +87,20 @@ const isTargaValida = computed(() => {
     // [A-Z]{2}$ (finisce con 2 lettere)
     const regex = /^[A-Z]{2}\d{3}[A-Z]{2}$/
     return regex.test(targa.value)
+})
+
+const formattaCude = () => {
+    // rimuove qualsiasi carattere che non sia lettera, numero o trattino, e converte in maiuscolo
+    codiceDisabilita.value = codiceDisabilita.value.replace(/[^a-zA-Z0-9-]/g, '').toUpperCase()
+}
+
+const isCudeValido = computed(() => {
+    // se non abbiamo selezionato un posto per disabili, il campo è tecnicamente "valido" a prescindere
+    if (!postoSelezionato.value?.isdisabili) return true;
+    
+    // solo lettere maiuscole, numeri e trattini. Lunghezza da 5 a 20 caratteri.
+    const regex = /^[A-Z0-9-]{5,20}$/;
+    return regex.test(codiceDisabilita.value);
 })
 
 const aggiornaMappa = async () => {
@@ -73,7 +122,7 @@ const aggiornaMappa = async () => {
         messaggio.value = { tipo: 'error', testo: 'L\'orario di partenza deve essere successivo a quello di arrivo.' }
         return
     }
-    
+
     messaggio.value = null
     await garageStore.fetchPosti(props.id, checkIn.value, checkOut.value)
     isMapConfirmed.value = true
@@ -86,6 +135,7 @@ const resetSelezione = async () => {
     targa.value = ''
     note.value = ''
     postoSelezionato.value = null
+    codiceDisabilita.value = ''
     messaggio.value = null
     isMapConfirmed.value = false
 
@@ -106,9 +156,14 @@ const durataOre = computed(() => {
 
 const gestisciPrenotazione = async () => {
     if (!postoSelezionato.value) return
-    
+
     if (!isTargaValida.value) {
         messaggio.value = { tipo: 'error', testo: 'Inserisci una targa valida prima di procedere.' }
+        return
+    }
+
+    if (postoSelezionato.value.isdisabili && !isCudeValido.value) {
+        messaggio.value = { tipo: 'error', testo: 'Inserisci un codice Contrassegno CUDE valido (es. IT-1234567).' }
         return
     }
 
@@ -120,7 +175,8 @@ const gestisciPrenotazione = async () => {
         note: note.value,
         inizio: checkIn.value,
         fine: checkOut.value,
-        prezzo_totale: prezzoTotale.value
+        prezzo_totale: prezzoTotale.value,
+        codice_disabilita: codiceDisabilita.value
     }
 
     const res = await garageStore.prenota(payload)
@@ -128,7 +184,13 @@ const gestisciPrenotazione = async () => {
     isPrenotando.value = false;
 
     if (res.success) {
+        if (authStore.utente) {
+            authStore.utente.saldo = parseFloat(authStore.utente.saldo) - parseFloat(prezzoTotale.value);
+            authStore.setUtente(authStore.utente);
+        }
+
         await aggiornaMappa()
+        
         messaggio.value = { tipo: 'success', testo: `Prenotazione avvenuta con successo! Il tuo codice è: ${res.prenotazione.codiceprenotazione}` }
         postoSelezionato.value = null
         targa.value = ''
@@ -137,6 +199,46 @@ const gestisciPrenotazione = async () => {
         messaggio.value = { tipo: 'error', testo: res.error || 'Errore durante la prenotazione' }
     }
 }
+
+const commentiEspansi = ref(new Set())
+
+const toggleCommento = (index) => {
+    const nuovoSet = new Set(commentiEspansi.value)
+    if (nuovoSet.has(index)) {
+        nuovoSet.delete(index)
+    } else {
+        nuovoSet.add(index)
+    }
+    commentiEspansi.value = nuovoSet
+}
+
+const formattaDataRecensione = (dataString) => {
+    if (!dataString) return ''
+    const data = new Date(dataString)
+    return new Intl.DateTimeFormat('it-IT', {
+        month: 'long',
+        year: 'numeric'
+    }).format(data)
+}
+
+// Calcola le percentuali per la "scaletta" dei voti complessivi
+const distribuzioneVoti = computed(() => {
+    const recensioni = garageStore.recensioni
+    const totale = recensioni.length
+    const distrib = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }
+    if (totale === 0) return distrib
+    recensioni.forEach(r => {
+        const voto = Math.floor(r.votogenerale || 0)
+        if (distrib[voto] !== undefined) {
+            distrib[voto]++
+        }
+    })
+    for (let i = 1; i <= 5; i++) {
+        distrib[i] = (distrib[i] / totale) * 100
+    }
+    return distrib
+})
+
 </script>
 
 <template>
@@ -168,9 +270,10 @@ const gestisciPrenotazione = async () => {
                                 </svg>
                                 Aperto 24h
                             </div>
-                            
+
                             <div class="badge" v-else>
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
                                     <circle cx="12" cy="12" r="10" />
                                     <polyline points="12 6 12 12 16 14" />
                                 </svg>
@@ -189,8 +292,36 @@ const gestisciPrenotazione = async () => {
                     </div>
 
                     <div class="hero-right">
-                        <div class="prezzo-label">Tariffa base</div>
-                        <div class="prezzo-valore">€{{ garageStore.currentGarage?.tariffabase }}<span>/ora</span></div>
+                        <div class="prezzo-label">Tariffe a partire da:</div>
+                        
+                        <div class="price-line" v-if="tariffePerVeicolo['MOTO']">
+                            <span class="v-tipo">Moto</span>
+                            <span class="prezzo-valore-small">€{{ tariffePerVeicolo['MOTO'].toFixed(2) }}<span>/h</span></span>
+                        </div>
+                        
+                        <div class="price-line" v-if="tariffePerVeicolo['AUTO']">
+                            <span class="v-tipo">Auto</span>
+                            <span class="prezzo-valore-small">€{{ tariffePerVeicolo['AUTO'].toFixed(2) }}<span>/h</span></span>
+                        </div>
+                        
+                        <div class="price-line" v-if="tariffePerVeicolo['FURGONE']">
+                            <span class="v-tipo">Furgone</span>
+                            <span class="prezzo-valore-small">€{{ tariffePerVeicolo['FURGONE'].toFixed(2) }}<span>/h</span></span>
+                        </div>
+
+                        <div class="special-rates-container" v-if="tariffaElettrica || tariffaDisabili">
+                            
+                            <div class="special-line ev-line" v-if="tariffaElettrica">
+                                <span class="v-tipo">Ricarica elettrica</span>
+                                <span class="prezzo-valore-small">€{{ tariffaElettrica }}<span>/h</span></span>
+                            </div>
+
+                            <div class="special-line cude-line" v-if="tariffaDisabili">
+                                <span class="v-tipo">Disabili</span>
+                                <span class="prezzo-valore-small">€{{ tariffaDisabili }}<span>/h</span></span>
+                            </div>
+
+                        </div>
                     </div>
                 </div>
             </section>
@@ -211,7 +342,7 @@ const gestisciPrenotazione = async () => {
                             :selectedId="postoSelezionato?.id_posto"
                             :isAnteprima="!isMapConfirmed"
                             @select="(p) => postoSelezionato = p"
-                            @error="(msg) => messaggio = { tipo: 'error', testo: msg }"/>
+                            @error="(msg) => messaggio = { tipo: 'error', testo: msg }" />
                     </div>
                 </div>
 
@@ -244,18 +375,21 @@ const gestisciPrenotazione = async () => {
                             <hr>
                             <div class="form-group">
                                 <label>Targa veicolo</label>
-                                <input 
-                                    type="text" 
-                                    v-model="targa" 
-                                    @input="formattaTarga"
-                                    placeholder="Es. AA123BB"
-                                    maxlength="7"
-                                    required
-                                >
+                                <input type="text" v-model="targa" @input="formattaTarga" placeholder="Es. AA123BB"
+                                    maxlength="7" required>
                                 <small v-if="targa.length > 0 && !isTargaValida" class="error-text">
                                     Formato non valido.
                                 </small>
                             </div>
+
+                            <div class="form-group" v-if="postoSelezionato.isdisabili">
+                                <label>Codice Contrassegno CUDE</label>
+                                <input type="text" v-model="codiceDisabilita" @input="formattaCude" placeholder="Es. IT-1234567" required>
+                                <small v-if="codiceDisabilita.length > 0 && !isCudeValido" class="error-text">
+                                    Formato non valido.
+                                </small>
+                            </div>
+
                             <div class="form-group">
                                 <label>Note (opzionale)</label>
                                 <input type="text" v-model="note">
@@ -281,7 +415,7 @@ const gestisciPrenotazione = async () => {
                             </div>
                         </div>
 
-                        <button class="btn fill" :disabled="!isMapConfirmed || !postoSelezionato || !targa || !isTargaValida"
+                        <button class="btn fill" :disabled="!isMapConfirmed || !postoSelezionato || !targa || !isTargaValida || (postoSelezionato.isdisabili && !isCudeValido)"
                             @click="gestisciPrenotazione">
                             Prenota ora
                         </button>
@@ -289,6 +423,129 @@ const gestisciPrenotazione = async () => {
                     </div>
                 </aside>
             </div>
+            <!-- SEZIONE RECENSIONI -->
+            <section class="reviews-section card" v-if="garageStore.currentGarage">
+                <div class="card-body">
+
+                    <div class="overall-rating-header">
+                        <h2 class="rating-number">{{ Number(garageStore.currentGarage.mediagenerale).toFixed(2) }}</h2>
+
+                        <div class="average-stars">
+                            <i v-for="i in 5" :key="i" class="bi" :class="[
+                                garageStore.currentGarage.mediagenerale >= i ? 'bi-star-fill star--on' :
+                                    garageStore.currentGarage.mediagenerale >= i - 0.5 ? 'bi-star-half star--on' :
+                                        'bi-star star--off'
+                            ]">
+                            </i>
+                        </div>
+
+                        <span class="reviews-count">
+                            {{ garageStore.recensioni.length }} recensioni
+                        </span>
+                    </div>
+
+                    <hr class="reviews-divider">
+
+                    <!-- CONTENITORE UNICO PER CHI HA RECENSIONI -->
+                    <div v-if="garageStore.recensioni.length > 0">
+
+                        <div class="reviews-breakdown">
+                            <!-- Sinistra: Scaletta dei voti -->
+                            <div class="rating-ladder">
+                                <div v-for="star in 5" :key="star" class="ladder-row">
+                                    <span class="ladder-num">{{ 6 - star }}</span>
+                                    <div class="ladder-bar-bg">
+                                        <div class="ladder-bar-fill"
+                                            :style="{ width: distribuzioneVoti[6 - star] + '%' }">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Destra: Categorie Specifiche -->
+                            <div class="categories-grid">
+                                <div class="category-item">
+                                    <span class="cat-label"><i class="bi bi-geo-alt"></i> Posizione</span>
+                                    <span class="cat-val">{{ Number(garageStore.currentGarage.mediaposizione).toFixed(1)
+                                    }}</span>
+                                </div>
+                                <div class="category-item">
+                                    <span class="cat-label"><i class="bi bi-tag"></i> Prezzo</span>
+                                    <span class="cat-val">{{ Number(garageStore.currentGarage.mediaprezzo).toFixed(1)
+                                    }}</span>
+                                </div>
+                                <div class="category-item">
+                                    <span class="cat-label"><i class="bi bi-stars"></i> Pulizia</span>
+                                    <span class="cat-val">{{ Number(garageStore.currentGarage.mediapulizia).toFixed(1)
+                                    }}</span>
+                                </div>
+                                <div class="category-item">
+                                    <span class="cat-label"><i class="bi bi-car-front"></i> Spazio di manovra</span>
+                                    <span class="cat-val">{{ Number(garageStore.currentGarage.mediaspazio).toFixed(1)
+                                    }}</span>
+                                </div>
+                                <div class="category-item">
+                                    <span class="cat-label"><i class="bi bi-shield-check"></i> Sicurezza</span>
+                                    <span class="cat-val">{{ Number(garageStore.currentGarage.mediasicurezza).toFixed(1)
+                                    }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Blocco Commenti -->
+                        <div class="user-comments-section mt-5 pt-4 border-top">
+                            <div class="comments-grid">
+                                <div v-for="(recensione, index) in garageStore.recensioni" :key="index"
+                                    class="comment-card">
+                                    <div class="comment-header">
+                                        <!-- Avatar -->
+                                        <div class="user-avatar">
+                                            <img v-if="recensione.fotoprofilo_url" :src="recensione.fotoprofilo_url"
+                                                alt="User avatar">
+                                            <span v-else>{{ recensione.nome.charAt(0).toUpperCase() }}</span>
+                                        </div>
+
+                                        <!-- Nome e Info -->
+                                        <div class="user-info">
+                                            <h4 class="user-name">{{ recensione.nome }} {{ recensione.inizialecognome
+                                            }}.</h4>
+                                        </div>
+                                    </div>
+
+                                    <div class="comment-meta">
+                                        <!-- Stelline piccole per la singola recensione -->
+                                        <div class="small-stars">
+                                            <i v-for="star in 5" :key="'s' + star" class="bi"
+                                                :class="star <= Math.round(recensione.votogenerale) ? 'bi-star-fill star--on' : 'bi-star star--off'">
+                                            </i>
+                                        </div>
+                                        <span class="meta-dot">·</span>
+                                        <span class="comment-date">{{ formattaDataRecensione(recensione.datacreazione)
+                                        }}</span>
+                                    </div>
+
+                                    <!-- Testo Recensione -->
+                                    <p class="comment-text"
+                                        :class="{ 'comment-text--expanded': commentiEspansi.has(index) }"
+                                        v-if="recensione.commento">{{ recensione.commento }}</p>
+                                    <p class="comment-text text-muted fst-italic" v-else></p>
+
+                                    <button v-if="recensione.commento && recensione.commento.length > 180"
+                                        class="mostra-altro-btn" @click="toggleCommento(index)">
+                                        {{ commentiEspansi.has(index) ? 'Mostra meno' : 'Mostra altro' }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div v-else class="empty-reviews text-center py-4 text-muted">
+                        Nessuna recensione presente al momento. Sii il primo a prenotare e recensire!
+                    </div>
+
+                </div>
+            </section>
         </main>
     </div>
     <Footer />
@@ -369,42 +626,54 @@ const gestisciPrenotazione = async () => {
     text-align: right;
     flex-shrink: 0;
     padding-top: 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end; /* Allinea tutto perfettamente a destra */
+    gap: 8px; /* Spazio tra le righe */
 }
 
 .prezzo-label {
     font-size: 0.68rem;
-    color: rgba(255, 255, 255, 0.35);
+    color: rgba(255, 255, 255, 0.9);
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
 }
 
-.prezzo-valore {
-    font-size: 2.2rem;
+.price-line {
+    display: flex;
+    align-items: center;
+    gap: 15px; /* Spazio tra il nome del veicolo e il prezzo */
+}
+
+.v-tipo {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 500;
+}
+
+.prezzo-valore-small {
+    font-size: 1.4rem;
     font-weight: 700;
     color: var(--white);
     line-height: 1;
+    min-width: 65px;
+    text-align: right;
 }
 
-.prezzo-valore span {
-    font-size: 0.95rem;
+.prezzo-valore-small span {
+    font-size: 0.8rem;
     font-weight: 400;
     opacity: 0.5;
 }
 
 @media (max-width: 600px) {
-    .hero-top {
-        flex-direction: column;
-        gap: 16px;
-        padding: 0 20px;
-    }
-
     .hero-right {
+        align-items: flex-start; /* Su mobile li allinea a sinistra */
         text-align: left;
     }
-
-    .basic-hero {
-        padding: 24px 0 20px;
+    .prezzo-valore-small {
+        text-align: left;
     }
 }
 
@@ -502,7 +771,7 @@ const gestisciPrenotazione = async () => {
     color: #aaa;
 }
 
-.form-group input, 
+.form-group input,
 .form-group textarea {
     width: 100%;
     padding: 9px 11px;
@@ -640,4 +909,301 @@ const gestisciPrenotazione = async () => {
     margin-top: 4px;
     display: block;
 }
+
+/* SEZIONE RECENSIONI */
+.reviews-section {
+    max-width: 1200px;
+    margin: 0 auto 40px;
+    width: calc(100% - 64px);
+}
+
+.reviews-section .card-body {
+    padding: 32px 48px;
+}
+
+.overall-rating-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.overall-rating-header h2.rating-number {
+    font-size: 4.5rem;
+    font-weight: 800;
+    color: var(--text-dark);
+    margin: 0 0 4px 0;
+    line-height: 1;
+    letter-spacing: -0.05em;
+}
+
+.average-stars {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.average-stars i {
+    font-size: 2.2rem;
+    transition: transform 0.2s;
+}
+
+.star--on {
+    color: #f59e0b;
+    filter: drop-shadow(0 3px 10px rgba(245, 158, 11, 0.45));
+}
+
+.star--off {
+    color: #dde3ed;
+}
+
+.overall-rating-header h2 {
+    font-size: 4rem;
+    font-weight: 800;
+    color: var(--text-dark);
+    margin: 0;
+    line-height: 1.1;
+    letter-spacing: -0.04em;
+}
+
+.reviews-count {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #64748b;
+}
+
+.reviews-divider {
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    margin: 0 0 32px 0;
+}
+
+.reviews-breakdown {
+    display: flex;
+    gap: 60px;
+    align-items: flex-start;
+}
+
+/* Scaletta Sinistra */
+.rating-ladder {
+    flex: 0 0 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.ladder-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ladder-num {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #334155;
+    width: 12px;
+}
+
+.ladder-bar-bg {
+    flex-grow: 1;
+    height: 6px;
+    background: #e2e8f0;
+    border-radius: 99px;
+    overflow: hidden;
+}
+
+.ladder-bar-fill {
+    height: 100%;
+    background: #0f172a;
+    border-radius: 99px;
+    transition: width 0.5s ease-out;
+}
+
+/* Categorie Destra */
+.categories-grid {
+    flex-grow: 1;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 24px 32px;
+}
+
+.category-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-left: 20px;
+    border-left: 1px solid #f1f5f9;
+}
+
+.cat-label {
+    font-size: 0.85rem;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cat-label i {
+    font-size: 1.1rem;
+    color: var(--text-dark);
+}
+
+.cat-val {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text-dark);
+}
+
+/* GRIGLIA COMMENTI */
+.user-comments-section {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+.comments-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 32px 48px;
+}
+
+.comment-card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.comment-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.user-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    color: #64748b;
+    font-weight: 700;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.user-name {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-dark);
+}
+
+.comment-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.small-stars {
+    display: flex;
+    gap: 2px;
+}
+
+.small-stars i {
+    font-size: 0.8rem;
+}
+
+.meta-dot {
+    color: #94a3b8;
+    font-weight: bold;
+}
+
+.comment-date {
+    font-size: 0.9rem;
+    color: #64748b;
+}
+
+.comment-text {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: #334155;
+    margin: 0 0 8px;
+    display: -webkit-box;
+    line-clamp: 3;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-word;
+}
+
+.comment-text--expanded {
+    line-clamp: unset;
+    -webkit-line-clamp: unset;
+    overflow: visible;
+}
+
+.mostra-altro-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-dark);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    align-self: flex-start;
+    transition: opacity 0.15s;
+}
+
+.mostra-altro-btn:hover {
+    opacity: 0.6;
+}
+
+/* Stili per le Tariffe Speciali */
+.special-rates-container {
+    margin-top: 6px;
+    padding-top: 8px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.2);
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.special-line {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end; /* Allinea i prezzi a destra */
+    gap: 15px;
+    width: 100%;
+}
+
+.special-line .prezzo-valore-small span {
+    opacity: 0.7;
+}
+
+@media (max-width: 600px) {
+    .special-line {
+        justify-content: flex-start; /* Su mobile allinea a sinistra */
+    }
+}
+
 </style>
