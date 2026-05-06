@@ -12,13 +12,13 @@ INSERT INTO Utente (Ruolo, Nome, Cognome, NomeUtente, CodiceFiscale, Email, Pass
 ('CLIENTE', 'Giada', 'Serra', 'giadaserra', 'SRRGDA99M45H501L', 'giada.s@email.com', '$2b$10$LXSwRxWPIl0wRboIgW4NSuF3LQ/A6CvyRpVj8QD0Cw/0uWkVwQ.ty', '3400000006');
 
 -- GARAGE
-INSERT INTO Garage (ID_Gestore, Nome, Descrizione, Indirizzo, Latitudine, Longitudine, AltezzaMassima, TariffaAuto, TariffaMoto, TariffaFurgone, TariffaElettrica, TariffaDisabili, OrarioApertura, OrarioChiusura, Is24h, MappaTestuale) VALUES
-(1, 'EUR business parking', 'Ampio parcheggio zona uffici EUR.', 'Viale Europa, 150, Roma', 41.8285, 12.4673, 2.50, 2.50, NULL, NULL, 4.50, 1.00, '08:00:00', '20:00:00', FALSE, E'E01:2x1-E02:2x1-E03:2x1-E04:2x1-E05:2x1\nX:10x1\nE06:2x1-E07:2x1-E08:2x1-E09:2x1-E10:2x1\nE11:2x1-E12:2x1-E13:2x1-E14:2x1-E15:2x1\nX:10x1\nE16:2x1-E17:2x1-E18:2x1-E19:2x1-E20:2x1'),
-(2, 'Parioli green parking', 'Esclusivo e videosorvegliato.', 'Viale Parioli, 12, Roma', 41.9258, 12.4883, 2.10, 6.00, 3.00, 9.50, 8.00, 2.00, '07:00:00', '23:00:00', FALSE, E'P01:2x1-P02:2x1-P03:2x1-X:2x1-P04:1x1-P05:1x1-P06:1x1-P07:1x1\nX:12x1\nP08:2x1-P09:2x1-P10:2x1-X:2x1-P11:2x1-P12:2x1\nP13:2x2-P14:2x2-P15:2x2-X:2x1-P16:2x2-P17:2x2\nX:12x1\nX:12x1\nP18:1x1-P19:1x1-P20:1x1-P21:1x1-P22:1x1-P23:1x1-X:6x1'),
-(3, 'San Giovanni 24/7 parking', 'Vicinissimo alla Metro A.', 'Via Appia Nuova, 45, Roma', 41.8851, 12.5105, 2.30, 3.50, NULL, NULL, 5.00, 1.00, '00:00:00', '23:59:59', TRUE, E'S01:2x1-S02:2x1-S03:2x1-S04:2x1-S05:2x1-S06:2x1-S07:2x1-S08:2x1-S09:2x1-S10:2x1\nX:20x1\nS11:2x1-S12:2x1-S13:2x1-S14:2x1-S15:2x1-S16:2x1-S17:2x1-S18:2x1-S19:2x1-S20:2x1'),
-(4, 'Ostiense 24/7 parking', 'Ideale per la zona Gazometro.', 'Via del Porto Fluviale, 5, Roma', 41.8722, 12.4811, 3.50, 3.00, NULL, 4.50, 4.50, 1.50, '00:00:00', '23:59:59', TRUE, E'K01:2x1-K02:2x1-X:2x1-K03:2x1-K04:2x1\nK05:2x1-K06:2x1-X:2x1-K07:2x1-K08:2x1\nX:10x1\nK09:2x1-K10:2x1-X:2x1-K11:2x1-K12:2x1\nK13:2x1-K14:2x1-X:2x1-K15:2x1-K16:2x1\nX:10x1\nK17:2x2-K18:2x2-K19:2x2-K20:2x2-K21:2x2\nX:10x1'),
-(5, 'Vaticano parking', 'A due passi da Piazza San Pietro.', 'Via delle Fornaci, 20, Roma', 41.9001, 12.4550, 2.10, 4.50, 2.00, NULL, 6.50, 2.00, '06:00:00', '22:00:00', FALSE, E'V01:2x1-V02:2x1-V03:2x1-V04:2x1-X:2x1-V05:1x1-V06:1x1-V07:1x1-V08:1x1-V09:1x1-V10:1x1-V11:1x1-V12:1x1\nX:18x1\nV13:2x1-V14:2x1-V15:2x1-V16:2x1-X:2x1-V17:1x1-V18:1x1-V19:1x1-V20:1x1-V21:1x1-V22:1x1-V23:1x1-V24:1x1'),
-(6, 'Testaccio market garage', 'Perfetto per il mercato e i locali.', 'Via Galvani, 30, Roma', 41.8775, 12.4789, 2.40, 2.50, 1.50, 4.50, NULL, 1.00, '07:00:00', '02:00:00', FALSE, E'T01:2x2-T02:2x2-T03:2x2-X:2x1-T04:2x1-T05:2x1-T06:2x1-X:2x1-T07:1x1-T08:1x1-T09:1x1-T10:1x1\nX:2x1-T11:2x1-T12:2x1-T13:2x1-X:2x1-T14:1x1-T15:1x1-T16:1x1-T17:1x1\nX:20x1\nT18:2x2-T19:2x2-T20:2x2-X:2x1-T21:2x1-T22:2x1-T23:2x1-X:2x1-T24:1x1-T25:1x1-T26:1x1-T27:1x1\nX:2x1-T28:2x1-T29:2x1-T30:2x1-X:2x1-T31:2x1-T32:2x1\nX:20x1\nT33:2x1-T34:2x1-T35:2x1-T36:2x1-T37:2x1-T38:2x1-T39:2x1-T40:2x1-T41:2x1-T42:2x1');
+INSERT INTO Garage (ID_Gestore, Nome, Descrizione, Indirizzo, Latitudine, Longitudine, AltezzaMassima, TariffaAuto, TariffaMoto, TariffaFurgone, SovrapprezzoElettrica, ScontoDisabili, OrarioApertura, OrarioChiusura, Is24h, MappaTestuale) VALUES
+(1, 'EUR business parking', 'Ampio parcheggio zona uffici EUR.', 'Viale Europa, 150, Roma', 41.8285, 12.4673, 2.50, 2.50, NULL, NULL, 2.00, 1.50, '08:00:00', '20:00:00', FALSE, E'E01:2x1-E02:2x1-E03:2x1-E04:2x1-E05:2x1\nX:10x1\nE06:2x1-E07:2x1-E08:2x1-E09:2x1-E10:2x1\nE11:2x1-E12:2x1-E13:2x1-E14:2x1-E15:2x1\nX:10x1\nE16:2x1-E17:2x1-E18:2x1-E19:2x1-E20:2x1'),
+(2, 'Parioli green parking', 'Esclusivo e videosorvegliato.', 'Viale Parioli, 12, Roma', 41.9258, 12.4883, 2.10, 6.00, 3.00, 9.50, 2.00, 4.00, '07:00:00', '23:00:00', FALSE, E'P01:2x1-P02:2x1-P03:2x1-X:2x1-P04:1x1-P05:1x1-P06:1x1-P07:1x1\nX:12x1\nP08:2x1-P09:2x1-P10:2x1-X:2x1-P11:2x1-P12:2x1\nP13:2x2-P14:2x2-P15:2x2-X:2x1-P16:2x2-P17:2x2\nX:12x1\nX:12x1\nP18:1x1-P19:1x1-P20:1x1-P21:1x1-P22:1x1-P23:1x1-X:6x1'),
+(3, 'San Giovanni 24/7 parking', 'Vicinissimo alla Metro A.', 'Via Appia Nuova, 45, Roma', 41.8851, 12.5105, 2.30, 3.50, NULL, NULL, 1.50, 2.50, '00:00:00', '23:59:59', TRUE, E'S01:2x1-S02:2x1-S03:2x1-S04:2x1-S05:2x1-S06:2x1-S07:2x1-S08:2x1-S09:2x1-S10:2x1\nX:20x1\nS11:2x1-S12:2x1-S13:2x1-S14:2x1-S15:2x1-S16:2x1-S17:2x1-S18:2x1-S19:2x1-S20:2x1'),
+(4, 'Ostiense 24/7 parking', 'Ideale per la zona Gazometro.', 'Via del Porto Fluviale, 5, Roma', 41.8722, 12.4811, 3.50, 3.00, NULL, 4.50, 1.50, 1.50, '00:00:00', '23:59:59', TRUE, E'K01:2x1-K02:2x1-X:2x1-K03:2x1-K04:2x1\nK05:2x1-K06:2x1-X:2x1-K07:2x1-K08:2x1\nX:10x1\nK09:2x1-K10:2x1-X:2x1-K11:2x1-K12:2x1\nK13:2x1-K14:2x1-X:2x1-K15:2x1-K16:2x1\nX:10x1\nK17:2x2-K18:2x2-K19:2x2-K20:2x2-K21:2x2\nX:10x1'),
+(5, 'Vaticano parking', 'A due passi da Piazza San Pietro.', 'Via delle Fornaci, 20, Roma', 41.9001, 12.4550, 2.10, 4.50, 2.00, NULL, 2.00, 2.50, '06:00:00', '22:00:00', FALSE, E'V01:2x1-V02:2x1-V03:2x1-V04:2x1-X:2x1-V05:1x1-V06:1x1-V07:1x1-V08:1x1-V09:1x1-V10:1x1-V11:1x1-V12:1x1\nX:18x1\nV13:2x1-V14:2x1-V15:2x1-V16:2x1-X:2x1-V17:1x1-V18:1x1-V19:1x1-V20:1x1-V21:1x1-V22:1x1-V23:1x1-V24:1x1'),
+(6, 'Testaccio market garage', 'Perfetto per il mercato e i locali.', 'Via Galvani, 30, Roma', 41.8775, 12.4789, 2.40, 2.50, 1.50, 4.50, NULL, 1.50, '07:00:00', '02:00:00', FALSE, E'T01:2x2-T02:2x2-T03:2x2-X:2x1-T04:2x1-T05:2x1-T06:2x1-X:2x1-T07:1x1-T08:1x1-T09:1x1-T10:1x1\nX:2x1-T11:2x1-T12:2x1-T13:2x1-X:2x1-T14:1x1-T15:1x1-T16:1x1-T17:1x1\nX:20x1\nT18:2x2-T19:2x2-T20:2x2-X:2x1-T21:2x1-T22:2x1-T23:2x1-X:2x1-T24:1x1-T25:1x1-T26:1x1-T27:1x1\nX:2x1-T28:2x1-T29:2x1-T30:2x1-X:2x1-T31:2x1-T32:2x1\nX:20x1\nT33:2x1-T34:2x1-T35:2x1-T36:2x1-T37:2x1-T38:2x1-T39:2x1-T40:2x1-T41:2x1-T42:2x1');
 
 -- POSTI AUTO
 INSERT INTO PostoAuto (ID_Garage, CodicePosto, TipoVeicolo, IsDisabili, IsElettrica) VALUES
@@ -655,11 +655,11 @@ INSERT INTO Transazione (ID_Utente, Tipo, Importo, Descrizione) VALUES
 -- RECENSIONI
 INSERT INTO Recensione (ID_Prenotazione, ID_Utente, ID_Garage, VotoGenerale, VotoPosizione, VotoPrezzo, VotoPulizia, VotoSpazio, VotoSicurezza, Commento) VALUES
 (1, 5, 1, 5, 5, 4, 5, 5, 5, 'Posto perfetto, comodissimo per gli uffici. Ritornerò sicuramente!'),
-(2, 6, 2, 4, 5, 3, 5, 4, 5, 'Molto sicuro ma un po'' caro. Ottima la posizione per fare acquisti ai Parioli.'),
+(2, 6, 2, 4, 5, 3, 5, 4, 5, 'Molto sicuro ma un po caro. Ottima la posizione per fare acquisti ai Parioli.'),
 (3, 7, 3, 5, 5, 5, 4, 5, 4, 'Comodissimo per prendere la metro, prezzo onesto e ampi spazi.'),
 (4, 8, 4, 3, 4, 4, 3, 4, 3, 'Spazioso per il mio furgone, ma l''illuminazione e la pulizia sono migliorabili.'),
 (5, 9, 5, 5, 5, 4, 5, 4, 5, 'Vicinissimo a San Pietro, personale cortese e facile da raggiungere.'),
-(6, 10, 6, 4, 5, 4, 3, 3, 4, 'Molto comodo per la movida serale, ma i posti auto sono un po'' stretti.'),
+(6, 10, 6, 4, 5, 4, 3, 3, 4, 'Molto comodo per la movida serale, ma i posti auto sono un po stretti.'),
 (77, 5, 1, 5, 5, 4, 5, 4, 5, 'Comodo per la zona EUR.'),
 (78, 6, 2, 4, 5, 3, 5, 5, 5, 'Un po caro ma vale la pena.'),
 (79, 7, 3, 5, 5, 5, 4, 5, 4, 'Vicinissimo alla metro.'),
@@ -710,7 +710,7 @@ INSERT INTO Recensione (ID_Prenotazione, ID_Utente, ID_Garage, VotoGenerale, Vot
 (125, 5, 1, 5, 5, 4, 5, 5, 5, 'Veramente ottimo e centrale.'),
 (126, 6, 2, 4, 5, 3, 5, 4, 5, 'Posto di livello.');
 
--- AGGIORNAMENTO MEDIE GARAGE (eseguito post-inserimento recensioni)
+-- AGGIORNAMENTO MEDIE GARAGE
 UPDATE Garage g
 SET
     MediaGenerale = COALESCE((SELECT ROUND(AVG(VotoGenerale), 2) FROM Recensione WHERE ID_Garage = g.ID_Garage), 0.00),
@@ -721,7 +721,7 @@ SET
     MediaSicurezza = COALESCE((SELECT ROUND(AVG(VotoSicurezza), 2) FROM Recensione WHERE ID_Garage = g.ID_Garage), 0.00),
     NumeroRecensioni = (SELECT COUNT(*) FROM Recensione WHERE ID_Garage = g.ID_Garage);
 
--- AGGIORNAMENTO SALDO (eseguito post-inserimento transazioni)
+-- AGGIORNAMENTO SALDO
 UPDATE Utente u
 SET Saldo = COALESCE((
     SELECT SUM(Importo) 

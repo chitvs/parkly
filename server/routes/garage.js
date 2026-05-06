@@ -121,7 +121,7 @@ router.post('/garages-gestore', async (req, res) => {
 
     const {
       nome, descrizione, indirizzo, latitudine, longitudine,
-      tariffabase, tariffamoto, tariffafurgone, tariffaelettrica, tariffadisabili,
+      tariffabase, tariffamoto, tariffafurgone, sovrapprezzoelettrica, scontodisabili,
       altezzamassima, orarioapertura, orariochiusura, is24h, mappatestuale, posti 
     } = req.body;
 
@@ -136,7 +136,7 @@ router.post('/garages-gestore', async (req, res) => {
     const result = await db.tx(async t => {
       const garage = await t.one(
         `INSERT INTO Garage
-          (ID_Gestore, Nome, Descrizione, Indirizzo, Latitudine, Longitudine, AltezzaMassima, TariffaAuto, TariffaMoto, TariffaFurgone, TariffaElettrica, TariffaDisabili, OrarioApertura, OrarioChiusura, Is24h, MappaTestuale, IsAttivo)
+          (ID_Gestore, Nome, Descrizione, Indirizzo, Latitudine, Longitudine, AltezzaMassima, TariffaAuto, TariffaMoto, TariffaFurgone, SovrapprezzoElettrica, ScontoDisabili, OrarioApertura, OrarioChiusura, Is24h, MappaTestuale, IsAttivo)
          VALUES
           ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, TRUE)
          RETURNING *`,
@@ -151,8 +151,8 @@ router.post('/garages-gestore', async (req, res) => {
           tariffabase,
           tariffamoto || null,
           tariffafurgone || null,
-          tariffaelettrica || null,
-          tariffadisabili || null,
+          sovrapprezzoelettrica || null,
+          scontodisabili || null,
           apertura,
           chiusura,
           is24h || false,
@@ -211,16 +211,18 @@ router.get("/:id/posti", async (req, res) => {
     const { id } = req.params;
     const { inizio, fine } = req.query;
 
-    if (!inizio || !fine || inizio === "" || fine === "") {
+    if (!inizio || !fine || inizio === "") {
       const querySemplice = `
                 SELECT p.*, FALSE AS is_occupato,
-                CASE 
-                    WHEN p.IsDisabili THEN g.TariffaDisabili 
-                    WHEN p.IsElettrica THEN g.TariffaElettrica 
-                    WHEN p.TipoVeicolo = 'AUTO' THEN g.TariffaAuto 
-                    WHEN p.TipoVeicolo = 'MOTO' THEN g.TariffaMoto 
-                    WHEN p.TipoVeicolo = 'FURGONE' THEN g.TariffaFurgone 
-                END as tariffaoraria
+                GREATEST(
+                    (CASE 
+                        WHEN p.TipoVeicolo = 'AUTO' THEN g.TariffaAuto 
+                        WHEN p.TipoVeicolo = 'MOTO' THEN g.TariffaMoto 
+                        WHEN p.TipoVeicolo = 'FURGONE' THEN g.TariffaFurgone 
+                    END)
+                    + CASE WHEN p.IsElettrica THEN COALESCE(g.SovrapprezzoElettrica, 0) ELSE 0 END
+                    - CASE WHEN p.IsDisabili THEN COALESCE(g.ScontoDisabili, 0) ELSE 0 END
+                , 0) as tariffaoraria
                 FROM PostoAuto p
                 JOIN Garage g ON p.ID_Garage = g.ID_Garage
                 WHERE p.ID_Garage = $1
@@ -238,13 +240,15 @@ router.get("/:id/posti", async (req, res) => {
                 AND pr.Stato = 'ATTIVA'
                 AND (pr.InizioSosta, pr.FineSosta) OVERLAPS ($2::timestamp, $3::timestamp)
             ) AS is_occupato,
-            CASE 
-                WHEN p.IsDisabili THEN g.TariffaDisabili 
-                WHEN p.IsElettrica THEN g.TariffaElettrica 
-                WHEN p.TipoVeicolo = 'AUTO' THEN g.TariffaAuto 
-                WHEN p.TipoVeicolo = 'MOTO' THEN g.TariffaMoto 
-                WHEN p.TipoVeicolo = 'FURGONE' THEN g.TariffaFurgone 
-            END as tariffaoraria
+            GREATEST(
+                (CASE 
+                    WHEN p.TipoVeicolo = 'AUTO' THEN g.TariffaAuto 
+                    WHEN p.TipoVeicolo = 'MOTO' THEN g.TariffaMoto 
+                    WHEN p.TipoVeicolo = 'FURGONE' THEN g.TariffaFurgone 
+                END)
+                + CASE WHEN p.IsElettrica THEN COALESCE(g.SovrapprezzoElettrica, 0) ELSE 0 END
+                - CASE WHEN p.IsDisabili THEN COALESCE(g.ScontoDisabili, 0) ELSE 0 END
+            , 0) as tariffaoraria
             FROM PostoAuto p
             JOIN Garage g ON p.ID_Garage = g.ID_Garage
             WHERE p.ID_Garage = $1
