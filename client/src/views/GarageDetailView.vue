@@ -1257,6 +1257,17 @@ const distribuzioneVoti = computed(() => {
         flex: auto; /* Sovrascrive il flex rigido da PC */
     }
 
+    /*Griglia 2x3 per le categorie specifiche */
+    .categories-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 20px 16px; /* Spazio verticale 20px, orizzontale 16px */
+        width: 100%;
+    }
+
+    .category-item {
+        padding-left: 12px; /* Riduce il padding per farle entrare meglio affiancate */
+    }
+
     /* 4. Griglia Commenti: una colonna sola invece di due */
     .comments-grid {
         grid-template-columns: 1fr;
