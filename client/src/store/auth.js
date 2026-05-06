@@ -32,12 +32,12 @@ export const authStore = reactive({
   },
 
   // Logica Login centralizzata
-  async login(email, password) {
+  async login(identificatore, password) {
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ identificatore, password })
       });
 
       if (!response.ok) {
@@ -138,38 +138,6 @@ async updateProfile(payload) {
   }
 },
 
-// Funzione per recuperare le prenotazioni dell'utente
-async getBookings() {
-  try {
-    const response = await fetch('/api/auth/bookings', {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include' // FONDAMENTALE per i cookie di sessione
-    });
-    
-    return await response.json();
-  } catch (error) {
-    console.error("Errore fetch prenotazioni:", error);
-    return { success: false, error: "Errore di connessione" };
-  }
-},
-
-// Funzione per annullare una prenotazione specifica
-async cancelBooking(codicePrenotazione) {
-  try {
-    const response = await fetch(`/api/auth/bookings/${codicePrenotazione}/cancel`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include'
-    });
-    
-    return await response.json();
-  } catch (error) {
-    console.error("Errore durante l'annullamento:", error);
-    return { success: false, error: "Errore di connessione al server" };
-  }
-},
-
 // Logica Logout completa
   async logout() {
     try {
@@ -181,6 +149,30 @@ async cancelBooking(codicePrenotazione) {
       console.error("Errore durante il logout lato server:", err);
     } finally {
       this.setUtente(null);
+    }
+  },
+
+  async deleteAccount() {
+    try {
+      const res = await fetch('/api/auth/delete-account', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        // puliamo lo stato locale
+        this.utente = null;
+        // ripuliamo eventuali dati persistenti
+        localStorage.removeItem('utente');
+        return { success: true };
+      } else {
+        return { success: false, error: data.error };
+      }
+    } catch (error) {
+      console.error("Errore durante l'eliminazione dell'account:", error);
+      return { success: false, error: "Errore di connessione" };
     }
   }
 })

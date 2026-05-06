@@ -3,11 +3,13 @@ import { reactive, markRaw } from 'vue'
 export const garageStore = reactive({
   currentGarage: null,
   posti: [],
+  recensioni: [],
   isLoading: false,
 
   clearGarageData() {
     this.currentGarage = null
     this.posti = []
+    this.recensioni = []
   },
 
   async fetchGarage(id) {
@@ -38,6 +40,18 @@ export const garageStore = reactive({
         success: false,
         error: 'Impossibile caricare la mappa',
       }
+    }
+  },
+
+  async fetchRecensioni(id) {
+    try {
+      const response = await fetch(`/api/garage/${id}/recensioni`)
+      const data = await response.json()
+      if (data.success) {
+        this.recensioni = markRaw(data.recensioni)
+      }
+    } catch (err) {
+      console.error('Impossibile caricare le recensioni', err)
     }
   },
 

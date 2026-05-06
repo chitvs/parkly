@@ -1,17 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcrypt');
-const db = require('../database/db'); // Questo file usa in automatico DB_USER, DB_PASSWORD, ecc.
+const db = require('../database/db');
 const { isLoggato } = require('../middleware/authMiddleware');
-
-// --- NUOVE IMPORTAZIONI PER L'UPLOAD FOTO ---
 const multer = require('multer');
 const { createClient } = require('@supabase/supabase-js');
 
 // configura il client Supabase usando le variabili dell'environment
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
-// Configura Multer (handler per le foto prima di mandarle a Supabase)
+// configura Multer (handler per le foto prima di mandarle a Supabase)
 const upload = multer({ storage: multer.memoryStorage() });
 
 // Registrazione
@@ -19,6 +17,7 @@ router.post('/register', async (req, res) => {
     const { 
         nome, 
         cognome, 
+        nomeUtente,
         email, 
         password, 
         ruolo,
@@ -27,14 +26,17 @@ router.post('/register', async (req, res) => {
     } = req.body;
 
     try {
-        // l'email esiste?
-        const utenteEsistente = await db.oneOrNone('SELECT * FROM Utente WHERE Email = $1', [email]);
-    
+        // l'email o il nome utente esistono?
+        const utenteEsistente = await db.oneOrNone(
+            'SELECT * FROM Utente WHERE Email = $1 OR NomeUtente = $2', 
+            [email, nomeUtente]
+        );    
+
         // se l'email esiste, lancio un errore
         if (utenteEsistente) {
             return res.status(400).json({ 
                 success: false, 
-                error: 'Email già registrata' 
+                error: 'Email o Nome Utente già in uso'
             });
         }
 
@@ -43,13 +45,15 @@ router.post('/register', async (req, res) => {
 
         // salvataggio nel db
         const nuovoUtente = await db.one(
-            'INSERT INTO Utente (Nome, Cognome, Email, PasswordHash, Ruolo, Telefono, codiceFiscale) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id_utente, nome, email, ruolo    ',
-            [nome, cognome, email, passwordHash, ruolo || 'CLIENTE', telefono || null, codiceFiscale || null] // default CLIENTE se ruolo non specificato
+            'INSERT INTO Utente (Nome, Cognome, NomeUtente, Email, PasswordHash, Ruolo, Telefono, codiceFiscale) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id_utente, nome, nomeutente, email, ruolo',
+            [nome, cognome, nomeUtente, email, passwordHash, ruolo || 'CLIENTE', telefono || null, codiceFiscale || null] // default CLIENTE se ruolo non specificato
         );
 
         req.session.utente = {
             id: nuovoUtente.id_utente,
             nome: nuovoUtente.nome,
+            nomeUtente: nuovoUtente.nomeUtente,
+            saldo: utente.saldo,
             email: nuovoUtente.email,
             ruolo: nuovoUtente.ruolo
         };
@@ -72,17 +76,20 @@ router.post('/register', async (req, res) => {
 // Login
 router.post('/login', async (req, res) => {
     const { 
-        email, 
+        identificatore, // email o nomeutente 
         password 
     } = req.body;
 
     try {
-        const utente = await db.oneOrNone('SELECT * FROM Utente WHERE Email = $1', [email]);
+        const utente = await db.oneOrNone(
+            'SELECT * FROM Utente WHERE (Email = $1 OR NomeUtente = $1) AND IsAttivo = TRUE', 
+            [identificatore]
+        );
         
         if (!utente) {
             return res.status(401).json({ 
                 success: false, 
-                error: 'Email non valida' 
+                error: 'Credenziali non valide' 
             });
         }
 
@@ -100,6 +107,8 @@ router.post('/login', async (req, res) => {
         req.session.utente = {
             id: utente.id_utente,
             nome: utente.nome,
+            nomeUtente: utente.nomeutente,
+            saldo: utente.saldo,
             email: utente.email,
             ruolo: utente.ruolo,
             fotoProfilo_URL: utente.fotoprofilo_url 
@@ -172,7 +181,7 @@ router.get('/profile', async (req, res) => {
         // N.B: NON selezioniamo la password (PasswordHash) per sicurezza!
         
         const utente = await db.oneOrNone(
-            `SELECT id_utente, nome, cognome, email, telefono, codiceFiscale, fotoprofilo_url, ruolo 
+            `SELECT id_utente, nome, cognome, nomeutente, email, telefono, codiceFiscale, fotoprofilo_url, ruolo, saldo 
             FROM Utente WHERE id_utente = $1`, 
             [req.session.utente.id]
         );
@@ -204,33 +213,34 @@ router.put('/profile', async (req, res) => {
         });
     }
 
-    const { nome, cognome, email, telefono, codiceFiscale } = req.body;
+    const { nome, cognome, nomeUtente, email, telefono, codiceFiscale } = req.body;
 
     try {
-        // Controllo se l'utente sta cercando di usare un'email già presa da qualcun altro
-        const emailEsistente = await db.oneOrNone(
-            'SELECT id_utente FROM Utente WHERE Email = $1 AND id_utente != $2', 
-            [email, req.session.utente.id]
+        // Controllo se l'utente sta cercando di usare un'email già presa da qualcun altro, controllo anche il nome utente
+        const datiEsistenti = await db.oneOrNone(
+            'SELECT id_utente FROM Utente WHERE (Email = $1 OR NomeUtente = $2) AND id_utente != $3', 
+            [email, nomeUtente, req.session.utente.id]
         );
 
-        if (emailEsistente) {
+        if (datiEsistenti) {
             return res.status(400).json({ 
                 success: false, 
-                error: 'Questa email è già in uso da un altro account' 
+                error: 'Questa email o nome utente è già in uso da un altro account' 
             });
         }
 
         // Eseguo l'UPDATE nel database
         const utenteAggiornato = await db.one(
             `UPDATE Utente 
-             SET Nome = $1, Cognome = $2, Email = $3, Telefono = $4, codiceFiscale = $5 
-             WHERE id_utente = $6 
-             RETURNING id_utente, nome, email, ruolo`,
-            [nome, cognome, email, telefono || null, codiceFiscale || null, req.session.utente.id]
+             SET Nome = $1, Cognome = $2, NomeUtente = $3, Email = $4, Telefono = $5, codiceFiscale = $6 
+             WHERE id_utente = $7 
+             RETURNING id_utente, nome, nomeutente, email, ruolo`,
+            [nome, cognome, nomeUtente, email, telefono || null, codiceFiscale || null, req.session.utente.id]
         );
 
         // Aggiorno i dati salvati nella sessione (nel caso abbia cambiato nome o email)
         req.session.utente.nome = utenteAggiornato.nome;
+        req.session.utente.nomeUtente = utenteAggiornato.nomeutente;
         req.session.utente.email = utenteAggiornato.email;
 
         res.json({ 
@@ -258,6 +268,35 @@ router.post('/logout', (req, res) => {
         res.clearCookie('connect.sid');
         res.json({ success: true, message: "Logout effettuato con successo" });
     });
+});
+
+// eliminazione account (soft-delete)
+router.delete('/delete-account', async (req, res) => {
+    // l'utente è loggato?
+    if (!req.session.utente || !req.session.utente.id) {
+        return res.status(401).json({ success: false, error: 'Non autorizzato' });
+    }
+
+    try {
+        const utenteId = req.session.utente.id;
+
+        // spengo l'utente nel db (soft-delete)
+        await db.none('UPDATE Utente SET IsAttivo = FALSE WHERE id_utente = $1', [utenteId]);
+
+        // distruggo la sessione corrente in modo che venga buttato fuori dall'app
+        req.session.destroy((err) => {
+            if (err) {
+                console.error("Errore distruzione sessione dopo eliminazione:", err);
+                return res.status(500).json({ success: false, error: "Impossibile disconnettere l'account" });
+            }
+            res.clearCookie('connect.sid');
+            res.json({ success: true, message: "Account eliminato con successo" });
+        });
+
+    } catch (err) {
+        console.error('Errore durante eliminazione account:', err);
+        res.status(500).json({ success: false, error: 'Errore interno del server' });
+    }
 });
 
 // Sincronizzazione del frontend con sessione reale sul server
@@ -323,73 +362,6 @@ router.post('/upload-avatar', upload.single('avatar'), async (req, res) => {
     } catch (error) {
         console.error('Errore upload:', error);
         res.status(500).json({ success: false, error: 'Errore durante il caricamento' });
-    }
-});
-
-
-// Recupero le prenotazioni dell'utente loggato
-router.get('/bookings', async (req, res) => {
-    // Controllo sicurezza: l'utente è loggato?
-    if (!req.session.utente || !req.session.utente.id) {
-        return res.status(401).json({ success: false, error: 'Non autorizzato' });
-    }
-
-    try {
-        // Faccio una JOIN per recuperare anche il nome del Garage e il Codice del Posto
-        const query = `
-            SELECT 
-                p.CodicePrenotazione, p.Targa, p.InizioSosta, p.FineSosta, 
-                p.PrezzoTotale, p.Stato, p.DataCreazione,
-                pa.CodicePosto, 
-                g.Nome AS NomeGarage, g.Indirizzo
-            FROM Prenotazione p
-            JOIN PostoAuto pa ON p.ID_Posto = pa.ID_Posto
-            JOIN Garage g ON pa.ID_Garage = g.ID_Garage
-            WHERE p.ID_Utente = $1
-            ORDER BY p.InizioSosta DESC
-        `;
-
-        const prenotazioni = await db.any(query, [req.session.utente.id]);
-
-        res.json({ success: true, data: prenotazioni });
-
-    } catch (err) {
-        console.error('Errore recupero prenotazioni:', err);
-        res.status(500).json({ success: false, error: 'Errore interno del server' });
-    }
-});
-
-// Annullamento di una prenotazione
-router.put('/bookings/:codice/cancel', async (req, res) => {
-    if (!req.session.utente || !req.session.utente.id) {
-        return res.status(401).json({ success: false, error: 'Non autorizzato' });
-    }
-
-    try {
-        const codicePrenotazione = req.params.codice;
-        const utenteId = req.session.utente.id;
-
-        // Eseguiamo l'UPDATE solo se lo stato è ancora 'ATTIVA' e se è del nostro utente
-        const result = await db.result(
-            `UPDATE Prenotazione 
-             SET Stato = 'ANNULLATA' 
-             WHERE CodicePrenotazione = $1 AND ID_Utente = $2 AND Stato = 'ATTIVA'`,
-            [codicePrenotazione, utenteId]
-        );
-
-        // db.result ci dice quante righe sono state modificate
-        if (result.rowCount === 0) {
-            return res.status(400).json({ 
-                success: false, 
-                error: 'Prenotazione non trovata o già annullata.' 
-            });
-        }
-
-        res.json({ success: true, messaggio: 'Prenotazione annullata con successo' });
-
-    } catch (err) {
-        console.error('Errore annullamento prenotazione:', err);
-        res.status(500).json({ success: false, error: 'Errore interno del server' });
     }
 });
 

@@ -63,9 +63,9 @@ const altezza = computed({
             <label>Tipo di veicolo</label>
             <select v-model="tipoVeicolo" class="filter-select">
                 <option value="ALL">Tutti</option>
-                <option value="AUTO">🚗 Auto</option>
-                <option value="MOTO">🏍️ Moto</option>
-                <option value="FURGONE">🚐 Furgone</option>
+                <option value="AUTO">Auto</option>
+                <option value="MOTO">Moto</option>
+                <option value="FURGONE">Furgone</option>
             </select>
         </div>
 

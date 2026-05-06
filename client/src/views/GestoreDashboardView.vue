@@ -441,7 +441,7 @@ const caricaDati = async () => {
 }
 
 const caricaGarage = async () => {
-  const res = await fetch('/api/garages-gestore', { credentials: 'include' })
+  const res = await fetch('/api/garage/garages-gestore', { credentials: 'include' })
   if (!res.ok) return
   const data = await res.json()
   mieiGarage.value = data
@@ -456,7 +456,7 @@ const caricaGarage = async () => {
     } catch { /* ignora */ }
 
     try {
-      const r = await fetch(`/api/garages/${g.id_garage}/occupazione`, { credentials: 'include' })
+      const r = await fetch(`/api/garage/${g.id_garage}/occupazione`, { credentials: 'include' })
       if (r.ok) {
         const { percentuale } = await r.json()
         occupazioneGarage.value[g.id_garage] = Math.round(percentuale)
@@ -494,12 +494,12 @@ const aggiornaMappaOrari = async () => {
 }
 
 const caricaStorico = async () => {
-  const res = await fetch('/api/prenotazioni-gestore', { credentials: 'include' })
+  const res = await fetch('/api/prenotazioni/prenotazioni-gestore', { credentials: 'include' })
   if (res.ok) storicoPrenotazioni.value = await res.json()
 }
 
 const caricaStato = async () => {
-  const res = await fetch('/api/stato-garages-gestore', { credentials: 'include' })
+  const res = await fetch('/api/garage/stato-garages-gestore', { credentials: 'include' })
   if (res.ok) allerteStato.value = await res.json()
 }
 
@@ -536,7 +536,7 @@ const salvaNuovoGarage = async () => {
 
   staSalvando.value = true
   try {
-    const res = await fetch('/api/garages-gestore', {
+    const res = await fetch('/api/garage/garages-gestore', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
