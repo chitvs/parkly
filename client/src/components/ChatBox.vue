@@ -90,7 +90,7 @@ import { useChat } from '@/composables/useChat';
 const emit = defineEmits(['chiudi']);
 
 const props = defineProps({
-  idGarage: { type: Number, required: true },
+  idPrenotazione: { type: Number, required: true },
   idDestinatario: { type: Number, required: true },
   nomeDestinatario: { type: String, default: 'Utente' },
   ruoloDestinatario: { type: String, default: '' },
@@ -116,7 +116,7 @@ const {
   errore,
   inviaMessaggio,
   caricaStorico,
-} = useChat(props.idGarage, props.idDestinatario);
+} = useChat(props.idPrenotazione, props.idDestinatario);
 
 const inizialeDestinatario = computed(() =>
   props.nomeDestinatario?.charAt(0).toUpperCase() || '?'

@@ -1,12 +1,13 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { prenotazioniStore } from '../store/prenotazioni.js'
 import { useRecensione } from '../composables/useRecensione.js'
+import { getSocket } from '../composables/useChat.js' 
 
 import 'bootstrap-icons/font/bootstrap-icons.css'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
-import ChatBox from '../components/ChatBox.vue' // Importo la ChatBox
+import ChatBox from '../components/ChatBox.vue'
 
 const bookings = ref([])
 const isLoading = ref(true)
@@ -25,8 +26,36 @@ const {
 // Stato per gestire la chat aperta
 const chatSelezionata = ref(null)
 
+// Variabile per tenere traccia del socket in questa pagina
+let socket = null;
+
+// --- GESTIONE NOTIFICHE IN TEMPO REALE ---
+const handleNuovoMessaggio = (msg) => {
+  // Cerchiamo la prenotazione a cui appartiene questo messaggio
+  const bookingToUpdate = bookings.value.find(b => Number(b.id_prenotazione) === Number(msg.id_prenotazione));
+  
+  if (bookingToUpdate) {
+    // Se la chat di questa prenotazione NON è attualmente aperta, incrementiamo il pallino
+    const chatAperta = chatSelezionata.value && chatSelezionata.value.idPrenotazione === Number(msg.id_prenotazione);
+    if (!chatAperta) {
+      bookingToUpdate.nonletti = (bookingToUpdate.nonletti || 0) + 1;
+    }
+  }
+}
+
+
 onMounted(async () => {
   await caricaPrenotazioni()
+  // INIZIALIZZA IL SOCKET E ASCOLTA IN BACKGROUND
+  socket = getSocket();
+  socket.on('nuovo_messaggio', handleNuovoMessaggio);
+})
+
+// Quando l'utente cambia pagina, smettiamo di ascoltare per non creare cloni dell'evento
+onUnmounted(() => {
+  if (socket) {
+    socket.off('nuovo_messaggio', handleNuovoMessaggio);
+  }
 })
 
 const caricaPrenotazioni = async () => {
@@ -91,9 +120,10 @@ const categories = [
 
 // Funzioni per aprire e chiudere la chat
 const apriChat = (booking) => {
-  // id_garage e id_gestore devono arrivare dalla query API (vedi fix route)
+  //levo il pallino rosso
+  booking.nonletti = 0;
   chatSelezionata.value = {
-    idGarage: Number(booking.id_garage),
+    idPrenotazione: Number(booking.id_prenotazione), 
     idDestinatario: Number(booking.id_gestore),
     nomeDestinatario: booking.nomegestore || booking.nomegarage || 'Gestore'
   }
@@ -159,6 +189,7 @@ const chiudiChat = () => {
                   </svg>
                   Annulla
                   </button>
+
                   <!-- Pulsante Chat -->
                   <button 
                     v-if="booking.stato === 'ATTIVA'" 
@@ -167,14 +198,15 @@ const chiudiChat = () => {
                     title="Contatta il gestore"
                   >
                     <!--pallino notifica-->
-                    <span v-if="booking.nonLetti > 0" class="chat-notification-dot"></span>
+                    <span v-if="booking.nonletti > 0" class="chat-notification-dot"></span>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
                           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                       </svg>
                         Contatta
                   </button>
-                  <!--pulsante recensioni-->
+
+                  <!--Pulsante Recensioni-->
                   <div v-if="booking.stato === 'CONCLUSA' && !booking.ha_recensito"
                     class="d-flex align-items-center ms-3 border-start ps-3">
                     <span class="text-muted small fw-semibold me-2 d-none d-sm-inline">Com'è andata?</span>
@@ -184,6 +216,7 @@ const chiudiChat = () => {
                     </div>
                   </div>
 
+                  <!--Ha Recensito-->
                   <div v-else-if="booking.stato === 'CONCLUSA' && booking.ha_recensito"
                     class="d-flex align-items-center ms-3 border-start ps-3 text-success">
                     <i class="bi bi-check-circle-fill me-2 fs-5"></i>
@@ -237,7 +270,7 @@ const chiudiChat = () => {
     <!-- Componente ChatBox montato come Popup fluttuante -->
     <div v-if="chatSelezionata" class="chat-popup-container">
       <ChatBox 
-        :idGarage="chatSelezionata.idGarage"
+        :idPrenotazione="chatSelezionata.idPrenotazione" 
         :idDestinatario="chatSelezionata.idDestinatario"
         :nomeDestinatario="chatSelezionata.nomeDestinatario"
         ruoloDestinatario="Gestore"
@@ -340,6 +373,7 @@ const chiudiChat = () => {
 </template>
 
 <style scoped>
+
 .page-wrapper {
   display: flex;
   flex-direction: column;
@@ -379,14 +413,13 @@ const chiudiChat = () => {
 .btn-primary:hover {
   background-color: #00336E;
 }
-
 /* Stile per replicare l'estetica delle targhe */
 .font-monospace {
   letter-spacing: 2px;
   font-family: 'Courier New', Courier, monospace;
 }
 
-/*  CSS PER IL POPUP DELLA CHAT */
+/*  CSS per il popup della chat */
 .chat-popup-container {
   position: fixed;
   bottom: 24px;
@@ -400,6 +433,7 @@ const chiudiChat = () => {
   gap: 8px;
   animation: slideUp 0.3s ease-out;
 }
+
 /* --- UNITÀ STILISTICA: BADGE E PULSANTI --- */
 .action-group {
   flex-wrap: wrap; /* Evita che si schiaccino su schermi molto piccoli */
@@ -416,17 +450,16 @@ const chiudiChat = () => {
   border-radius: 8px; 
   border: 1px solid transparent;
   transition: all 0.2s ease;
-  height: 36px; /* Forza la stessa altezza per tutti gli elementi */
+  height: 36px;
 }
 
-/* --- 1. Badge di Stato --- */
+/* --- Badge di Stato --- */
 .custom-badge {
   text-transform: uppercase;
   font-size: 0.75rem;
   letter-spacing: 0.5px;
   cursor: default;
-  border-radius: 99px; /* Raggio leggermente diverso perchè lo stato non è un bottone*/
-
+  border-radius: 99px; /* Raggio diverso perchè lo stato NON è un bottone*/
 }
 .badge-attiva {
   background-color: #137333;
@@ -444,7 +477,6 @@ const chiudiChat = () => {
   border-color: #c5221f;
 }
 
-/* --- 2. Pulsante Chat --- */
 .btn-chat {
   background-color: #e0f0ff;
   color: var(--primary-blue, #00408A);
@@ -465,14 +497,14 @@ const chiudiChat = () => {
   right: -4px;
   width: 12px;
   height: 12px;
-  background-color: #ef4444; /* Rosso vibrante */
-  border: 2px solid #ffffff; /* Bordo bianco per staccarlo dallo sfondo */
+  background-color: #ef4444; 
+  border: 2px solid #ffffff; 
   border-radius: 50%;
   box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
   z-index: 2;
 }
 
-/* --- 3. Pulsante Annulla --- */
+/* --- Pulsante Annulla --- */
 .btn-cancel {
   background-color: white;
   color: #c5221f;

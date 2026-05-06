@@ -262,10 +262,21 @@
                       <span :class="['badge', statoBadge(p.stato)]">{{ p.stato }}</span>
                     </td>
                     <td>
-                      <button class="btn-chat" @click="apriChat(p)" title="Scrivi al cliente">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                      <!-- Pulsante Chat -->
+                  <button 
+                    v-if="p.stato === 'ATTIVA'" 
+                    @click="apriChat(p)" 
+                    class="custom-btn btn-chat"
+                    title="Scrivi al cliente"
+                  >
+                    <!--pallino notifica-->
+                    <span v-if="p.nonletti > 0" class="chat-notification-dot"></span>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                      </svg>
                         Scrivi
-                      </button>
+                  </button>
                     </td>
                   </tr>
                   <tr v-if="storicoPrenotazioni.length === 0">
@@ -379,6 +390,7 @@
     <div v-if="chatSelezionata" class="chat-popup-container">
       <ChatBox
         @chiudi="chiudiChat"
+        :idPrenotazione="chatSelezionata.idPrenotazione"
         :idGarage="chatSelezionata.idGarage"
         :idDestinatario="chatSelezionata.idDestinatario"
         :nomeDestinatario="chatSelezionata.nomeDestinatario"
@@ -390,8 +402,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { authStore } from '../store/auth.js'
+import { getSocket } from '../composables/useChat.js'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 import PlanimetriaGarage from '../components/PlanimetriaGarage.vue'
@@ -407,7 +420,28 @@ const erroreForm  = ref('')
 const mieiGarage           = ref([])
 const storicoPrenotazioni   = ref([])
 const allerteStato          = ref([])
-const chatSelezionata       = ref(null)  // stato per gestire la chat aperta{ idGarage, idDestinatario, nomeDestinatario }
+const chatSelezionata       = ref(null)  // stato per gestire la chat aperta
+
+// Variabile per tenere traccia del socket in questa pagina
+let socket = null
+
+// --- GESTIONE NOTIFICHE IN TEMPO REALE ---
+const handleNuovoMessaggio = (msg) => {
+  // Cerchiamo la prenotazione a cui appartiene questo messaggio
+  const prenotazioneDaAggiornare = storicoPrenotazioni.value.find(
+    p => Number(p.id_prenotazione) === Number(msg.id_prenotazione)
+  )
+
+  if (prenotazioneDaAggiornare) {
+    // Se la chat di questa prenotazione NON è attualmente aperta, incrementiamo il pallino
+    const chatAperta = chatSelezionata.value &&
+      chatSelezionata.value.idPrenotazione === Number(msg.id_prenotazione)
+    if (!chatAperta) {
+      prenotazioneDaAggiornare.nonletti = (prenotazioneDaAggiornare.nonletti || 0) + 1
+    }
+  }
+}
+
 const occupazioneGarage     = ref({})
 const postiPerGarage        = ref({})
 
@@ -573,7 +607,10 @@ const apriChat = (prenotazione) => {
     console.error('[Chat] Dati mancanti sulla prenotazione:', prenotazione)
     return
   }
+  // Azzera il pallino notifica
+  prenotazione.nonletti = 0
   chatSelezionata.value = {
+    idPrenotazione: Number(prenotazione.id_prenotazione),
     idGarage,
     idDestinatario: idCliente,
     nomeDestinatario: prenotazione.nomecliente
@@ -584,7 +621,20 @@ const apriChat = (prenotazione) => {
 
 const chiudiChat = () => { chatSelezionata.value = null }
 
-onMounted(caricaDati)
+onMounted(async () => {
+  await caricaDati()
+
+  // INIZIALIZZA IL SOCKET E ASCOLTA IN BACKGROUND
+  socket = getSocket()
+  socket.on('nuovo_messaggio', handleNuovoMessaggio)
+})
+
+// Quando l'utente cambia pagina, smettiamo di ascoltare per non creare cloni dell'evento
+onUnmounted(() => {
+  if (socket) {
+    socket.off('nuovo_messaggio', handleNuovoMessaggio)
+  }
+})
 
 const navItems = [
   { id: 'statistiche', label: 'Statistiche',    icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>' },
@@ -845,8 +895,21 @@ const navItems = [
 .anteprima-reset:hover { text-decoration: underline; }
 
 
+/* ── Pallino notifica messaggi non letti ── */
+.chat-notification-dot {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 10px;
+  height: 10px;
+  background: #E74C3C;
+  border-radius: 50%;
+  border: 2px solid #fff;
+}
+
 /* ── Pulsante Chat nella tabella ── */
 .btn-chat {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 5px;

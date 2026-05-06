@@ -99,26 +99,22 @@ io.use((socket, next) => {
   next();
 });
 
-//  HELPER: verifica relazione prenotazione fra mittente e destinatario 
-async function verificaRelazione(idMittente, idDestinatario, idGarage) {
+// HELPER: verifica relazione fra mittente e destinatario basata sulla PRENOTAZIONE
+async function verificaRelazione(idUtente, idPrenotazione) {
   const rows = await db.any(
     `SELECT 1
      FROM Prenotazione p
      JOIN PostoAuto pa ON pa.ID_Posto = p.ID_Posto
      JOIN Garage g ON g.ID_Garage = pa.ID_Garage
-     WHERE g.ID_Garage = $3
-       AND (
-         (p.ID_Utente = $1 AND g.ID_Gestore = $2)
-         OR
-         (g.ID_Gestore = $1 AND p.ID_Utente = $2)
-       )
+     WHERE p.ID_Prenotazione = $2
+       AND (p.ID_Utente = $1 OR g.ID_Gestore = $1)
      LIMIT 1`,
-    [idMittente, idDestinatario, idGarage]
+    [idUtente, idPrenotazione]
   );
   return rows.length > 0;
 }
 
-//  LOGICA SOCKET.IO 
+// LOGICA SOCKET.IO 
 io.on('connection', (socket) => {
   const utente = socket.utente;
   console.log(`[Socket] Connesso: ${utente.nome} ${utente.cognome} (ID: ${utente.id})`);
@@ -126,25 +122,25 @@ io.on('connection', (socket) => {
   // Room privata per questo utente
   socket.join(`user:${utente.id}`);
 
-  //  Invio messaggio 
-  socket.on('invia_messaggio', async ({ idDestinatario, idGarage, testo }) => {
-    if (!idDestinatario || !idGarage || !testo?.trim()) {
+  // Invio messaggio 
+  socket.on('invia_messaggio', async ({ idDestinatario, idPrenotazione, testo }) => {
+    if (!idDestinatario || !idPrenotazione || !testo?.trim()) {
       return socket.emit('errore', { msg: 'Dati messaggio incompleti.' });
     }
 
     try {
-      const autorizzato = await verificaRelazione(utente.id, idDestinatario, idGarage);
+      // Passiamo utente.id e idPrenotazione
+      const autorizzato = await verificaRelazione(utente.id, idPrenotazione);
       if (!autorizzato) {
-        return socket.emit('errore', {
-          msg: 'Non sei autorizzato a contattare questo utente per questo garage.'
-        });
+        return socket.emit('errore', { msg: 'Non autorizzato per questa prenotazione.' });
       }
 
+      // Inseriamo con ID_Prenotazione
       const messaggio = await db.one(
-        `INSERT INTO Messaggio (ID_Mittente, ID_Destinatario, ID_Garage, Testo)
+        `INSERT INTO Messaggio (ID_Mittente, ID_Destinatario, ID_Prenotazione, Testo)
          VALUES ($1, $2, $3, $4)
          RETURNING *`,
-        [utente.id, idDestinatario, idGarage, testo.trim()]
+        [utente.id, idDestinatario, idPrenotazione, testo.trim()]
       );
 
       const payload = {
@@ -155,7 +151,7 @@ io.on('connection', (socket) => {
 
       // Recapita al destinatario (se online)
       io.to(`user:${idDestinatario}`).emit('nuovo_messaggio', payload);
-
+      
       // Conferma al mittente
       socket.emit('messaggio_inviato', payload);
 

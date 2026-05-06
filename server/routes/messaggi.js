@@ -12,61 +12,50 @@ function requireAuth(req, res, next) {
   next();
 }
 
-// ─── GET /api/messaggi/:idGarage/:idInterlocutore ───────────────────────────
-// Carica lo storico della conversazione specifica tra l'utente loggato e l'interlocutore
-router.get('/:idGarage/:idInterlocutore', requireAuth, async (req, res) => {
-  const idGarage = parseInt(req.params.idGarage);
-  const idInterlocutore = parseInt(req.params.idInterlocutore); 
+// ─── GET /api/messaggi/:idPrenotazione ───────────────────────────
+// Carica lo storico della conversazione specifica per questa prenotazione
+router.get('/:idPrenotazione', requireAuth, async (req, res) => {
+  const idPrenotazione = parseInt(req.params.idPrenotazione);
   const idUtente = req.session.utente.id;
 
   try {
-    // Verifica che l'utente abbia diritto di accedere a questa conversazione:
-    // deve essere il gestore del garage OPPURE avere almeno una prenotazione lì
+    // Verifica che l'utente sia o il cliente della prenotazione o il gestore
     const accesso = await db.any(
-      `SELECT 1 FROM Garage WHERE ID_Garage = $1 AND ID_Gestore = $2
-       UNION
-       SELECT 1 FROM Prenotazione p
-         JOIN PostoAuto pa ON pa.ID_Posto = p.ID_Posto
-         WHERE pa.ID_Garage = $1 AND p.ID_Utente = $2
+      `SELECT 1 FROM Prenotazione p
+       JOIN PostoAuto pa ON pa.ID_Posto = p.ID_Posto
+       JOIN Garage g ON g.ID_Garage = pa.ID_Garage
+       WHERE p.ID_Prenotazione = $1 AND (p.ID_Utente = $2 OR g.ID_Gestore = $2)
        LIMIT 1`,
-      [idGarage, idUtente]
+      [idPrenotazione, idUtente]
     );
 
     if (accesso.length === 0) {
-      return res.status(403).json({ error: 'Accesso non autorizzato a questa conversazione.' });
+      return res.status(403).json({ error: 'Accesso negato.' });
     }
 
-    // <-- Query: restituisce solo i messaggi tra idUtente e idInterlocutore
+    // Estrazione di solo i messaggi di QUESTA precisa prenotazione
     const messaggi = await db.any(
       `SELECT m.*,
               u_mit.Nome     AS nomemittente,
-              u_mit.Cognome  AS cognomemittente,
-              u_des.Nome     AS nomedestinatario,
-              u_des.Cognome  AS cognomedestinatario
+              u_mit.Cognome  AS cognomemittente
        FROM Messaggio m
        JOIN Utente u_mit ON u_mit.ID_Utente = m.ID_Mittente
-       JOIN Utente u_des ON u_des.ID_Utente = m.ID_Destinatario
-       WHERE m.ID_Garage = $1
-         AND (
-           (m.ID_Mittente = $2 AND m.ID_Destinatario = $3) 
-           OR 
-           (m.ID_Mittente = $3 AND m.ID_Destinatario = $2)
-         )
+       WHERE m.ID_Prenotazione = $1
        ORDER BY m.DataInvio ASC`,
-      [idGarage, idUtente, idInterlocutore]
+      [idPrenotazione]
     );
 
-    // <-- Marca come letti solo i messaggi inviati da questo specifico interlocutore
+    // Marca come letti
     await db.none(
       `UPDATE Messaggio SET Letto = TRUE
-       WHERE ID_Garage = $1 AND ID_Destinatario = $2 AND ID_Mittente = $3 AND Letto = FALSE`,
-      [idGarage, idUtente, idInterlocutore]
+       WHERE ID_Prenotazione = $1 AND ID_Destinatario = $2 AND Letto = FALSE`,
+      [idPrenotazione, idUtente]
     );
 
     res.json(messaggi);
   } catch (err) {
     console.error('Errore caricamento messaggi:', err);
-    res.status(500).json({ error: 'Errore interno del server.' });
+    res.status(500).json({ error: 'Errore interno' });
   }
 });
 
@@ -80,7 +69,7 @@ router.get('/non-letti/count', requireAuth, async (req, res) => {
        WHERE ID_Destinatario = $1 AND Letto = FALSE`,
       [req.session.utente.id]
     );
-    res.json({ nonLetti: parseInt(result.totale) });
+    res.json({ nonletti: parseInt(result.totale) });
   } catch (err) {
     console.error('Errore conteggio non letti:', err);
     res.status(500).json({ error: 'Errore interno del server.' });

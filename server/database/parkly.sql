@@ -85,13 +85,15 @@ CREATE TABLE Messaggio (
     ID_Messaggio SERIAL PRIMARY KEY,
     ID_Mittente INT NOT NULL,
     ID_Destinatario INT NOT NULL,
-    ID_Garage INT NOT NULL,               -- Contesto: la conversazione è sempre legata a un garage
+    ID_Garage INT,               -- Contesto: la conversazione è sempre legata a un garage
+    ID_Prenotazione INT NOT NULL,
     Testo TEXT NOT NULL,
     Letto BOOLEAN DEFAULT FALSE,
     DataInvio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (ID_Mittente) REFERENCES Utente(ID_Utente) ON DELETE CASCADE,
     FOREIGN KEY (ID_Destinatario) REFERENCES Utente(ID_Utente) ON DELETE CASCADE,
     FOREIGN KEY (ID_Garage) REFERENCES Garage(ID_Garage) ON DELETE CASCADE,
+    FOREIGN KEY (ID_Prenotazione) REFERENCES Prenotazione(ID_Prenotazione) ON DELETE CASCADE;
     CONSTRAINT CHK_No_Self_Chat CHECK (ID_Mittente <> ID_Destinatario)
 );
  
