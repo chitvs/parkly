@@ -515,8 +515,6 @@ const aggiornaMappaOrari = async () => {
       console.error("Errore nell'aggiornamento mappa:", e);
     }
   }));
-
-  // QUESTO E' IL SEGRETO: Forza Vue a cancellare e ridisegnare la mappa
   reRenderKey.value++;
 }
 

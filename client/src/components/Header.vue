@@ -413,11 +413,11 @@ const handleLogout = async () => {
 
 .parkly-dropdown {
   border-radius: 16px;
-  overflow: hidden; /* Mantiene i bordi arrotondati anche all'hover degli item */
+  overflow: hidden; 
 
   border-top: 10px solid transparent; 
   background-clip: padding-box; 
-  margin-top: 0 !important; /* Assicuriamoci che non ci siano margini residui */
+  margin-top: 0 !important;
 }
 
 .parkly-dropdown .dropdown-item {
@@ -470,44 +470,42 @@ const handleLogout = async () => {
 /* --- REGOLE PER IL MOBILE (SMARTPHONE E TABLET) --- */
 @media (max-width: 768px) {
   .main-header {
-    flex-wrap: wrap; /* Permette agli elementi di andare a capo se non c'è spazio */
-    padding: 10px 15px; /* Riduciamo i margini per recuperare spazio prezioso */
+    flex-wrap: wrap; 
+    padding: 10px 15px; 
   }
 
   .logo-image {
-    height: 32px; /* Rimpiccioliamo un pelo il logo */
+    height: 32px; 
   }
 
-  /* Il trucco magico: spostiamo la navigazione nella seconda riga */
+
   .nav-links {
-    order: 3; /* Lo forziamo a essere il terzo blocco */
-    width: 100%; /* Gli diciamo di occupare tutta la riga sotto */
-    justify-content: center; /* Centriamo "Home" e "Garage" */
+    order: 3; 
+    width: 100%; 
+    justify-content: center; 
     margin-top: 12px;
     padding-top: 10px;
-    border-top: 1px solid #f0f0f0; /* Mettiamo una linetta divisoria elegante */
-    gap: 2rem; /* Spazio comodo per le dita (touch) */
+    border-top: 1px solid #f0f0f0; 
+    gap: 2rem; 
   }
 
   .user-actions {
-    order: 2; /* I bottoni restano su, di fianco al logo */
-    gap: 0.5rem; /* Avviciniamo un po' Accedi e Registrati */
+    order: 2; 
+    gap: 0.5rem; 
   }
 
-  /* Rimpiccioliamo leggermente i bottoni per farli stare comodi */
+  
   .login-btn,
   .register-btn {
     padding: 0.4rem 0.8rem;
     font-size: 0.8rem;
   }
-  
-  /* Evitiamo che il bottone dell'utente loggato sia troppo grassotto/largo */
+
   .user-name-btn {
     padding: 0.4rem 0.8rem;
     font-size: 0.85rem;
   }
 
-  /* Sistemiamo il menu a tendina per evitare che sbatta fuori dal telefono */
   .parkly-dropdown {
     right: -10px !important;
   }

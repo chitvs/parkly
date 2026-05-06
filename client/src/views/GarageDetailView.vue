@@ -9,7 +9,7 @@ import Footer from '../components/Footer.vue'
 import PlanimetriaGarage from '../components/PlanimetriaGarage.vue'
 
 const route = useRoute()
-const router = useRouter() // <-- AGGIUNTO: ci serve per forzare il cambio pagina
+const router = useRouter()
 const props = defineProps(['id'])
 const checkIn = ref(route.query.inizio || '')
 const checkOut = ref(route.query.fine || '')
@@ -513,7 +513,6 @@ const distribuzioneVoti = computed(() => {
                                     </div>
 
                                     <div class="comment-meta">
-                                        <!-- Stelline piccole per la singola recensione -->
                                         <div class="small-stars">
                                             <i v-for="star in 5" :key="'s' + star" class="bi"
                                                 :class="star <= Math.round(recensione.votogenerale) ? 'bi-star-fill star--on' : 'bi-star star--off'">
@@ -552,7 +551,6 @@ const distribuzioneVoti = computed(() => {
 </template>
 
 <style scoped>
-/* Ho lasciato invariato tutto il tuo CSS originale */
 .page-container {
     background: var(--bg-light);
     min-height: 100vh;

@@ -48,7 +48,6 @@ const getDisplayPrice = (garage) => {
     // altrimenti mostra la tariffa base generica
     return Number(garage.tariffabase).toFixed(2);
 }
-//
 
 const {
     showExtendedResults,
