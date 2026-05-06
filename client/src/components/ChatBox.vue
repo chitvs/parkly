@@ -86,9 +86,9 @@ import { ref, computed, watch, nextTick } from 'vue';
 import { authStore } from '@/store/auth';
 import { useChat } from '@/composables/useChat';
 
-// ─── Props ed Emits ───────────────────────────────────────────────────────────
 const emit = defineEmits(['chiudi']);
 
+// Props passate dal componente padre (Bookings o GestoreDashboard)
 const props = defineProps({
   idPrenotazione: { type: Number, required: true },
   idDestinatario: { type: Number, required: true },
@@ -96,34 +96,36 @@ const props = defineProps({
   ruoloDestinatario: { type: String, default: '' },
 });
 
-// ─── Stato e Autenticazione ───────────────────────────────────────────────────
+const aperta = ref(true); // Stato della "tendina" del popup
+const testo = ref(''); // Modello per l'input testuale
+const listaRef = ref(null); // Riferimento al div che contiene i messaggi nel DOM
 
-// Funzione sicura per verificare l'allineamento dei messaggi
+
+// Controlla se il messaggio stampato nel ciclo v-for è stato inviato da noi o dall'altro utente.
+// Usa l'AuthStore per fare il match con il nostro ID corrente.
 const isMioMessaggio = (idMittente) => {
   if (!idMittente || !authStore.utente?.id) return false;
   return Number(idMittente) === Number(authStore.utente?.id);
 };
 
-const aperta = ref(true);
-const testo = ref('');
-const listaRef = ref(null);
 
-
-// ─── Chat composable ─────────────────────────────────────────────────────────
+// Inizializza il composable delegandogli la logica Socket/API
 const {
   messaggi,
-  staCaricando, // Reinserito per gestire l'indicatore
+  staCaricando,
   errore,
   inviaMessaggio,
-  caricaStorico,
 } = useChat(props.idPrenotazione, props.idDestinatario);
 
+// Estrae la prima lettera del nome per usarla come avatar rotondo
 const inizialeDestinatario = computed(() =>
   props.nomeDestinatario?.charAt(0).toUpperCase() || '?'
 );
 
-// ─── Scroll automatico ───────────────────────────────────────────────────────
+// --- GESTIONE DELLO SCROLL ---
 function scrollInFondo() {
+  // nextTick attende che Vue abbia fisicamente aggiornato l'HTML
+  // prima di calcolare l'altezza della barra di scorrimento.
   nextTick(() => {
     if (listaRef.value) {
       listaRef.value.scrollTop = listaRef.value.scrollHeight;
@@ -131,23 +133,25 @@ function scrollInFondo() {
   });
 }
 
+// Ogni volta che l'array "messaggi" cambia (es. ne arriva uno nuovo), scrolla giù
 watch(messaggi, scrollInFondo, { deep: true });
+
+// Quando l'utente clicca l'icona "▾" per aprire la tendina, riportiamo lo scroll in fondo
 watch(aperta, (val) => {
   if (val) {
-    caricaStorico();
     scrollInFondo();
   }
 });
 
-// ─── Azioni ───────────────────────────────────────────────────────────────────
+// --- AZIONI ---
 function invia() {
   if (!testo.value.trim()) return;
   inviaMessaggio(testo.value);
-  testo.value = '';
+  testo.value = ''; // Pulisce l'input dopo l'invio
 }
 
 
-// ─── Date e Ora ───────────────────────────────────────────────────────────────
+  // ─── Date e Ora ───────────────────────────────────────────────────────────────
 function soloOra(ts) {
   if (!ts) return '';
   return new Date(ts).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });

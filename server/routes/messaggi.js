@@ -1,25 +1,30 @@
-// Usa pg-promise (db) e autenticazione via sessione, coerente con il resto del progetto
-
 const express = require('express');
 const router = express.Router();
 const db = require('../database/db');
 
-// ─── Middleware: verifica sessione attiva ─────────────────────────────────────
+/*
+MIDDLEWARE DI AUTENTICAZIONE
+Intercetta la richiesta prima che arrivi alla rotta.
+Se non c'è una sessione attiva (niente cookie valido), blocca tutto con un errore 401.
+ */
 function requireAuth(req, res, next) {
   if (!req.session?.utente) {
     return res.status(401).json({ error: 'Non autenticato.' });
   }
-  next();
+  next(); // Passa il controllo alla rotta successiva
 }
 
-// ─── GET /api/messaggi/:idPrenotazione ───────────────────────────
-// Carica lo storico della conversazione specifica per questa prenotazione
+/**
+ * GET /api/messaggi/:idPrenotazione
+ * Restituisce lo storico dei messaggi di una specifica prenotazione.
+ */
 router.get('/:idPrenotazione', requireAuth, async (req, res) => {
   const idPrenotazione = parseInt(req.params.idPrenotazione);
-  const idUtente = req.session.utente.id;
+  const idUtente = req.session.utente.id; // Chi sta facendo la richiesta?
 
   try {
-    // Verifica che l'utente sia o il cliente della prenotazione o il gestore
+    // Controlliamo se l'utente loggato è il Cliente che ha prenotato, 
+    // o è il Gestore proprietario del garage di quella prenotazione.
     const accesso = await db.any(
       `SELECT 1 FROM Prenotazione p
        JOIN PostoAuto pa ON pa.ID_Posto = p.ID_Posto
@@ -33,7 +38,7 @@ router.get('/:idPrenotazione', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'Accesso negato.' });
     }
 
-    // Estrazione di solo i messaggi di QUESTA precisa prenotazione
+    // Prendiamo tutti i messaggi ordinati dal più vecchio al più recente
     const messaggi = await db.any(
       `SELECT m.*,
               u_mit.Nome     AS nomemittente,
@@ -45,34 +50,18 @@ router.get('/:idPrenotazione', requireAuth, async (req, res) => {
       [idPrenotazione]
     );
 
-    // Marca come letti
+    // Segniamo come letti tutti i messaggi in cui l'utente loggato era il "Destinatario"
     await db.none(
       `UPDATE Messaggio SET Letto = TRUE
        WHERE ID_Prenotazione = $1 AND ID_Destinatario = $2 AND Letto = FALSE`,
       [idPrenotazione, idUtente]
     );
 
+    // Invia la risposta al frontend
     res.json(messaggi);
   } catch (err) {
     console.error('Errore caricamento messaggi:', err);
     res.status(500).json({ error: 'Errore interno' });
-  }
-});
-
-// ─── GET /api/messaggi/non-letti/count ───────────────────────────────────────
-// Conta i messaggi non letti dell'utente (usato per il badge nell'header)
-router.get('/non-letti/count', requireAuth, async (req, res) => {
-  try {
-    const result = await db.one(
-      `SELECT COUNT(*) AS totale
-       FROM Messaggio
-       WHERE ID_Destinatario = $1 AND Letto = FALSE`,
-      [req.session.utente.id]
-    );
-    res.json({ nonletti: parseInt(result.totale) });
-  } catch (err) {
-    console.error('Errore conteggio non letti:', err);
-    res.status(500).json({ error: 'Errore interno del server.' });
   }
 });
 

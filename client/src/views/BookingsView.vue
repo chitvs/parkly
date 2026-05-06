@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { prenotazioniStore } from '../store/prenotazioni.js'
 import { useRecensione } from '../composables/useRecensione.js'
 import { getSocket } from '../composables/useChat.js' 
@@ -9,9 +9,11 @@ import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 import ChatBox from '../components/ChatBox.vue'
 
-const bookings = ref([])
-const isLoading = ref(true)
+// Stati reattivi per i dati del componente
+const bookings = ref([]) // Conterrà l'array delle prenotazioni dell'utente
+const isLoading = ref(true) // Gestisce l'UI di caricamento
 
+// Import delle funzioni e stati esportati dal composable delle recensioni
 const {
   showReviewModal,
   currentStep,
@@ -23,41 +25,45 @@ const {
   inviaRecensione
 } = useRecensione()
 
-// Stato per gestire la chat aperta
+// Stato per gestire la chat aperta 
 const chatSelezionata = ref(null)
 
 // Variabile per tenere traccia del socket in questa pagina
 let socket = null;
 
 // --- GESTIONE NOTIFICHE IN TEMPO REALE ---
+// Funzione chiamata ogni volta che il server emette un evento 'nuovo_messaggio'
 const handleNuovoMessaggio = (msg) => {
-  // Cerchiamo la prenotazione a cui appartiene questo messaggio
+  // Cerca la prenotazione di riferimento nell'elenco
   const bookingToUpdate = bookings.value.find(b => Number(b.id_prenotazione) === Number(msg.id_prenotazione));
   
   if (bookingToUpdate) {
-    // Se la chat di questa prenotazione NON è attualmente aperta, incrementiamo il pallino
+    // Controlla se l'utente ha già la chat aperta per quella specifica prenotazione
     const chatAperta = chatSelezionata.value && chatSelezionata.value.idPrenotazione === Number(msg.id_prenotazione);
+    // Se la chat non è aperta, incrementa il counter dei messaggi non letti per far apparire il pallino rosso
     if (!chatAperta) {
       bookingToUpdate.nonletti = (bookingToUpdate.nonletti || 0) + 1;
     }
   }
 }
 
-
 onMounted(async () => {
+  // Carica i dati appena il componente viene montato
   await caricaPrenotazioni()
-  // INIZIALIZZA IL SOCKET E ASCOLTA IN BACKGROUND
+  
+  // Inizializza il WebSocket e metti in ascolto gli eventi globali di notifica
   socket = getSocket();
   socket.on('nuovo_messaggio', handleNuovoMessaggio);
 })
 
-// Quando l'utente cambia pagina, smettiamo di ascoltare per non creare cloni dell'evento
+// Pulizia fondamentale per evitare memory leak e doppi listener se l'utente naviga tra le pagine
 onUnmounted(() => {
   if (socket) {
     socket.off('nuovo_messaggio', handleNuovoMessaggio);
   }
 })
 
+// Chiamata all'API per prendere le prenotazioni
 const caricaPrenotazioni = async () => {
   isLoading.value = true
   const response = await prenotazioniStore.getBookings()
@@ -69,6 +75,7 @@ const caricaPrenotazioni = async () => {
   isLoading.value = false
 }
 
+// Helper per formattare le date in formato locale italiano
 const formatDate = (dateString) => {
   if (!dateString) return ''
   const date = new Date(dateString)
@@ -81,17 +88,15 @@ const formatDate = (dateString) => {
   }).format(date)
 }
 
-
-// funzione per cancellare le prenotazioni
+// Gestione della cancellazione di una prenotazione
 const handleCancelBooking = async (codice) => {
-  // Chiedo conferma all'utente
   const confermato = confirm("Sei sicuro di voler annullare questa prenotazione? L'operazione non può essere annullata.");
   
   if (!confermato) return; // Se clicca "Annulla" nel popup, fermiamo tutto
 
-  // Chiamiamo lo store
   const response = await prenotazioniStore.cancelBooking(codice);
 
+  // Aggiornamento dell'interfaccia utente (UI) senza ricaricare tutto
   if (response.success) {
     const bookingToUpdate = bookings.value.find(b => b.codiceprenotazione === codice)
     if (bookingToUpdate) bookingToUpdate.stato = 'ANNULLATA'
@@ -101,11 +106,13 @@ const handleCancelBooking = async (codice) => {
   }
 }
 
+// Funzione chiamata dopo il completamento di una recensione
 const chiudiEAggiorna = async () => {
   chiudiModale()
-  await caricaPrenotazioni()
+  await caricaPrenotazioni() // Ricarica per rimuovere l'opzione "scrivi recensione"
 }
 
+// Blocca lo scroll del body quando si apre la modale delle recensioni
 watch(showReviewModal, (val) => {
   document.body.style.overflow = val ? 'hidden' : ''
 })
@@ -118,10 +125,19 @@ const categories = [
   { id: 'sicurezza', label: 'Sicurezza', icon: 'bi bi-shield-check' },
 ]
 
-// Funzioni per aprire e chiudere la chat
-const apriChat = (booking) => {
-  //levo il pallino rosso
+// Gestione dell'apertura del componente ChatBox
+const apriChat = async (booking) => {
+  // Rimuove il pallino rosso (notifica letta)
   booking.nonletti = 0;
+  
+  // Tecnica per forzare il re-mount del componente figlio (ChatBox):
+  // Impostandolo a null lo rimuoviamo dal DOM
+  chatSelezionata.value = null; 
+  
+  // Aspetta un "tick" del ciclo di rendering di Vue per assicurarsi che il DOM sia aggiornato
+  await nextTick();
+  
+  // Reimposta l'oggetto ricreando il componente ChatBox fresco
   chatSelezionata.value = {
     idPrenotazione: Number(booking.id_prenotazione), 
     idDestinatario: Number(booking.id_gestore),

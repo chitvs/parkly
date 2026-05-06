@@ -402,7 +402,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { authStore } from '../store/auth.js'
 import { getSocket } from '../composables/useChat.js'
 import Header from '../components/Header.vue'
@@ -410,13 +410,16 @@ import Footer from '../components/Footer.vue'
 import PlanimetriaGarage from '../components/PlanimetriaGarage.vue'
 import ChatBox from '../components/ChatBox.vue'
 
+// Verifica i permessi di visualizzazione 
 const isGestore = computed(() => authStore.utente?.ruolo === 'GESTORE')
 
+// Gestione delle Tab di navigazione 
 const vistaAttiva = ref('statistiche')
 const isLoading   = ref(false)
 const staSalvando = ref(false)
 const erroreForm  = ref('')
 
+// Liste di dati
 const mieiGarage           = ref([])
 const storicoPrenotazioni   = ref([])
 const allerteStato          = ref([])
@@ -427,7 +430,7 @@ let socket = null
 
 // --- GESTIONE NOTIFICHE IN TEMPO REALE ---
 const handleNuovoMessaggio = (msg) => {
-  // Cerchiamo la prenotazione a cui appartiene questo messaggio
+  // Individua la prenotazione a cui appartiene questo messaggio
   const prenotazioneDaAggiornare = storicoPrenotazioni.value.find(
     p => Number(p.id_prenotazione) === Number(msg.id_prenotazione)
   )
@@ -442,15 +445,18 @@ const handleNuovoMessaggio = (msg) => {
   }
 }
 
+// Mappe oggetto (dizionari) per gestire i dati specifici per ID del Garage
 const occupazioneGarage     = ref({})
 const postiPerGarage        = ref({})
 
-// CHIAVE PER FORZARE L'AGGIORNAMENTO DELLA MAPPA
+// CHIAVE PER FORZARE L'AGGIORNAMENTO DELLA MAPPA 
+// Quando il suo valore cambia, Vue distrugge e ricrea il componente collegato 
 const reRenderKey = ref(0)
 
 const filtroInizio = ref('')
 const filtroFine = ref('')
 
+// Modello per il form del nuovo garage
 const nuovoGarage = ref({
   nome: '', indirizzo: '', descrizione: '',
   tariffabase: null, altezzamassima: null,
@@ -458,6 +464,7 @@ const nuovoGarage = ref({
   is24h: false, mappatestuale: ''
 })
 
+// Calcolo dinamico dei guadagni basato solo sul mese corrente e sulle prenotazioni NON annullate
 const guadagnoMese = computed(() => {
   const ora = new Date()
   return storicoPrenotazioni.value
@@ -470,12 +477,15 @@ const guadagnoMese = computed(() => {
     .toFixed(2)
 })
 
+// Contatore calcolato automaticamente delle prenotazioni attualmente valide
 const prenotazioniAttive = computed(() =>
   storicoPrenotazioni.value.filter(p => p.stato === 'ATTIVA').length
 )
 
+// Helper per accesso sicuro alle percentuali di occupazione (fallback a 0)
 const getOccupancy = (idGarage) => occupazioneGarage.value[idGarage] ?? 0
 
+// Formattazione data italiana
 const formatData = (iso) => {
   if (!iso) return '-'
   const d = new Date(iso)
@@ -483,12 +493,14 @@ const formatData = (iso) => {
        + ' ' + d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
 }
 
+// Utility per mappare lo stato a una classe CSS
 const statoBadge = (stato) => {
   if (stato === 'ATTIVA')    return 'badge--green'
   if (stato === 'ANNULLATA') return 'badge--red'
   return 'badge--gray'
 }
 
+// Promise.all velocizza la dashboard eseguendo le 3 richieste API principali in parallelo
 const caricaDati = async () => {
   if (!isGestore.value) return
   isLoading.value = true
@@ -499,12 +511,14 @@ const caricaDati = async () => {
   }
 }
 
+// Caricamento dei garage del gestore e dei loro dettagli (posti + occupazione)
 const caricaGarage = async () => {
   const res = await fetch('/api/garage/garages-gestore', { credentials: 'include' })
   if (!res.ok) return
   const data = await res.json()
   mieiGarage.value = data
 
+  // Elaborazione parallela per scaricare la pianta e il tasso di occupazione di ogni singolo garage
   await Promise.all(data.map(async (g) => {
     try {
       const r = await fetch(`/api/garage/${g.id_garage}/posti`, { credentials: 'include' })
@@ -512,7 +526,7 @@ const caricaGarage = async () => {
         const resPosti = await r.json()
         postiPerGarage.value[g.id_garage] = resPosti.posti 
       }
-    } catch { /* ignora */ }
+    } catch { /* Ignora l'errore per non bloccare il caricamento del resto della dashboard */ }
 
     try {
       const r = await fetch(`/api/garage/${g.id_garage}/occupazione`, { credentials: 'include' })
@@ -520,13 +534,14 @@ const caricaGarage = async () => {
         const { percentuale } = await r.json()
         occupazioneGarage.value[g.id_garage] = Math.round(percentuale)
       }
-    } catch { /* ignora */ }
+    } catch {/*IGNORA*/ }
   }))
   
-  // Aggiorna la mappa appena caricata
+  // Forza il re-render del componente Planimetria che ora ha i dati aggiornati
   reRenderKey.value++
 }
 
+// Endpoint per calcolare la disponibilità dei posti in un intervallo di tempo
 const aggiornaMappaOrari = async () => {
   if (!filtroInizio.value || !filtroFine.value) {
     alert("Inserisci sia l'orario di inizio che di fine!");
@@ -548,7 +563,7 @@ const aggiornaMappaOrari = async () => {
     }
   }));
 
-  // QUESTO E' IL SEGRETO: Forza Vue a cancellare e ridisegnare la mappa
+  // Forza Vue a cancellare e ridisegnare la mappa
   reRenderKey.value++;
 }
 
@@ -562,6 +577,7 @@ const caricaStato = async () => {
   if (res.ok) allerteStato.value = await res.json()
 }
 
+// Lettore file locale per estrarre la mappa txt prima dell'upload (FileReader API)
 const caricaPlanimetria = (event) => {
   const file = event.target.files[0]
   if (!file) return
@@ -570,17 +586,19 @@ const caricaPlanimetria = (event) => {
   reader.readAsText(file)
 }
 
+// Creazione della risorsa sul server (Garage)
 const salvaNuovoGarage = async () => {
   erroreForm.value = ''
   staSalvando.value = true
   try {
     const res = await fetch('/api/garage/garages-gestore', {
       method: 'POST',
-      credentials: 'include',
+      credentials: 'include', // Necessario per usare la sessione auth
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(nuovoGarage.value)
     })
     if (res.ok) {
+      // Reset dei dati del form dopo successo
       nuovoGarage.value = {
         nome: '', indirizzo: '', descrizione: '',
         tariffabase: null, altezzamassima: null,
@@ -588,7 +606,7 @@ const salvaNuovoGarage = async () => {
         is24h: false, mappatestuale: ''
       }
       await caricaGarage()
-      vistaAttiva.value = 'statistiche'
+      vistaAttiva.value = 'statistiche' // Ritorna alla tab principale
     } else {
       const err = await res.json().catch(() => ({}))
       erroreForm.value = err.error || 'Errore durante il salvataggio.'
@@ -600,15 +618,25 @@ const salvaNuovoGarage = async () => {
   }
 }
 
-const apriChat = (prenotazione) => {
+// Logica per avviare la chat in veste di Gestore 
+const apriChat = async (prenotazione) => {
   const idGarage  = Number(prenotazione.id_garage)
   const idCliente = Number(prenotazione.id_utente)
   if (!idGarage || !idCliente || isNaN(idGarage) || isNaN(idCliente)) {
     console.error('[Chat] Dati mancanti sulla prenotazione:', prenotazione)
     return
   }
-  // Azzera il pallino notifica
+  
+  // Azzera il pallino notifica all'apertura
   prenotazione.nonletti = 0
+
+  // Smonta il componente
+  chatSelezionata.value = null
+
+  // Attendi che Vue registri la chiusura nel DOM
+  await nextTick()
+
+  // Rimonta il componente con i nuovi dati per innescare correttamente useChat
   chatSelezionata.value = {
     idPrenotazione: Number(prenotazione.id_prenotazione),
     idGarage,
@@ -624,7 +652,7 @@ const chiudiChat = () => { chatSelezionata.value = null }
 onMounted(async () => {
   await caricaDati()
 
-  // INIZIALIZZA IL SOCKET E ASCOLTA IN BACKGROUND
+  // Aggancio al socket globale e ascolto in background
   socket = getSocket()
   socket.on('nuovo_messaggio', handleNuovoMessaggio)
 })
@@ -646,6 +674,7 @@ const navItems = [
 </script>
 
 <style scoped>
+
 .garage-link {
   color: #0066CC;
   text-decoration: none;

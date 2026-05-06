@@ -1,15 +1,17 @@
 import { ref, onUnmounted } from 'vue';
 import { io } from 'socket.io-client';
 
-
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
 
-let socketInstance = null; // Singleton: una connessione sola per tutta l'app
+/*SINGLETON SOCKET: Indipendentemente da quante volte chiamiamo getSocket()
+  nei vari componenti, useremo sempre la stessa identica connessione */
+let socketInstance = null; 
 
 export function getSocket() {
   if (!socketInstance) {
+    // Inizializza la connessione solo se non esiste ancora
     socketInstance = io(SERVER_URL, {
-      withCredentials: true, // invia il cookie di sessione automaticamente
+      withCredentials: true, // Invia il cookie di sessione per l'autenticazione
       autoConnect: true,
     });
 
@@ -20,7 +22,7 @@ export function getSocket() {
   return socketInstance;
 }
 
-// Chiamato al logout per pulire la connessione
+// Da chiamare al momento del logout per pulire la connessione
 export function disconnectSocket() {
   if (socketInstance) {
     socketInstance.disconnect();
@@ -28,21 +30,23 @@ export function disconnectSocket() {
   }
 }
 
-// Composable principale 
+ // Gestisce lo stato e la logica di una singola conversazione.
 export function useChat(idPrenotazione, idDestinatario) {
+  // Stati reattivi per l'interfaccia
   const messaggi = ref([]);
   const staCaricando = ref(false);
   const errore = ref(null);
+  // Recuperiamo l'unica istanza del socket disponibile
   const socket = getSocket();
 
   async function caricaStorico() {
     staCaricando.value = true;
     try {
-      // L'URL richiede solo idPrenotazione
+      // Chiamata REST API per recuperare i vecchi messaggi dal database
       const res = await fetch(`${SERVER_URL}/api/messaggi/${idPrenotazione}`, {
-        credentials: 'include', //invia cookie sessione
+        credentials: 'include', //invia cookie sessione 
       });
-      if (!res.ok) throw new Error('Errore nel caricamento');
+      if (!res.ok) throw new Error('Errore nel caricamento dello storico');
       messaggi.value = await res.json();
     } catch (err) {
       errore.value = err.message;
@@ -51,8 +55,11 @@ export function useChat(idPrenotazione, idDestinatario) {
     }
   }
 
+
   function inviaMessaggio(testo) {
-    if (!testo?.trim()) return;
+    if (!testo?.trim()) return; // Evita l'invio di messaggi vuoti
+    
+    // Emette l'evento al backend Node.js
     socket.emit('invia_messaggio', {
       idDestinatario,
       idPrenotazione, 
@@ -61,28 +68,35 @@ export function useChat(idPrenotazione, idDestinatario) {
   }
 
   //Filtri socket
-  // ── Listener: messaggio in arrivo dal destinatario ────────────────────────
+  
+  // Quando l'altro utente ci scrive
   function onNuovoMessaggio(msg) {
+    // Controllo di sicurezza: aggiungiamo il messaggio solo se appartiene alla chat che stiamo visualizzando
     if (Number(msg.id_prenotazione) === Number(idPrenotazione)) {
       messaggi.value.push(msg);
     }
   }
-  // ── Listener: conferma messaggio inviato da noi ───────────────────────────
+  
+  // Quando il nostro messaggio viene salvato con successo dal server
   function onMessaggioInviato(msg) {
     if (Number(msg.id_prenotazione) === Number(idPrenotazione)) {
       messaggi.value.push(msg);
     }
   }
 
+  // Iscrizione agli eventi Socket
   socket.on('nuovo_messaggio', onNuovoMessaggio);
   socket.on('messaggio_inviato', onMessaggioInviato);
 
+  /*Quando il componente che usa questo composable viene distrutto (es. chiudo il popup),
+  dobbiamo rimuovere i listener per evitare memory leaks.*/
   onUnmounted(() => {
     socket.off('nuovo_messaggio', onNuovoMessaggio);
     socket.off('messaggio_inviato', onMessaggioInviato);
   });
 
+  // Appena il composable viene invocato, carica automaticamente la cronologia
   caricaStorico();
 
   return { messaggi, staCaricando, errore, inviaMessaggio };
-} 
+}
