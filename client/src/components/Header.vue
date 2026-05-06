@@ -27,16 +27,15 @@ onUnmounted(() => {
   }
 })
 
-const forceCleanupModal = () => {
-  document.body.classList.remove('modal-open')
-  document.body.style = ''
-  const backdrop = document.querySelector('.modal-backdrop')
-  if (backdrop) backdrop.remove()
+const openLoginModal = () => {
+  if (modalInstance) {
+    modalInstance.show()
+  }
 }
 
 const closeLoginModal = () => {
   return new Promise((resolve) => {
-    if (!modalElement.value.classList.contains('show')) {
+    if (!modalInstance || !modalElement.value.classList.contains('show')) {
       resolve()
       return
     }
@@ -44,10 +43,13 @@ const closeLoginModal = () => {
     modalElement.value.addEventListener(
       'hidden.bs.modal',
       () => {
-        forceCleanupModal()
+        loginIdentificatore.value = ''
+        loginPassword.value = ''
+        isPasswordVisible.value = false
+        
         resolve()
       },
-      { once: true },
+      { once: true } 
     )
 
     modalInstance.hide()
@@ -91,7 +93,7 @@ const handleLogout = async () => {
     <div class="user-actions">
       <template v-if="!authStore.utente">
         <RouterLink to="/register" class="register-btn">Registrati</RouterLink>
-        <button type="button" class="login-btn" data-bs-toggle="modal" data-bs-target="#modalLogin">
+        <button type="button" class="login-btn" @click="openLoginModal">
           Accedi
         </button>
       </template>
