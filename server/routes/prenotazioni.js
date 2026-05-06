@@ -120,7 +120,7 @@ router.post('/', isLoggato, async (req, res) => {
             `, [
                 id_utente, 
                 -costoSosta, 
-                `Prenotazione ${checkOrari.nome_garage} - Posto ${checkOrari.codiceposto}`
+                `Pagamento prenotazione ${checkOrari.codicePrenotazione}`
             ]);
 
             // inserisco nel db la prenotazione
@@ -274,7 +274,7 @@ router.put('/:codice/annulla', async (req, res) => {
             `, [
                 utenteId, 
                 prenotazione.prezzototale, 
-                `Rimborso prenotazione annullata (${codicePrenotazione})`
+                `Rimborso prenotazione ${codicePrenotazione}`
             ]);
 
             return utente.saldo;

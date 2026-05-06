@@ -85,7 +85,7 @@ CREATE TABLE Messaggio (
     ID_Messaggio SERIAL PRIMARY KEY,
     ID_Mittente INT NOT NULL,
     ID_Destinatario INT NOT NULL,
-    ID_Garage INT,               -- Contesto: la conversazione è sempre legata a un garage
+    ID_Garage INT,               
     ID_Prenotazione INT NOT NULL,
     Testo TEXT NOT NULL,
     Letto BOOLEAN DEFAULT FALSE,
@@ -153,4 +153,3 @@ Alcuni significati delle parole chiave sql:
 -- ON DELETE CASCADE: se il record padre viene eliminato, elimina a cascata i record figli collegati.
 
 */
-

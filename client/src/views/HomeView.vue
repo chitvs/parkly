@@ -65,7 +65,7 @@ const handleSearch = () => {
 
     </main>
 
-    <Footer />
+    <Footer/>
   </div>
 </template>
 
@@ -101,11 +101,6 @@ const handleSearch = () => {
   color: var(--accent-blue);
   /* Un azzurro più chiaro per l'enfasi sul testo blu scuro */
 }
-
-/* Stile Sottotitolo Hero:
-  - Opacità 80%: dà priorità visiva al titolo principale
-  - Max 700px + margin auto: centra il testo e previene righe troppo lunghe
-*/
 .hero-text p {
   font-size: 1.3rem;
   color: rgba(255, 255, 255, 0.8);
