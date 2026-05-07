@@ -120,7 +120,7 @@ router.post('/', isLoggato, async (req, res) => {
             `, [
                 id_utente, 
                 -costoSosta, 
-                `Pagamento prenotazione ${checkOrari.codicePrenotazione}`
+                `Pagamento prenotazione ${codice}`
             ]);
 
             // inserisco nel db la prenotazione
