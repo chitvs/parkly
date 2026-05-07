@@ -45,15 +45,16 @@ router.post('/register', async (req, res) => {
 
         // salvataggio nel db
         const nuovoUtente = await db.one(
-            'INSERT INTO Utente (Nome, Cognome, NomeUtente, Email, PasswordHash, Ruolo, Telefono, codiceFiscale) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id_utente, nome, nomeutente, email, ruolo',
+            'INSERT INTO Utente (Nome, Cognome, NomeUtente, Email, PasswordHash, Ruolo, Telefono, codiceFiscale) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id_utente, nome, cognome, nomeutente, email, ruolo',
             [nome, cognome, nomeUtente, email, passwordHash, ruolo || 'CLIENTE', telefono || null, codiceFiscale || null] // default CLIENTE se ruolo non specificato
         );
 
         req.session.utente = {
             id: nuovoUtente.id_utente,
             nome: nuovoUtente.nome,
+            cognome: nuovoUtente.cognome,
             nomeUtente: nuovoUtente.nomeUtente,
-            saldo: utente.saldo,
+            saldo: 0.00,
             email: nuovoUtente.email,
             ruolo: nuovoUtente.ruolo
         };
@@ -107,6 +108,7 @@ router.post('/login', async (req, res) => {
         req.session.utente = {
             id: utente.id_utente,
             nome: utente.nome,
+            cognome: utente.cognome,
             nomeUtente: utente.nomeutente,
             saldo: utente.saldo,
             email: utente.email,
