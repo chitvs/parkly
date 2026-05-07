@@ -111,6 +111,7 @@
                     <th>Indirizzo</th>
                     <th>Tariffa Base</th>
                     <th>Stato</th>
+                    <th>Chat</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -260,6 +261,23 @@
                     <td>
                       <span :class="['badge', statoBadge(p.stato)]">{{ p.stato }}</span>
                     </td>
+                    <td>
+                      <!-- Pulsante Chat -->
+                  <button 
+                    v-if="p.stato === 'ATTIVA'" 
+                    @click="apriChat(p)" 
+                    class="custom-btn btn-chat"
+                    title="Scrivi al cliente"
+                  >
+                    <!--pallino notifica-->
+                    <span v-if="p.nonletti > 0" class="chat-notification-dot"></span>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                      </svg>
+                        Scrivi
+                  </button>
+                    </td>
                   </tr>
                   <tr v-if="storicoPrenotazioni.length === 0">
                     <td colspan="7" class="td-empty">Nessuna prenotazione trovata.</td>
@@ -362,36 +380,79 @@
     </div>
 
     <Footer />
+
+    <!-- Popup Chat fisso in basso a destra — identico a BookingsView -->
+    <div v-if="chatSelezionata" class="chat-popup-container">
+      <ChatBox
+        @chiudi="chiudiChat"
+        :idPrenotazione="chatSelezionata.idPrenotazione"
+        :idGarage="chatSelezionata.idGarage"
+        :idDestinatario="chatSelezionata.idDestinatario"
+        :nomeDestinatario="chatSelezionata.nomeDestinatario"
+        ruoloDestinatario="Cliente"
+      />
+    </div>
+
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { authStore } from '../store/auth.js'
+import { getSocket } from '../composables/useChat.js'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 import PlanimetriaGarage from '../components/PlanimetriaGarage.vue'
+import ChatBox from '../components/ChatBox.vue'
 
+// Verifica i permessi di visualizzazione 
 const isGestore = computed(() => authStore.utente?.ruolo === 'GESTORE')
 
+// Gestione delle Tab di navigazione 
 const vistaAttiva = ref('statistiche')
 const isLoading   = ref(false)
 const staSalvando = ref(false)
 const erroreForm  = ref('')
 const erroriValidazione = ref({})
 
+// Liste di dati
 const mieiGarage           = ref([])
 const storicoPrenotazioni   = ref([])
 const allerteStato          = ref([])
+const chatSelezionata       = ref(null)  // stato per gestire la chat aperta
+
+// Variabile per tenere traccia del socket in questa pagina
+let socket = null
+
+// --- GESTIONE NOTIFICHE IN TEMPO REALE ---
+const handleNuovoMessaggio = (msg) => {
+  // Individua la prenotazione a cui appartiene questo messaggio
+  const prenotazioneDaAggiornare = storicoPrenotazioni.value.find(
+    p => Number(p.id_prenotazione) === Number(msg.id_prenotazione)
+  )
+
+  if (prenotazioneDaAggiornare) {
+    // Se la chat di questa prenotazione NON è attualmente aperta, incrementiamo il pallino
+    const chatAperta = chatSelezionata.value &&
+      chatSelezionata.value.idPrenotazione === Number(msg.id_prenotazione)
+    if (!chatAperta) {
+      prenotazioneDaAggiornare.nonletti = (prenotazioneDaAggiornare.nonletti || 0) + 1
+    }
+  }
+}
+
+// Mappe oggetto (dizionari) per gestire i dati specifici per ID del Garage
 const occupazioneGarage     = ref({})
 const postiPerGarage        = ref({})
 
-// CHIAVE PER FORZARE L'AGGIORNAMENTO DELLA MAPPA
+// CHIAVE PER FORZARE L'AGGIORNAMENTO DELLA MAPPA 
+// Quando il suo valore cambia, Vue distrugge e ricrea il componente collegato 
 const reRenderKey = ref(0)
 
 const filtroInizio = ref('')
 const filtroFine = ref('')
 
+// Modello per il form del nuovo garage
 const nuovoGarage = ref({
   nome: '', indirizzo: '', descrizione: '',
   tariffabase: null, altezzamassima: null,
@@ -399,6 +460,7 @@ const nuovoGarage = ref({
   is24h: false, mappatestuale: ''
 })
 
+// Calcolo dinamico dei guadagni basato solo sul mese corrente e sulle prenotazioni NON annullate
 const guadagnoMese = computed(() => {
   const ora = new Date()
   return storicoPrenotazioni.value
@@ -411,12 +473,15 @@ const guadagnoMese = computed(() => {
     .toFixed(2)
 })
 
+// Contatore calcolato automaticamente delle prenotazioni attualmente valide
 const prenotazioniAttive = computed(() =>
   storicoPrenotazioni.value.filter(p => p.stato === 'ATTIVA').length
 )
 
+// Helper per accesso sicuro alle percentuali di occupazione (fallback a 0)
 const getOccupancy = (idGarage) => occupazioneGarage.value[idGarage] ?? 0
 
+// Formattazione data italiana
 const formatData = (iso) => {
   if (!iso) return '-'
   const d = new Date(iso)
@@ -424,12 +489,14 @@ const formatData = (iso) => {
        + ' ' + d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
 }
 
+// Utility per mappare lo stato a una classe CSS
 const statoBadge = (stato) => {
   if (stato === 'ATTIVA')    return 'badge--green'
   if (stato === 'ANNULLATA') return 'badge--red'
   return 'badge--gray'
 }
 
+// Promise.all velocizza la dashboard eseguendo le 3 richieste API principali in parallelo
 const caricaDati = async () => {
   if (!isGestore.value) return
   isLoading.value = true
@@ -440,12 +507,14 @@ const caricaDati = async () => {
   }
 }
 
+// Caricamento dei garage del gestore e dei loro dettagli (posti + occupazione)
 const caricaGarage = async () => {
   const res = await fetch('/api/garage/garages-gestore', { credentials: 'include' })
   if (!res.ok) return
   const data = await res.json()
   mieiGarage.value = data
 
+  // Elaborazione parallela per scaricare la pianta e il tasso di occupazione di ogni singolo garage
   await Promise.all(data.map(async (g) => {
     try {
       const r = await fetch(`/api/garage/${g.id_garage}/posti`, { credentials: 'include' })
@@ -453,7 +522,7 @@ const caricaGarage = async () => {
         const resPosti = await r.json()
         postiPerGarage.value[g.id_garage] = resPosti.posti 
       }
-    } catch { /* ignora */ }
+    } catch { /* Ignora l'errore per non bloccare il caricamento del resto della dashboard */ }
 
     try {
       const r = await fetch(`/api/garage/${g.id_garage}/occupazione`, { credentials: 'include' })
@@ -461,13 +530,14 @@ const caricaGarage = async () => {
         const { percentuale } = await r.json()
         occupazioneGarage.value[g.id_garage] = Math.round(percentuale)
       }
-    } catch { /* ignora */ }
+    } catch {/*IGNORA*/ }
   }))
   
-  // Aggiorna la mappa appena caricata
+  // Forza il re-render del componente Planimetria che ora ha i dati aggiornati
   reRenderKey.value++
 }
 
+// Endpoint per calcolare la disponibilità dei posti in un intervallo di tempo
 const aggiornaMappaOrari = async () => {
   if (!filtroInizio.value || !filtroFine.value) {
     alert("Inserisci sia l'orario di inizio che di fine!");
@@ -489,7 +559,7 @@ const aggiornaMappaOrari = async () => {
     }
   }));
 
-  // QUESTO E' IL SEGRETO: Forza Vue a cancellare e ridisegnare la mappa
+  // Forza Vue a cancellare e ridisegnare la mappa
   reRenderKey.value++;
 }
 
@@ -526,6 +596,7 @@ const validaForm = () => {
   return Object.keys(errori).length === 0
 }
 
+// Creazione della risorsa sul server (Garage)
 const salvaNuovoGarage = async () => {
   erroreForm.value = ''
 
@@ -538,11 +609,12 @@ const salvaNuovoGarage = async () => {
   try {
     const res = await fetch('/api/garage/garages-gestore', {
       method: 'POST',
-      credentials: 'include',
+      credentials: 'include', // Necessario per usare la sessione auth
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(nuovoGarage.value)
     })
     if (res.ok) {
+      // Reset dei dati del form dopo successo
       nuovoGarage.value = {
         nome: '', indirizzo: '', descrizione: '',
         tariffabase: null, altezzamassima: null,
@@ -551,7 +623,7 @@ const salvaNuovoGarage = async () => {
       }
       erroriValidazione.value = {}
       await caricaGarage()
-      vistaAttiva.value = 'statistiche'
+      vistaAttiva.value = 'statistiche' // Ritorna alla tab principale
     } else {
       const err = await res.json().catch(() => ({}))
       erroreForm.value = err.error || 'Errore durante il salvataggio.'
@@ -563,7 +635,51 @@ const salvaNuovoGarage = async () => {
   }
 }
 
-onMounted(caricaDati)
+// Logica per avviare la chat in veste di Gestore 
+const apriChat = async (prenotazione) => {
+  const idGarage  = Number(prenotazione.id_garage)
+  const idCliente = Number(prenotazione.id_utente)
+  if (!idGarage || !idCliente || isNaN(idGarage) || isNaN(idCliente)) {
+    console.error('[Chat] Dati mancanti sulla prenotazione:', prenotazione)
+    return
+  }
+  
+  // Azzera il pallino notifica all'apertura
+  prenotazione.nonletti = 0
+
+  // Smonta il componente
+  chatSelezionata.value = null
+
+  // Attendi che Vue registri la chiusura nel DOM
+  await nextTick()
+
+  // Rimonta il componente con i nuovi dati per innescare correttamente useChat
+  chatSelezionata.value = {
+    idPrenotazione: Number(prenotazione.id_prenotazione),
+    idGarage,
+    idDestinatario: idCliente,
+    nomeDestinatario: prenotazione.nomecliente
+      ? prenotazione.nomecliente + ' ' + (prenotazione.cognomecliente || '')
+      : 'Cliente'
+  }
+}
+
+const chiudiChat = () => { chatSelezionata.value = null }
+
+onMounted(async () => {
+  await caricaDati()
+
+  // Aggancio al socket globale e ascolto in background
+  socket = getSocket()
+  socket.on('nuovo_messaggio', handleNuovoMessaggio)
+})
+
+// Quando l'utente cambia pagina, smettiamo di ascoltare per non creare cloni dell'evento
+onUnmounted(() => {
+  if (socket) {
+    socket.off('nuovo_messaggio', handleNuovoMessaggio)
+  }
+})
 
 const navItems = [
   { id: 'statistiche', label: 'Statistiche',    icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>' },
@@ -812,6 +928,92 @@ const navItems = [
 .btn-primary:hover:not(:disabled) { background: #00204A; transform: translateY(-1px); }
 .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
 
+.anteprima-planimetria {
+  margin-top: 16px;
+  border: 0.5px solid #E0E0E0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.anteprima-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: #EAFAF1;
+  border-bottom: 0.5px solid #A9DFBF;
+}
+.anteprima-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #1E8449;
+}
+.anteprima-reset {
+  background: none;
+  border: none;
+  font-size: 0.75rem;
+  color: #C0392B;
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0;
+}
+.anteprima-reset:hover { text-decoration: underline; }
+
+
+/* ── Pallino notifica messaggi non letti ── */
+.chat-notification-dot {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 10px;
+  height: 10px;
+  background: #E74C3C;
+  border-radius: 50%;
+  border: 2px solid #fff;
+}
+
+/* ── Pulsante Chat nella tabella ── */
+.btn-chat {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border: 0.5px solid #0066CC;
+  border-radius: 6px;
+  background: #EBF3FF;
+  color: #0066CC;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.btn-chat:hover {
+  background: #0066CC;
+  color: #fff;
+}
+
+/* ── Popup Chat fisso in basso a destra — identico a BookingsView ── */
+.chat-popup-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 350px;
+  max-width: calc(100vw - 48px);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 @media (max-width: 900px) {
   .sidebar { display: none; }
   .main-content { padding: 24px 20px; }
@@ -819,4 +1021,5 @@ const navItems = [
   .form-row--2col { grid-template-columns: 1fr; }
   .stato-grid { display: flex; flex-direction: column; gap: 24px; }
 }
+
 </style>
