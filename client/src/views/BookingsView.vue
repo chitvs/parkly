@@ -4,9 +4,6 @@ import { prenotazioniStore } from '../store/prenotazioni.js'
 import { useRecensione } from '../composables/useRecensione.js'
 import { getSocket } from '../composables/useChat.js' 
 
-
-
-
 import 'bootstrap-icons/font/bootstrap-icons.css'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
@@ -23,9 +20,12 @@ const {
   selectedBookingForReview,
   recensioneForm,
   isStep2Complete,
+  isEditing,
   iniziaRecensione,
+  apriModifica,
   chiudiModale,
-  inviaRecensione
+  inviaRecensione,
+  eliminaRecensione
 } = useRecensione()
 
 // Stato per gestire la chat aperta 
@@ -58,20 +58,6 @@ const ordinamento = ref('creazione_desc') // default: data creazione più recent
 // variabili per la paginazione
 const paginaCorrente = ref(1)
 const elementiPerPagina = 5
-
-const {
-  showReviewModal,
-  currentStep,
-  selectedBookingForReview,
-  recensioneForm,
-  isStep2Complete,
-  isEditing,
-  iniziaRecensione,
-  apriModifica,
-  chiudiModale,
-  inviaRecensione,
-  eliminaRecensione
-} = useRecensione()
 
 onMounted(async () => {
   // Carica i dati appena il componente viene montato
@@ -1166,6 +1152,8 @@ const chiudiChat = () => {
     transform: scale(1);
     opacity: 1;
   }
+}
+
 .garage-title-link {
   transition: color 0.2s ease;
 }
