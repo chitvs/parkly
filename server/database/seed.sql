@@ -710,7 +710,7 @@ INSERT INTO Recensione (ID_Prenotazione, ID_Utente, ID_Garage, VotoGenerale, Vot
 (125, 5, 1, 5, 5, 4, 5, 5, 5, 'Veramente ottimo e centrale.'),
 (126, 6, 2, 4, 5, 3, 5, 4, 5, 'Posto di livello.');
 
--- AGGIORNAMENTO MEDIE GARAGE
+-- AGGIORNAMENTO MEDIE GARAGE (eseguito post-inserimento recensioni)
 UPDATE Garage g
 SET
     MediaGenerale = COALESCE((SELECT ROUND(AVG(VotoGenerale), 2) FROM Recensione WHERE ID_Garage = g.ID_Garage), 0.00),
@@ -721,7 +721,7 @@ SET
     MediaSicurezza = COALESCE((SELECT ROUND(AVG(VotoSicurezza), 2) FROM Recensione WHERE ID_Garage = g.ID_Garage), 0.00),
     NumeroRecensioni = (SELECT COUNT(*) FROM Recensione WHERE ID_Garage = g.ID_Garage);
 
--- AGGIORNAMENTO SALDO
+-- AGGIORNAMENTO SALDO (eseguito post-inserimento transazioni)
 UPDATE Utente u
 SET Saldo = COALESCE((
     SELECT SUM(Importo) 

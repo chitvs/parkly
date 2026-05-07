@@ -78,11 +78,15 @@ const isTargaValida = computed(() => {
 })
 
 const formattaCude = () => {
+    // rimuove qualsiasi carattere che non sia lettera, numero o trattino, e converte in maiuscolo
     codiceDisabilita.value = codiceDisabilita.value.replace(/[^a-zA-Z0-9-]/g, '').toUpperCase()
 }
 
 const isCudeValido = computed(() => {
+    // se non abbiamo selezionato un posto per disabili, il campo è tecnicamente "valido" a prescindere
     if (!postoSelezionato.value?.isdisabili) return true;
+    
+    // solo lettere maiuscole, numeri e trattini. Lunghezza da 5 a 20 caratteri.
     const regex = /^[A-Z0-9-]{5,20}$/;
     return regex.test(codiceDisabilita.value);
 })
@@ -275,7 +279,7 @@ const distribuzioneVoti = computed(() => {
                     </div>
 
                     <div class="hero-right">
-                        <div class="prezzo-label">Tariffe Base:</div>
+                        <div class="prezzo-label">Tariffe a partire da:</div>
                         
                         <div class="price-line" v-if="tariffePerVeicolo['MOTO']">
                             <span class="v-tipo">Moto</span>

@@ -1,14 +1,13 @@
 <script setup>
-import { ref, onMounted, watch, computed } from 'vue'
+import { ref, onMounted, onUnmounted, watch, nextTick,computed } from 'vue'
 import { prenotazioniStore } from '../store/prenotazioni.js'
 import { useRecensione } from '../composables/useRecensione.js'
+import { getSocket } from '../composables/useChat.js' 
 
 import 'bootstrap-icons/font/bootstrap-icons.css'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
-
-const bookings = ref([])
-const isLoading = ref(true)
+import ChatBox from '../components/ChatBox.vue'
 
 // variabili per i filtri e l'ordinamento
 const filtroStato = ref('') // '' = Tutte, 'ATTIVA', 'CONCLUSA', 'ANNULLATA'
@@ -19,6 +18,12 @@ const ordinamento = ref('creazione_desc') // default: data creazione più recent
 const paginaCorrente = ref(1)
 const elementiPerPagina = 5
 
+
+// Stati reattivi per i dati del componente
+const bookings = ref([]) // Conterrà l'array delle prenotazioni dell'utente
+const isLoading = ref(true) // Gestisce l'UI di caricamento
+
+// Import delle funzioni e stati esportati dal composable delle recensioni
 const {
   showReviewModal,
   currentStep,
@@ -33,10 +38,46 @@ const {
   eliminaRecensione
 } = useRecensione()
 
+// Stato per gestire la chat aperta 
+const chatSelezionata = ref(null)
+
+// Variabile per tenere traccia del socket in questa pagina
+let socket = null;
+
+// --- GESTIONE NOTIFICHE IN TEMPO REALE ---
+// Funzione chiamata ogni volta che il server emette un evento 'nuovo_messaggio'
+const handleNuovoMessaggio = (msg) => {
+  // Cerca la prenotazione di riferimento nell'elenco
+  const bookingToUpdate = bookings.value.find(b => Number(b.id_prenotazione) === Number(msg.id_prenotazione));
+  
+  if (bookingToUpdate) {
+    // Controlla se l'utente ha già la chat aperta per quella specifica prenotazione
+    const chatAperta = chatSelezionata.value && chatSelezionata.value.idPrenotazione === Number(msg.id_prenotazione);
+    // Se la chat non è aperta, incrementa il counter dei messaggi non letti per far apparire il pallino rosso
+    if (!chatAperta) {
+      bookingToUpdate.nonletti = (bookingToUpdate.nonletti || 0) + 1;
+    }
+  }
+}
+
+
 onMounted(async () => {
+  // Carica i dati appena il componente viene montato
   await caricaPrenotazioni()
+  
+  // Inizializza il WebSocket e metti in ascolto gli eventi globali di notifica
+  socket = getSocket();
+  socket.on('nuovo_messaggio', handleNuovoMessaggio);
 })
 
+// Pulizia fondamentale per evitare memory leak e doppi listener se l'utente naviga tra le pagine
+onUnmounted(() => {
+  if (socket) {
+    socket.off('nuovo_messaggio', handleNuovoMessaggio);
+  }
+})
+
+// Chiamata all'API per prendere le prenotazioni
 const caricaPrenotazioni = async () => {
   isLoading.value = true
   const response = await prenotazioniStore.getBookings()
@@ -132,10 +173,15 @@ const getStatusBadgeClass = (stato) => {
   }
 }
 
+// Gestione della cancellazione di una prenotazione
 const handleCancelBooking = async (codice) => {
-  const confermato = confirm("Sei sicuro di voler annullare questa prenotazione? L'operazione non può essere annullata.")
-  if (!confermato) return
-  const response = await prenotazioniStore.cancelBooking(codice)
+  const confermato = confirm("Sei sicuro di voler annullare questa prenotazione? L'operazione non può essere annullata.");
+  
+  if (!confermato) return; // Se clicca "Annulla" nel popup, fermiamo tutto
+
+  const response = await prenotazioniStore.cancelBooking(codice);
+
+  // Aggiornamento dell'interfaccia utente (UI) senza ricaricare tutto
   if (response.success) {
     const bookingToUpdate = bookings.value.find(b => b.codiceprenotazione === codice)
     if (bookingToUpdate) bookingToUpdate.stato = 'ANNULLATA'
@@ -168,6 +214,30 @@ const categories = [
   { id: 'spazio', label: 'Spazio di manovra', icon: 'bi bi-car-front' },
   { id: 'sicurezza', label: 'Sicurezza', icon: 'bi bi-shield-check' },
 ]
+
+// Gestione dell'apertura del componente ChatBox
+const apriChat = async (booking) => {
+  // Rimuove il pallino rosso (notifica letta)
+  booking.nonletti = 0;
+  
+  // Tecnica per forzare il re-mount del componente figlio (ChatBox):
+  // Impostandolo a null lo rimuoviamo dal DOM
+  chatSelezionata.value = null; 
+  
+  // Aspetta un "tick" del ciclo di rendering di Vue per assicurarsi che il DOM sia aggiornato
+  await nextTick();
+  
+  // Reimposta l'oggetto ricreando il componente ChatBox fresco
+  chatSelezionata.value = {
+    idPrenotazione: Number(booking.id_prenotazione), 
+    idDestinatario: Number(booking.id_gestore),
+    nomeDestinatario: booking.nomegestore || booking.nomegarage || 'Gestore'
+  }
+}
+
+const chiudiChat = () => {
+  chatSelezionata.value = null
+}
 </script>
 
 <template>
@@ -243,18 +313,44 @@ const categories = [
                   </router-link>
                   <small class="text-muted"><i class="bi bi-geo-alt-fill me-1"></i>{{ booking.indirizzo }}</small>
                 </div>
-                <div class="d-flex align-items-center gap-2">
-                  <span class="badge rounded-pill px-3 py-2 text-uppercase fw-semibold"
-                    :class="getStatusBadgeClass(booking.stato)">
+                <div class="action-group d-flex align-items-center gap-2">
+  
+                  <!-- Badge Stato  -->
+                  <span class="custom-badge" :class="'badge-' + booking.stato.toLowerCase()">
                     {{ booking.stato }}
                   </span>
 
-                  <button v-if="booking.stato === 'ATTIVA'" @click="handleCancelBooking(booking.codiceprenotazione)"
-                    class="btn btn-outline-danger btn-sm rounded-circle d-flex align-items-center justify-content-center fw-bold fs-5"
-                    style="width: 32px; height: 32px; padding-bottom: 4px;" title="Annulla Prenotazione">
-                    &times;
+                  <!-- Pulsante Annulla  -->
+                  <button 
+                      v-if="booking.stato === 'ATTIVA'" 
+                      @click="handleCancelBooking(booking.codiceprenotazione)" 
+                      class="custom-btn btn-cancel"
+                      title="Annulla Prenotazione"
+                  >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 6L6 18M6 6l12 12"/>
+                  </svg>
+                  Annulla
                   </button>
 
+                  <!-- Pulsante Chat -->
+                  <button 
+                    v-if="booking.stato === 'ATTIVA'" 
+                    @click="apriChat(booking)" 
+                    class="custom-btn btn-chat"
+                    title="Contatta il gestore"
+                  >
+                    <!--pallino notifica-->
+                    <span v-if="booking.nonletti > 0" class="chat-notification-dot"></span>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                      </svg>
+                        Contatta
+                  </button>
+
+                  <!--Pulsante Recensioni-->
                   <div v-if="booking.stato === 'CONCLUSA' && !booking.ha_recensito"
                     class="d-flex align-items-center ms-3 border-start ps-3">
                     <span class="text-muted small fw-semibold me-2 d-none d-sm-inline">Com'è andata?</span>
@@ -333,6 +429,17 @@ const categories = [
 
       </div>
     </main>
+
+    <!-- Componente ChatBox montato come Popup fluttuante -->
+    <div v-if="chatSelezionata" class="chat-popup-container">
+      <ChatBox 
+        :idPrenotazione="chatSelezionata.idPrenotazione" 
+        :idDestinatario="chatSelezionata.idDestinatario"
+        :nomeDestinatario="chatSelezionata.nomeDestinatario"
+        ruoloDestinatario="Gestore"
+        @chiudi="chiudiChat"
+      />
+    </div>
 
     <Footer />
 
@@ -471,10 +578,115 @@ const categories = [
 .btn-primary:hover {
   background-color: #00336E;
 }
-
+/* Stile per replicare l'estetica delle targhe */
 .font-monospace {
   letter-spacing: 2px;
   font-family: 'Courier New', Courier, monospace;
+}
+
+/*  CSS per il popup della chat */
+.chat-popup-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 350px;
+  max-width: calc(100vw - 48px);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  animation: slideUp 0.3s ease-out;
+}
+
+/* --- UNITÀ STILISTICA: BADGE E PULSANTI --- */
+.action-group {
+  flex-wrap: wrap; /* Evita che si schiaccino su schermi molto piccoli */
+}
+
+/* Base comune per altezza, font e bordi */
+.custom-badge, .custom-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.4rem 0.85rem;
+  border-radius: 8px; 
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  height: 36px;
+}
+
+/* --- Badge di Stato --- */
+.custom-badge {
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
+  cursor: default;
+  border-radius: 99px; /* Raggio diverso perchè lo stato NON è un bottone*/
+}
+.badge-attiva {
+  background-color: #137333;
+  color: #ffffff;
+  border-color: #137333;
+}
+.badge-conclusa {
+  background-color: #4a4d51;
+  color: #ffffff;
+  border-color: #4a4d51;
+}
+.badge-annullata {
+  background-color: #c5221f;
+  color: #ffffff;
+  border-color: #c5221f;
+}
+
+.btn-chat {
+  background-color: #e0f0ff;
+  color: var(--primary-blue, #00408A);
+  border-color: #b3d7ff;
+  cursor: pointer;
+  gap: 0.4rem;
+  position: relative;
+}
+.btn-chat:hover {
+  background-color: var(--primary-blue, #00408A);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 64, 138, 0.15);
+}
+.chat-notification-dot {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 12px;
+  height: 12px;
+  background-color: #ef4444; 
+  border: 2px solid #ffffff; 
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+  z-index: 2;
+}
+
+/* --- Pulsante Annulla --- */
+.btn-cancel {
+  background-color: white;
+  color: #c5221f;
+  border-color: #fad2cf;
+  cursor: pointer;
+  gap: 0.3rem;
+}
+.btn-cancel:hover {
+  background-color: #c5221f;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(197, 34, 31, 0.15);
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .trigger-stars i {
@@ -882,6 +1094,74 @@ const categories = [
 
 .cat-star:active {
   transform: scale(0.85);
+}
+
+.success-ring-wrap {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  margin: 0 auto 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.success-halo {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(rgba(0, 64, 138, 0.12),
+      rgba(245, 158, 11, 0.18),
+      rgba(0, 64, 138, 0.08),
+      rgba(245, 158, 11, 0.14));
+  animation: haloSpin 6s linear infinite, haloPulse 2.5s ease-in-out infinite;
+}
+
+.success-emoji {
+  font-size: 3.2rem;
+  position: relative;
+  animation: popIn 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  filter: drop-shadow(0 4px 12px rgba(245, 158, 11, 0.5));
+}
+
+@keyframes haloSpin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes haloPulse {
+
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: scale(1) rotate(0deg);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.08) rotate(180deg);
+  }
+}
+
+@keyframes popIn {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+
+  60% {
+    transform: scale(1.18);
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .garage-title-link {

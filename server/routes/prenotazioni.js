@@ -198,7 +198,19 @@ router.get('/', async (req, res) => {
                 END AS ha_recensito,
 
                 pa.CodicePosto, 
-                g.Nome AS NomeGarage, g.Indirizzo
+                g.Nome AS NomeGarage, 
+                g.Indirizzo,
+                g.ID_Gestore, --Serve al frontend per aprire la chat
+
+                -- SUBQUERY MESSAGGI NON LETTI PER QUESTA PRENOTAZIONE
+                (
+                    SELECT COUNT(*)
+                    FROM Messaggio m
+                    WHERE m.ID_Prenotazione = p.ID_Prenotazione
+                      AND m.ID_Destinatario = $1
+                      AND m.Letto = FALSE
+                )::int AS nonletti
+
             FROM Prenotazione p
             JOIN PostoAuto pa ON p.ID_Posto = pa.ID_Posto
             JOIN Garage g ON pa.ID_Garage = g.ID_Garage
@@ -295,10 +307,26 @@ router.get('/prenotazioni-gestore', async (req, res) => {
         const idGestore = utenteLoggato.id;
         
         const query = `
-            SELECT p.*, g.Nome as nome_garage 
+            SELECT 
+                p.*, 
+                g.Nome as nome_garage,
+                pa.ID_Garage,
+                u.Nome as nomecliente,
+                u.Cognome as cognomecliente,
+
+                -- SUBQUERY MESSAGGI NON LETTI PER QUESTA PRENOTAZIONE
+                (
+                    SELECT COUNT(*)
+                    FROM Messaggio m
+                    WHERE m.ID_Prenotazione = p.ID_Prenotazione
+                      AND m.ID_Destinatario = $1
+                      AND m.Letto = FALSE
+                )::int AS nonletti
+
             FROM Prenotazione p
             JOIN PostoAuto pa ON p.ID_Posto = pa.ID_Posto
             JOIN Garage g ON pa.ID_Garage = g.ID_Garage
+            JOIN Utente u ON p.ID_Utente = u.ID_Utente
             WHERE g.ID_Gestore = $1
             ORDER BY p.InizioSosta DESC
         `;

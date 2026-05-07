@@ -1,4 +1,6 @@
 import { reactive } from 'vue'
+import { disconnectSocket } from '@/composables/useChat'
+
 
 export const authStore = reactive({
   utente: null,
@@ -149,6 +151,31 @@ async updateProfile(payload) {
       console.error("Errore durante il logout lato server:", err);
     } finally {
       this.setUtente(null);
+      disconnectSocket(); //chiudo socket usata per inviare messaggi tra utenti
+    }
+  },
+
+  async deleteAccount() {
+    try {
+      const res = await fetch('/api/auth/delete-account', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        // puliamo lo stato locale
+        this.utente = null;
+        // ripuliamo eventuali dati persistenti
+        localStorage.removeItem('utente');
+        return { success: true };
+      } else {
+        return { success: false, error: data.error };
+      }
+    } catch (error) {
+      console.error("Errore durante l'eliminazione dell'account:", error);
+      return { success: false, error: "Errore di connessione" };
     }
   },
 
