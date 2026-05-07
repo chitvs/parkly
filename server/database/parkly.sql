@@ -94,7 +94,6 @@ CREATE TABLE Messaggio (
 );
  
 -- Indici per velocizzare le query di caricamento conversazione
-CREATE INDEX idx_messaggio_garage ON Messaggio(ID_Garage);
 CREATE INDEX idx_messaggio_mittente ON Messaggio(ID_Mittente);
 CREATE INDEX idx_messaggio_destinatario ON Messaggio(ID_Destinatario);
 
