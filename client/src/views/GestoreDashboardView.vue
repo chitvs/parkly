@@ -312,6 +312,13 @@ const postiConvertitiPerAnteprima = computed(() =>
 )
 
 // ─── Computed statistiche ────────────────────────────────────────────────────
+const menuFiltrato = computed(() => {
+  if (mieiGarage.value.length === 0) {
+    return navItems.filter(item => item.id === 'aggiungi') 
+  }
+  return navItems
+})
+
 const guadagnoMese = computed(() => {
   const ora = new Date()
   return storicoPrenotazioni.value
@@ -503,6 +510,9 @@ const openInfoModal    = () => { if (infoModalInstance) infoModalInstance.show()
 onMounted(async () => {
   ridimensionaGriglia()
   await caricaDati()
+  if (mieiGarage.value.length === 0) {
+    vistaAttiva.value = 'aggiungi'
+  }
   if (infoModalElement.value) {
     infoModalInstance = new bootstrap.Modal(infoModalElement.value)
   }
@@ -554,7 +564,7 @@ const navItems = [
           <span>Area Gestore</span>
         </div>
         <nav class="sidebar-nav">
-          <a v-for="item in navItems" :key="item.id" href="#"
+          <a v-for="item in menuFiltrato" :key="item.id" href="#"
              :class="['nav-item', { active: vistaAttiva === item.id }]"
              @click.prevent="vistaAttiva = item.id">
             <span class="nav-icon" v-html="item.icon"></span>
