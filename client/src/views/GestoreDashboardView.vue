@@ -77,10 +77,11 @@ const initMap = () => {
   const defaultLat = nuovoGarage.value.latitudine || 41.9028;
   const defaultLng = nuovoGarage.value.longitudine || 12.4964;
   
-  mapInstance = L.map('mappa-garage').setView([defaultLat, defaultLng], 13);
+  mapInstance = L.map('mappa-garage', {
+    attributionControl: false
+  }).setView([defaultLat, defaultLng], 13);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
-    attribution: '© OpenStreetMap'
   }).addTo(mapInstance);
 
   mapInstance.on('click', (e) => {
