@@ -78,8 +78,6 @@ CREATE TABLE Prenotazione (
     CONSTRAINT CHK_DateSosta CHECK (FineSosta > InizioSosta)
 );
 -- MESSAGGIO
--- La chat è consentita solo fra Cliente e Gestore di un garage prenotato.
--- La validazione avviene lato server prima di persistere il messaggio.
  
 CREATE TABLE Messaggio (
     ID_Messaggio SERIAL PRIMARY KEY,
@@ -91,8 +89,7 @@ CREATE TABLE Messaggio (
     DataInvio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (ID_Mittente) REFERENCES Utente(ID_Utente) ON DELETE CASCADE,
     FOREIGN KEY (ID_Destinatario) REFERENCES Utente(ID_Utente) ON DELETE CASCADE,
-    FOREIGN KEY (ID_Garage) REFERENCES Garage(ID_Garage) ON DELETE CASCADE,
-    FOREIGN KEY (ID_Prenotazione) REFERENCES Prenotazione(ID_Prenotazione) ON DELETE CASCADE;
+    FOREIGN KEY (ID_Prenotazione) REFERENCES Prenotazione(ID_Prenotazione) ON DELETE CASCADE,
     CONSTRAINT CHK_No_Self_Chat CHECK (ID_Mittente <> ID_Destinatario)
 );
  
@@ -140,6 +137,7 @@ Note e scelte varie:
 
 > Nella tabella PostoAuto non serve il campo IsDisponibile, basta vedere il tempo reale e i parametri InizioSosta e FineSosta della tabella Prenotazione
 
+> La chat è consentita solo fra Cliente e Gestore di un garage prenotato, la validazione avviene lato server prima di persistere il messaggio.
 -------------------------------------------
 
 Alcuni significati delle parole chiave sql:
