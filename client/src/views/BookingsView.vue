@@ -9,6 +9,16 @@ import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 import ChatBox from '../components/ChatBox.vue'
 
+// variabili per i filtri e l'ordinamento
+const filtroStato = ref('') // '' = Tutte, 'ATTIVA', 'CONCLUSA', 'ANNULLATA'
+const filtroGarage = ref('') // '' = Tutti, oppure l'id_garage
+const ordinamento = ref('creazione_desc') // default: data creazione più recente
+
+// variabili per la paginazione
+const paginaCorrente = ref(1)
+const elementiPerPagina = 5
+
+
 // Stati reattivi per i dati del componente
 const bookings = ref([]) // Conterrà l'array delle prenotazioni dell'utente
 const isLoading = ref(true) // Gestisce l'UI di caricamento
@@ -50,14 +60,6 @@ const handleNuovoMessaggio = (msg) => {
   }
 }
 
-// variabili per i filtri e l'ordinamento
-const filtroStato = ref('') // '' = Tutte, 'ATTIVA', 'CONCLUSA', 'ANNULLATA'
-const filtroGarage = ref('') // '' = Tutti, oppure l'id_garage
-const ordinamento = ref('creazione_desc') // default: data creazione più recente
-
-// variabili per la paginazione
-const paginaCorrente = ref(1)
-const elementiPerPagina = 5
 
 onMounted(async () => {
   // Carica i dati appena il componente viene montato
@@ -160,6 +162,15 @@ const formatDate = (dateString) => {
     hour: '2-digit',
     minute: '2-digit'
   }).format(date)
+}
+
+const getStatusBadgeClass = (stato) => {
+  switch (stato) {
+    case 'ATTIVA': return 'bg-success'
+    case 'CONCLUSA': return 'bg-secondary'
+    case 'ANNULLATA': return 'bg-danger'
+    default: return 'bg-primary'
+  }
 }
 
 // Gestione della cancellazione di una prenotazione
@@ -528,7 +539,6 @@ const chiudiChat = () => {
 </template>
 
 <style scoped>
-
 .page-wrapper {
   display: flex;
   flex-direction: column;

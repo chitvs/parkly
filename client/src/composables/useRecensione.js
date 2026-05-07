@@ -31,8 +31,6 @@ export function useRecensione() {
   // 4. Azioni
   const iniziaRecensione = (booking, starValue) => {
     selectedBookingForReview.value = booking
-    
-    // Reset del form in caso fosse stato chiuso a metà
     isEditing.value = false
     
     recensioneForm.value = {

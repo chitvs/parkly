@@ -5,7 +5,8 @@ const props = defineProps({
     posti: { type: Array, default: () => [] },
     mappaTestuale: { type: String, default: '' },
     selectedId: Number,
-    isAnteprima: { type: Boolean, default: false }
+    isAnteprima: { type: Boolean, default: false },
+    mostraErrori: { type: Boolean, default: true }
 });
 
 const emit = defineEmits(['select', 'error']);
@@ -204,7 +205,7 @@ const gestisciClick = (codice) => {
             </div>
         </div>
 
-        <div v-if="isAnteprima" class="avviso-anteprima">
+        <div v-if="isAnteprima && mostraErrori" class="avviso-anteprima">
             Inserisci gli orari per vedere i posti liberi.
         </div>
 

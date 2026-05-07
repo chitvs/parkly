@@ -120,7 +120,7 @@ router.post('/', isLoggato, async (req, res) => {
             `, [
                 id_utente, 
                 -costoSosta, 
-                `Pagamento prenotazione ${checkOrari.codicePrenotazione}`
+                `Pagamento prenotazione ${codice}`
             ]);
 
             // inserisco nel db la prenotazione
@@ -164,7 +164,7 @@ router.post('/', isLoggato, async (req, res) => {
     }
 });
 
-// Recupero le prenotazioni dell'utente loggato (Cliente, in prenotazioni.js)
+// Recupero le prenotazioni dell'utente loggato (in prenotazioni.js)
 router.get('/', async (req, res) => {
     if (!req.session.utente || !req.session.utente.id) {
         return res.status(401).json({ success: false, error: 'Non autorizzato' });

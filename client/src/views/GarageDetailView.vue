@@ -9,7 +9,7 @@ import Footer from '../components/Footer.vue'
 import PlanimetriaGarage from '../components/PlanimetriaGarage.vue'
 
 const route = useRoute()
-const router = useRouter() // <-- AGGIUNTO: ci serve per forzare il cambio pagina
+const router = useRouter()
 const props = defineProps(['id'])
 const checkIn = ref(route.query.inizio || '')
 const checkOut = ref(route.query.fine || '')
@@ -25,10 +25,9 @@ onMounted(async () => {
     garageStore.clearGarageData()
     await garageStore.fetchGarage(Number(props.id))
 
-    // se il garage non esiste...
     if (!garageStore.currentGarage) {
-        router.push({ name: 'NotFound' }) // ...spedisci l'utente alla pagina 404
-        return // ferma l'esecuzione del resto del codice
+        router.push({ name: 'NotFound' })
+        return
     }
 
     await garageStore.fetchPosti(props.id, '', '')
@@ -44,47 +43,36 @@ watch([checkIn, checkOut], () => {
     postoSelezionato.value = null
 })
 
-// calcolo delle tariffe dinamiche per veicolo
+// leggiamo i prezzi base direttamente dal record del garage
 const tariffePerVeicolo = computed(() => {
-    const posti = garageStore.posti;
-    if (!posti || !posti.length) return {};
+    const g = garageStore.currentGarage;
+    if (!g) return {};
     
-    const minPrices = {};
-    posti.forEach(p => {
-        if (p.isdisabili || p.iselettrica) return; 
-
-        const tipo = p.tipoveicolo;
-        const prezzo = Number(p.tariffaoraria);
-        
-        if (!minPrices[tipo] || prezzo < minPrices[tipo]) {
-            minPrices[tipo] = prezzo;
-        }
-    });
-    return minPrices;
+    const tariffe = {};
+    if (g.tariffamoto) tariffe['MOTO'] = Number(g.tariffamoto);
+    if (g.tariffaauto) tariffe['AUTO'] = Number(g.tariffaauto);
+    if (g.tariffafurgone) tariffe['FURGONE'] = Number(g.tariffafurgone);
+    
+    if (!tariffe['AUTO'] && g.tariffabase) tariffe['AUTO'] = Number(g.tariffabase);
+    
+    return tariffe;
 });
 
-// tariffa speciale Disabili
-const tariffaDisabili = computed(() => {
-    const posto = garageStore.posti?.find(p => p.isdisabili);
-    return posto ? Number(posto.tariffaoraria).toFixed(2) : null;
+const sovrapprezzoElettrica = computed(() => {
+    const val = garageStore.currentGarage?.sovrapprezzoelettrica;
+    return val && Number(val) > 0 ? Number(val).toFixed(2) : null;
 });
 
-// tariffa speciale Elettrica
-const tariffaElettrica = computed(() => {
-    const posto = garageStore.posti?.find(p => p.iselettrica && !p.isdisabili);
-    return posto ? Number(posto.tariffaoraria).toFixed(2) : null;
+const scontoDisabili = computed(() => {
+    const val = garageStore.currentGarage?.scontodisabili;
+    return val && Number(val) > 0 ? Number(val).toFixed(2) : null;
 });
 
 const formattaTarga = () => {
-    // rimuove qualsiasi carattere che non sia lettera o numero e converte in maiuscolo
     targa.value = targa.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
 }
 
-// la targa rispetta il formato italiano?
 const isTargaValida = computed(() => {
-    // ^[A-Z]{2} (inizia con 2 lettere) 
-    // \d{3} (3 numeri) 
-    // [A-Z]{2}$ (finisce con 2 lettere)
     const regex = /^[A-Z]{2}\d{3}[A-Z]{2}$/
     return regex.test(targa.value)
 })
@@ -221,7 +209,6 @@ const formattaDataRecensione = (dataString) => {
     }).format(data)
 }
 
-// Calcola le percentuali per la "scaletta" dei voti complessivi
 const distribuzioneVoti = computed(() => {
     const recensioni = garageStore.recensioni
     const totale = recensioni.length
@@ -309,16 +296,16 @@ const distribuzioneVoti = computed(() => {
                             <span class="prezzo-valore-small">€{{ tariffePerVeicolo['FURGONE'].toFixed(2) }}<span>/h</span></span>
                         </div>
 
-                        <div class="special-rates-container" v-if="tariffaElettrica || tariffaDisabili">
+                        <div class="special-rates-container" v-if="sovrapprezzoElettrica || scontoDisabili">
                             
-                            <div class="special-line ev-line" v-if="tariffaElettrica">
+                            <div class="special-line ev-line" v-if="sovrapprezzoElettrica">
                                 <span class="v-tipo">Ricarica elettrica</span>
-                                <span class="prezzo-valore-small">€{{ tariffaElettrica }}<span>/h</span></span>
+                                <span class="prezzo-valore-small">+€{{ sovrapprezzoElettrica }}<span>/h</span></span>
                             </div>
 
-                            <div class="special-line cude-line" v-if="tariffaDisabili">
-                                <span class="v-tipo">Disabili</span>
-                                <span class="prezzo-valore-small">€{{ tariffaDisabili }}<span>/h</span></span>
+                            <div class="special-line cude-line" v-if="scontoDisabili">
+                                <span class="v-tipo">Sconto Disabili</span>
+                                <span class="prezzo-valore-small">-€{{ scontoDisabili }}<span>/h</span></span>
                             </div>
 
                         </div>
@@ -423,7 +410,7 @@ const distribuzioneVoti = computed(() => {
                     </div>
                 </aside>
             </div>
-            <!-- SEZIONE RECENSIONI -->
+            
             <section class="reviews-section card" v-if="garageStore.currentGarage">
                 <div class="card-body">
 
@@ -446,11 +433,9 @@ const distribuzioneVoti = computed(() => {
 
                     <hr class="reviews-divider">
 
-                    <!-- CONTENITORE UNICO PER CHI HA RECENSIONI -->
                     <div v-if="garageStore.recensioni.length > 0">
 
                         <div class="reviews-breakdown">
-                            <!-- Sinistra: Scaletta dei voti -->
                             <div class="rating-ladder">
                                 <div v-for="star in 5" :key="star" class="ladder-row">
                                     <span class="ladder-num">{{ 6 - star }}</span>
@@ -462,7 +447,6 @@ const distribuzioneVoti = computed(() => {
                                 </div>
                             </div>
 
-                            <!-- Destra: Categorie Specifiche -->
                             <div class="categories-grid">
                                 <div class="category-item">
                                     <span class="cat-label"><i class="bi bi-geo-alt"></i> Posizione</span>
@@ -492,20 +476,17 @@ const distribuzioneVoti = computed(() => {
                             </div>
                         </div>
 
-                        <!-- Blocco Commenti -->
                         <div class="user-comments-section mt-5 pt-4 border-top">
                             <div class="comments-grid">
                                 <div v-for="(recensione, index) in garageStore.recensioni" :key="index"
                                     class="comment-card">
                                     <div class="comment-header">
-                                        <!-- Avatar -->
                                         <div class="user-avatar">
                                             <img v-if="recensione.fotoprofilo_url" :src="recensione.fotoprofilo_url"
                                                 alt="User avatar">
                                             <span v-else>{{ recensione.nome.charAt(0).toUpperCase() }}</span>
                                         </div>
 
-                                        <!-- Nome e Info -->
                                         <div class="user-info">
                                             <h4 class="user-name">{{ recensione.nome }} {{ recensione.inizialecognome
                                             }}.</h4>
@@ -513,7 +494,6 @@ const distribuzioneVoti = computed(() => {
                                     </div>
 
                                     <div class="comment-meta">
-                                        <!-- Stelline piccole per la singola recensione -->
                                         <div class="small-stars">
                                             <i v-for="star in 5" :key="'s' + star" class="bi"
                                                 :class="star <= Math.round(recensione.votogenerale) ? 'bi-star-fill star--on' : 'bi-star star--off'">
@@ -524,7 +504,6 @@ const distribuzioneVoti = computed(() => {
                                         }}</span>
                                     </div>
 
-                                    <!-- Testo Recensione -->
                                     <p class="comment-text"
                                         :class="{ 'comment-text--expanded': commentiEspansi.has(index) }"
                                         v-if="recensione.commento">{{ recensione.commento }}</p>
@@ -552,7 +531,6 @@ const distribuzioneVoti = computed(() => {
 </template>
 
 <style scoped>
-/* Ho lasciato invariato tutto il tuo CSS originale */
 .page-container {
     background: var(--bg-light);
     min-height: 100vh;
@@ -566,7 +544,6 @@ const distribuzioneVoti = computed(() => {
     font-size: 0.9rem;
 }
 
-/* HERO */
 .basic-hero {
     background: var(--deep-blue);
     color: var(--white);
@@ -628,8 +605,8 @@ const distribuzioneVoti = computed(() => {
     padding-top: 4px;
     display: flex;
     flex-direction: column;
-    align-items: flex-end; /* Allinea tutto perfettamente a destra */
-    gap: 8px; /* Spazio tra le righe */
+    align-items: flex-end; 
+    gap: 8px; 
 }
 
 .prezzo-label {
@@ -643,7 +620,7 @@ const distribuzioneVoti = computed(() => {
 .price-line {
     display: flex;
     align-items: center;
-    gap: 15px; /* Spazio tra il nome del veicolo e il prezzo */
+    gap: 15px; 
 }
 
 .v-tipo {
@@ -669,7 +646,7 @@ const distribuzioneVoti = computed(() => {
 
 @media (max-width: 600px) {
     .hero-right {
-        align-items: flex-start; /* Su mobile li allinea a sinistra */
+        align-items: flex-start; 
         text-align: left;
     }
     .prezzo-valore-small {
@@ -714,7 +691,6 @@ const distribuzioneVoti = computed(() => {
     opacity: 0.8;
 }
 
-/* LAYOUT */
 .layout-grid {
     display: grid;
     grid-template-columns: 1fr 300px;
@@ -863,7 +839,6 @@ const distribuzioneVoti = computed(() => {
     cursor: not-allowed;
 }
 
-/* RIEPILOGO PRENOTAZIONE */
 .prenotazione-box {
     margin-top: 4px;
 }
@@ -910,7 +885,6 @@ const distribuzioneVoti = computed(() => {
     display: block;
 }
 
-/* SEZIONE RECENSIONI */
 .reviews-section {
     max-width: 1200px;
     margin: 0 auto 40px;
@@ -984,7 +958,6 @@ const distribuzioneVoti = computed(() => {
     align-items: flex-start;
 }
 
-/* Scaletta Sinistra */
 .rating-ladder {
     flex: 0 0 300px;
     display: flex;
@@ -1020,7 +993,6 @@ const distribuzioneVoti = computed(() => {
     transition: width 0.5s ease-out;
 }
 
-/* Categorie Destra */
 .categories-grid {
     flex-grow: 1;
     display: grid;
@@ -1055,7 +1027,6 @@ const distribuzioneVoti = computed(() => {
     color: var(--text-dark);
 }
 
-/* GRIGLIA COMMENTI */
 .user-comments-section {
     margin-top: 3rem;
     padding-top: 2rem;
@@ -1177,7 +1148,6 @@ const distribuzioneVoti = computed(() => {
     opacity: 0.6;
 }
 
-/* Stili per le Tariffe Speciali */
 .special-rates-container {
     margin-top: 6px;
     padding-top: 8px;
@@ -1191,7 +1161,7 @@ const distribuzioneVoti = computed(() => {
 .special-line {
     display: flex;
     align-items: center;
-    justify-content: flex-end; /* Allinea i prezzi a destra */
+    justify-content: flex-end; 
     gap: 15px;
     width: 100%;
 }
@@ -1202,8 +1172,7 @@ const distribuzioneVoti = computed(() => {
 
 @media (max-width: 600px) {
     .special-line {
-        justify-content: flex-start; /* Su mobile allinea a sinistra */
+        justify-content: flex-start; 
     }
 }
-
 </style>
