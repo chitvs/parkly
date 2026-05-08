@@ -4,42 +4,25 @@ const db = require('../database/db');
 const { isLoggato } = require('../middleware/authMiddleware');
 
 router.post('/', isLoggato, async (req, res) => {
-    const { 
-        id_posto, 
-        targa, 
-        note,
-        inizio, 
-        fine, 
-        prezzo_totale,
-        codice_disabilita
-    } = req.body;
-
+    const { id_posto, targa, note, inizio, fine, prezzo_totale, codice_disabilita } = req.body;
     const id_utente = req.session.utente.id;
 
     try {
         const nuova = await db.tx(async t => {
-            
-            // controllo saldo utente
+
+            // 1. Controllo saldo
             const utente = await t.one(`SELECT Saldo FROM Utente WHERE ID_Utente = $1`, [id_utente]);
-            
-            const saldoCorrente = parseFloat(utente.saldo !== undefined ? utente.saldo : utente.Saldo || 0);
+            const saldoCorrente = parseFloat(utente.saldo || 0);
             const costoSosta = parseFloat(prezzo_totale);
-            
             if (saldoCorrente < costoSosta) {
-                throw { 
-                    isCustom: true, 
-                    status: 402, 
-                    message: 'Credito insufficiente per completare la prenotazione.' 
-                };
+                throw { isCustom: true, status: 402, message: 'Credito insufficiente per completare la prenotazione.' };
             }
 
-            // controllo che il garage sia aperto
+            // 2. Controllo orari garage
             const checkOrari = await t.one(`
                 SELECT 
-                    g.Is24h,
-                    g.OrarioApertura,
-                    g.OrarioChiusura,
-                    g.Nome AS nome_garage,
+                    g.Is24h, g.OrarioApertura, g.OrarioChiusura,
+                    g.Nome AS nome_garage, g.ID_Gestore,
                     p.CodicePosto,
                     ($2::timestamp::time >= g.OrarioApertura AND $2::timestamp::time <= g.OrarioChiusura) AS inizio_valido,
                     ($3::timestamp::time >= g.OrarioApertura AND $3::timestamp::time <= g.OrarioChiusura) AS fine_valida
@@ -48,119 +31,74 @@ router.post('/', isLoggato, async (req, res) => {
                 WHERE p.ID_Posto = $1
             `, [id_posto, inizio, fine]);
 
-            // Se il garage non è h24 inizio e fine devono stare negli orari di apertura/chiusura
-            if (!checkOrari.is24h) {
-                if (!checkOrari.inizio_valido || !checkOrari.fine_valida) {
-                    throw {
-                        isCustom: true,
-                        status: 400,
-                        message: 'Gli orari selezionati non rientrano nell\'orario di apertura del garage.'
-                    };
-                }
+            if (!checkOrari.is24h && (!checkOrari.inizio_valido || !checkOrari.fine_valida)) {
+                throw { isCustom: true, status: 400, message: "Gli orari selezionati non rientrano nell'orario di apertura del garage." };
             }
 
-            // blocchiamo il posto auto per la durata di questa transazione e controlliamo se è per disabili.
-            // Se un altro utente tenta di prenotare lo stesso posto contemporaneamente,
-            // il DB lo metterà in "pausa" finché noi non abbiamo finito.
+            // 3. Lock posto e controllo disabili
             const posto = await t.one('SELECT IsDisabili FROM PostoAuto WHERE ID_Posto = $1 FOR UPDATE', [id_posto]);
-
             if (posto.isdisabili && (!codice_disabilita || codice_disabilita.trim() === '')) {
-                throw { 
-                    isCustom: true, 
-                    status: 400, 
-                    message: 'Codice Contrassegno Disabili obbligatorio per questo parcheggio.' 
-                };
+                throw { isCustom: true, status: 400, message: 'Codice Contrassegno Disabili obbligatorio per questo parcheggio.' };
             }
 
-            // controllo disponibilità
+            // 4. Controllo disponibilità
             const occupato = await t.oneOrNone(`
                 SELECT ID_Prenotazione FROM Prenotazione 
-                WHERE ID_Posto = $1 
-                AND Stato = 'ATTIVA'
+                WHERE ID_Posto = $1 AND Stato = 'ATTIVA'
                 AND (InizioSosta, FineSosta) OVERLAPS ($2::timestamp, $3::timestamp)
             `, [id_posto, inizio, fine]);
-
             if (occupato) {
-                throw { 
-                    isCustom: true, 
-                    status: 409, 
-                    message: 'Posto non più disponibile per gli orari selezionati.' 
-                };
+                throw { isCustom: true, status: 409, message: 'Posto non più disponibile per gli orari selezionati.' };
             }
 
-            // genero il codice prenotazione
-            // Math.random().toString(36) converte un numero casuale in una stringa alfanumerica
-            // substring(2, 10) prende 8 caratteri, saltando la parte inizale
-            let codiceLibero = false;
+            // 5. Genera codice univoco
             let codice = '';
-
+            let codiceLibero = false;
             while (!codiceLibero) {
                 codice = 'PR-' + Math.random().toString(36).substring(2, 10).toUpperCase();
-                const esisteGia = await t.oneOrNone(`
-                    SELECT ID_Prenotazione FROM Prenotazione 
-                    WHERE CodicePrenotazione = $1
-                `, [codice]);
-
-                if (!esisteGia) {
-                    codiceLibero = true;
-                }
+                const esisteGia = await t.oneOrNone(`SELECT ID_Prenotazione FROM Prenotazione WHERE CodicePrenotazione = $1`, [codice]);
+                if (!esisteGia) codiceLibero = true;
             }
 
-            //  scalo i soldi dal saldo e recupero il nuovo valore tramite RETURNING
+            // 6. Scala il saldo
             const userUpdate = await t.one(`
-                UPDATE Utente 
-                SET Saldo = Saldo - $1 
-                WHERE ID_Utente = $2
-                RETURNING Saldo
+                UPDATE Utente SET Saldo = Saldo - $1 WHERE ID_Utente = $2 RETURNING Saldo
             `, [prezzo_totale, id_utente]);
-
-            // sincronizzazione della sessione
             req.session.utente.saldo = userUpdate.saldo;
 
-            // inserimento della transazione nel log
-            await t.none(`
-                INSERT INTO Transazione (ID_Utente, Tipo, Importo, Descrizione) 
-                VALUES ($1, 'PRENOTAZIONE', $2, $3)
-            `, [id_utente, -prezzo_totale, `Pagamento prenotazione ${codice}`]);
-
-            // inserisco nel db la prenotazione
-            return await t.one(`
+            // 7. Inserisci la prenotazione e recupera l'ID ← DEVE VENIRE PRIMA DELLE TRANSAZIONI
+            const nuovaPrenotazione = await t.one(`
                 INSERT INTO Prenotazione (ID_Utente, ID_Posto, CodicePrenotazione, Targa, Note, CodiceDisabilita, InizioSosta, FineSosta, PrezzoTotale)
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                 RETURNING ID_Prenotazione, CodicePrenotazione
             `, [
-                id_utente, 
-                id_posto, 
-                codice, 
-                targa, 
-                note, 
-                posto.isdisabili ? codice_disabilita : null, // Salva il codice o mette NULL
-                inizio, 
-                fine, 
-                prezzo_totale
+                id_utente, id_posto, codice, targa, note,
+                posto.isdisabili ? codice_disabilita : null,
+                inizio, fine, prezzo_totale
             ]);
+
+            // 8. Ora che l'ID esiste, inserisci le transazioni
+            await t.none(`
+                INSERT INTO Transazione (ID_Utente, ID_Prenotazione, Tipo, Importo, Descrizione)
+                VALUES ($1, $2, 'PRENOTAZIONE', $3, $4)
+            `, [id_utente, nuovaPrenotazione.id_prenotazione, -prezzo_totale, `Pagamento prenotazione ${codice}`]);
+
+            await t.none(`
+                INSERT INTO Transazione (ID_Utente, ID_Prenotazione, Tipo, Importo, Descrizione)
+                VALUES ($1, $2, 'INCASSO_SOSPESO', $3, $4)
+            `, [checkOrari.id_gestore, nuovaPrenotazione.id_prenotazione, prezzo_totale, `Incasso in sospeso per prenotazione ${codice}`]);
+
+            return nuovaPrenotazione;
         });
 
-        res.json({ 
-            success: true, 
-            messaggio: 'Prenotazione confermata', 
-            prenotazione: nuova 
-        });
+        res.json({ success: true, messaggio: 'Prenotazione confermata', prenotazione: nuova });
 
     } catch (err) {
         console.error('Errore salvataggio prenotazione:', err);
-        
         if (err.isCustom) {
-            return res.status(err.status).json({ 
-                success: false, 
-                error: err.message 
-            });
+            return res.status(err.status).json({ success: false, error: err.message });
         }
-
-        res.status(500).json({ 
-            success: false, 
-            error: 'Errore interno' 
-        });
+        res.status(500).json({ success: false, error: 'Errore interno' });
     }
 });
 
@@ -267,15 +205,17 @@ router.put('/:codice/annulla', async (req, res) => {
                 RETURNING Saldo
             `, [prenotazione.prezzototale, utenteId]);
 
+            // Elimina l'INCASSO_SOSPESO del gestore — la prenotazione è annullata, quei soldi non esistono più
+            await t.none(`
+                DELETE FROM Transazione 
+                WHERE ID_Prenotazione = $1 AND Tipo = 'INCASSO_SOSPESO'
+            `, [prenotazione.id_prenotazione]);
+
             // salvo la transazione nel db
             await t.none(`
-                INSERT INTO Transazione (ID_Utente, Tipo, Importo, Descrizione)
-                VALUES ($1, 'RIMBORSO', $2, $3)
-            `, [
-                utenteId, 
-                prenotazione.prezzototale, 
-                `Rimborso prenotazione ${codicePrenotazione}`
-            ]);
+                INSERT INTO Transazione (ID_Utente, ID_Prenotazione, Tipo, Importo, Descrizione)
+                VALUES ($1, $2, 'RIMBORSO', $3, $4)
+            `, [utenteId, prenotazione.id_prenotazione, prenotazione.prezzototale, `Rimborso prenotazione ${codicePrenotazione}`]);
 
             return utente.saldo;
         });

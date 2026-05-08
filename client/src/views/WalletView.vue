@@ -4,6 +4,7 @@ import { authStore } from '../store/auth.js'
 import { walletStore } from '../store/wallet.js'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
+import 'bootstrap-icons/font/bootstrap-icons.css'
 
 const isLoading = ref(false)
 const isLoadingTransazioni = ref(false)
@@ -128,7 +129,7 @@ const handleRicarica = async () => {
     // validazione scadenza carta
     if (formRicarica.scadenza.length === 5) {
         const [meseStr, annoStr] = formRicarica.scadenza.split('/')
-        
+
         // controlliamo che mese e anno siano effettivamente numeri validi
         const numMese = parseInt(meseStr, 10)
         const numAnno = parseInt(annoStr, 10)
@@ -142,7 +143,7 @@ const handleRicarica = async () => {
         const dataOggi = new Date()
         const meseAttuale = dataOggi.getMonth() + 1 // i mesi in JS partono da 0
         // prendi le ultime due cifre dell'anno corrente e convertile in numero in modo sicuro
-        const annoAttuale = dataOggi.getFullYear() % 100 
+        const annoAttuale = dataOggi.getFullYear() % 100
 
         // controlla se l'anno è passato, oppure se è l'anno corrente ma il mese è passato
         if (numAnno < annoAttuale || (numAnno === annoAttuale && numMese < meseAttuale)) {
@@ -182,6 +183,74 @@ const handleRicarica = async () => {
         isLoading.value = false
     }
 }
+
+// Aggiungi queste variabili reattive
+const tabAttiva = ref('ricarica') // 'ricarica' o 'prelievo'
+const prelievoForm = reactive({
+    importo: null,
+    metodo: 'Bonifico Bancario',
+    coordinate: '' // IBAN o Email PayPal
+})
+
+// Funzione per gestire il prelievo
+const handlePrelievo = async () => {
+    messaggio.value = null
+
+    if (!prelievoForm.importo || prelievoForm.importo <= 0) {
+        messaggio.value = { tipo: 'error', testo: "Inserisci un importo valido." }
+        return
+    }
+    if (prelievoForm.importo < 5) {
+        messaggio.value = { tipo: 'error', testo: "L'importo minimo per il prelievo è di 5,00€." }
+        return
+    }
+    if (prelievoForm.importo > saldoAttuale.value) {
+        messaggio.value = { tipo: 'error', testo: "Saldo insufficiente." }
+        return
+    }
+
+    if (!prelievoForm.coordinate.trim()) {
+        messaggio.value = { tipo: 'error', testo: "Inserisci le coordinate per l'accredito." }
+        return
+    }
+
+    if (prelievoForm.metodo === 'Bonifico Bancario') {
+        const ibanRegex = /^[A-Z]{2}\d{2}[A-Z0-9]{1,30}$/
+        const ibanPulito = prelievoForm.coordinate.replace(/\s/g, '').toUpperCase()
+        if (!ibanRegex.test(ibanPulito)) {
+            messaggio.value = { tipo: 'error', testo: "Formato IBAN non valido." }
+            return
+        }
+    } else if (prelievoForm.metodo === 'PayPal') {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        if (!emailRegex.test(prelievoForm.coordinate)) {
+            messaggio.value = { tipo: 'error', testo: "Inserisci un indirizzo email PayPal valido." }
+            return
+        }
+    }
+
+    isLoading.value = true
+    try {
+        const response = await walletStore.prelevaFondi({
+            importo: parseFloat(prelievoForm.importo),
+            metodo: `${prelievoForm.metodo}: ${prelievoForm.coordinate}`
+        })
+
+        if (response.success) {
+            messaggio.value = { tipo: 'success', testo: "Richiesta di prelievo inviata con successo." }
+            prelievoForm.importo = null
+            prelievoForm.coordinate = ''
+            await fetchTransazioni()
+        } else {
+            messaggio.value = { tipo: 'error', testo: response.error }
+        }
+    } catch (error) {
+        messaggio.value = { tipo: 'error', testo: "Errore durante l'operazione." }
+    } finally {
+        isLoading.value = false
+    }
+}
+
 </script>
 
 <template>
@@ -210,60 +279,89 @@ const handleRicarica = async () => {
             <div class="layout-grid wallet-grid">
 
                 <div class="card shadow-sm">
-                    <div class="card-header">
-                        <h2>Ricarica Saldo</h2>
+                    <div class="card-tabs">
+                        <button class="tab-btn" :class="{ active: tabAttiva === 'ricarica' }"
+                            @click="tabAttiva = 'ricarica'">
+                            Ricarica Saldo
+                        </button>
+                        <button class="tab-btn" :class="{ active: tabAttiva === 'prelievo' }"
+                            @click="tabAttiva = 'prelievo'">
+                            Preleva Saldo
+                        </button>
                     </div>
-                    <div class="card-body">
-                        <form @submit.prevent="handleRicarica">
 
+                    <div class="card-body">
+                        <form v-if="tabAttiva === 'ricarica'" @submit.prevent="handleRicarica">
                             <div class="form-group highlight-box">
                                 <label>Importo da ricaricare (€)</label>
-                                <input 
-                                    type="number" 
-                                    step="0.01" 
-                                    min="5" 
-                                    max="1000" 
-                                    class="amount-input"
-                                    v-model="formRicarica.importo" 
-                                    @input="limitaImporto"
-                                    placeholder="es. 50.00" 
-                                    required
-                                >
-                                <small class="hint-text">Importo minimo: 5,00 € | Massimo: 1.000,00 €</small>
+                                <input type="number" step="0.01" class="amount-input" v-model="formRicarica.importo"
+                                    @input="limitaImporto" placeholder="es. 50.00" required>
+                                <small class="hint-text">Min: 5,00 € | Max: 1.000,00 €</small>
                             </div>
-
                             <h3 class="section-subtitle">Dati Carta</h3>
-
                             <div class="form-group">
                                 <label>Titolare della Carta</label>
                                 <input type="text" v-model="formRicarica.titolare" @input="formattaTitolare"
                                     placeholder="MARIO ROSSI" required>
                             </div>
-
                             <div class="form-group">
                                 <label>Numero della Carta</label>
                                 <input type="text" class="font-monospace" v-model="formRicarica.numeroCarta"
-                                    @input="formattaNumeroCarta" placeholder="0000 0000 0000 0000" pattern="[\d\s]{19}"
-                                    required>
+                                    @input="formattaNumeroCarta" placeholder="0000 0000 0000 0000" required>
                             </div>
-
                             <div class="form-row">
                                 <div class="form-group">
                                     <label>Scadenza</label>
                                     <input type="text" class="text-center font-monospace"
                                         v-model="formRicarica.scadenza" @input="formattaScadenza" placeholder="MM/YY"
-                                        pattern="(0[1-9]|1[0-2])\/[0-9]{2}" required>
+                                        required>
                                 </div>
                                 <div class="form-group">
                                     <label>CVV</label>
                                     <input type="text" class="text-center font-monospace" v-model="formRicarica.cvv"
-                                        @input="formattaCVV" placeholder="123" pattern="[0-9]{3,4}" required>
+                                        @input="formattaCVV" placeholder="123" required>
                                 </div>
                             </div>
-
                             <button type="submit" class="btn fill w-100" :disabled="isLoading">
-                                {{ isLoading ? 'Elaborazione in corso...' : 'Conferma Ricarica' }}
+                                {{ isLoading ? 'Elaborazione...' : 'Conferma Ricarica' }}
                             </button>
+                        </form>
+
+                        <form v-else-if="tabAttiva === 'prelievo'" @submit.prevent="handlePrelievo">
+
+                            <!-- Avviso saldo insufficiente -->
+                            <div v-if="saldoAttuale < 5" class="info-prelievo"
+                                style="border-left: 3px solid #c62828; color: #c62828; background: #fff5f5;">
+                                Saldo insufficiente per richiedere un prelievo. Il minimo è di 5,00€.
+                            </div>
+
+                            <div class="form-group highlight-box-alt">
+                                <label>Importo da prelevare (€)</label>
+                                <input type="number" step="0.01" class="amount-input-alt" v-model="prelievoForm.importo"
+                                    :max="saldoAttuale" placeholder="0.00" required>
+                                <small class="hint-text">Disponibile: {{ formattaValuta(saldoAttuale) }}</small>
+                            </div>
+
+                            <div class="form-group mt-3">
+                                <label>Metodo di Accredito</label>
+                                <select class="form-input-select" v-model="prelievoForm.metodo">
+                                    <option value="Bonifico Bancario">Bonifico Bancario (IBAN)</option>
+                                    <option value="PayPal">PayPal (Email)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>{{ prelievoForm.metodo === 'PayPal' ? 'Email PayPal' : 'Codice IBAN' }}</label>
+                                <input type="text" v-model="prelievoForm.coordinate"
+                                    :placeholder="prelievoForm.metodo === 'PayPal' ? 'email@esempio.it' : 'IT00X00000...'"
+                                    required>
+                            </div>
+
+                            <!-- Tasto sempre attivo, la validazione avviene al submit -->
+                            <button type="submit" class="btn btn-success-fill w-100" :disabled="isLoading">
+                                {{ isLoading ? 'Trasferimento in corso...' : 'Invia Richiesta di Prelievo' }}
+                            </button>
+
                         </form>
                     </div>
                 </div>
@@ -286,15 +384,26 @@ const handleRicarica = async () => {
                             <div class="transaction-list">
                                 <div v-for="tx in transazioniPaginate" :key="tx.id" class="transaction-item">
                                     <div class="tx-left">
-                                        <div class="tx-icon" :class="tx.importo > 0 ? 'icon-in' : 'icon-out'">
-                                            {{ tx.importo > 0 ? '↓' : '↑' }}
+                                        <div class="tx-icon" :class="{
+                                            'icon-in': tx.importo > 0 && tx.tipo !== 'INCASSO_SOSPESO',
+                                            'icon-out': tx.importo < 0,
+                                            'icon-pending': tx.tipo === 'INCASSO_SOSPESO'
+                                        }">
+                                            <i v-if="tx.tipo === 'INCASSO_SOSPESO'" class="bi bi-clock-history" style="translate: 1.3px;"></i>
+                                            <template v-else>{{ tx.importo > 0 ? '↓' : '↑' }}</template>
                                         </div>
+
                                         <div class="tx-info">
                                             <strong class="tx-desc">{{ tx.descrizione }}</strong>
                                             <small class="tx-date">{{ formattaData(tx.data) }}</small>
                                         </div>
                                     </div>
-                                    <div class="tx-amount" :class="tx.importo > 0 ? 'text-success' : 'text-danger'">
+
+                                    <div class="tx-amount" :class="{
+                                        'text-success': tx.importo > 0 && tx.tipo !== 'INCASSO_SOSPESO',
+                                        'text-danger': tx.importo < 0,
+                                        'text-pending': tx.tipo === 'INCASSO_SOSPESO'
+                                    }">
                                         {{ tx.importo > 0 ? '+' : '' }}{{ formattaValuta(tx.importo) }}
                                     </div>
                                 </div>
@@ -764,4 +873,106 @@ const handleRicarica = async () => {
     background: var(--primary-blue, #00408A);
     color: white;
 }
+
+.card-tabs {
+    display: flex;
+    background: #f1f1f1;
+    border-bottom: 0.5px solid #e0e0e0;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 14px;
+    border: none;
+    background: none;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #888;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.tab-btn.active {
+    background: white;
+    color: var(--primary-blue);
+    border-bottom: 2px solid var(--primary-blue);
+}
+
+.highlight-box-alt {
+    background: #e8f5e9;
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px dashed #27ae60;
+}
+
+.amount-input-alt {
+    width: 100%;
+    background: transparent;
+    border: none;
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #2e7d32;
+    outline: none;
+}
+
+.form-input-select {
+    width: 100%;
+    padding: 10px;
+    border-radius: 7px;
+    border: 1px solid #ddd;
+    background: #fafafa;
+}
+
+.btn-success-fill {
+    background: #27ae60;
+    color: white;
+    margin-top: 10px;
+}
+
+.btn-success-fill:hover:not(:disabled) {
+    background: #219150;
+}
+
+.info-prelievo {
+    font-size: 0.75rem;
+    color: #666;
+    margin: 15px 0;
+    padding: 10px;
+    background: #f9f9f9;
+    border-radius: 6px;
+}
+
+
+/* Assicurati che .tx-icon sia configurato così per la centratura perfetta */
+.tx-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    line-height: 0; /* Impedisce che l'altezza del testo sballi l'icona */
+}
+
+.tx-icon i {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+}
+
+.icon-pending {
+    background-color: #FFF4E5;
+    color: #FF9800;
+}
+
+.text-pending {
+    color: #e98c00 !important;
+}
+
 </style>
