@@ -106,22 +106,22 @@ router.post('/', isLoggato, async (req, res) => {
                 }
             }
 
-            // scalo i soldi dal saldo
-            await t.none(`
+            //  scalo i soldi dal saldo e recupero il nuovo valore tramite RETURNING
+            const userUpdate = await t.one(`
                 UPDATE Utente 
                 SET Saldo = Saldo - $1 
                 WHERE ID_Utente = $2
+                RETURNING Saldo
             `, [prezzo_totale, id_utente]);
 
-            // inserisco nel db la transazione
+            // sincronizzazione della sessione
+            req.session.utente.saldo = userUpdate.saldo;
+
+            // inserimento della transazione nel log
             await t.none(`
-                INSERT INTO Transazione (ID_Utente, Tipo, Importo, Descrizione)
+                INSERT INTO Transazione (ID_Utente, Tipo, Importo, Descrizione) 
                 VALUES ($1, 'PRENOTAZIONE', $2, $3)
-            `, [
-                id_utente, 
-                -costoSosta, 
-                `Pagamento prenotazione ${codice}`
-            ]);
+            `, [id_utente, -prezzo_totale, `Pagamento prenotazione ${codice}`]);
 
             // inserisco nel db la prenotazione
             return await t.one(`
@@ -279,6 +279,8 @@ router.put('/:codice/annulla', async (req, res) => {
 
             return utente.saldo;
         });
+
+        req.session.utente.saldo = nuovoSaldo;
 
         res.json({ 
             success: true, 
