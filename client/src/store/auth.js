@@ -201,5 +201,26 @@ async updateProfile(payload) {
       console.error("Errore durante l'eliminazione dell'account:", error);
       return { success: false, error: "Errore di connessione" };
     }
+  },
+
+  async upgradeToGestore() {
+    try {
+      const response = await fetch('/api/auth/upgrade-role', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        this.utente.ruolo = 'GESTORE';
+        localStorage.setItem('utente', JSON.stringify(this.utente));
+        return { success: true };
+      }
+      
+      return { success: false, error: data.error || "Errore durante l'aggiornamento del ruolo" };
+    } catch (error) {
+      return { success: false, error: "Errore di connessione al server" };
+    }
   }
 })

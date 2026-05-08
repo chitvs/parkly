@@ -43,28 +43,29 @@ const router = createRouter({
       path: '/garage/:id',
       name: 'garage-detail',
       component: () => import('../views/GarageDetailView.vue'),
-      props: true, 
+      props: true,
+    },
+    {
+      path: '/diventa-gestore',
+      name: 'diventa-gestore',
+      component: () => import('../views/BecomeGestoreView.vue'),
+      meta: { requiresAuth: true, role: 'CLIENTE' }
     },
     {
       path: '/dashboard-gestore',
       name: 'dashboard-gestore',
       component: () => import('../views/GestoreDashboardView.vue'),
-      // solo chi è loggato ed è un gestore
       meta: { requiresAuth: true, role: 'GESTORE' }
     },
-    // --- GESTIONE ERRORI 404 ---
     {
-      // Rotta esplicita per redirect forzati (es. quando il garage non esiste nel DB)
       path: '/404',
       name: 'NotFound',
       component: () => import('../views/NotFoundView.vue'),
     },
     {
-      // Rotta catch-all: carica la 404 senza cambiare l'URL sbagliato digitato dall'utente
       path: '/:pathMatch(.*)*',
       component: () => import('../views/NotFoundView.vue'),
     },
-    // -------------------------------------
   ],
   scrollBehavior(to, from, savedPosition) {
     if (savedPosition) {

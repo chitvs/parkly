@@ -14,12 +14,12 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 // Registrazione
 router.post('/register', async (req, res) => {
-    const { 
-        nome, 
-        cognome, 
+    const {
+        nome,
+        cognome,
         nomeUtente,
-        email, 
-        password, 
+        email,
+        password,
         ruolo,
         telefono,
         codiceFiscale
@@ -28,14 +28,14 @@ router.post('/register', async (req, res) => {
     try {
         // l'email o il nome utente esistono?
         const utenteEsistente = await db.oneOrNone(
-            'SELECT * FROM Utente WHERE Email = $1 OR NomeUtente = $2', 
+            'SELECT * FROM Utente WHERE Email = $1 OR NomeUtente = $2',
             [email, nomeUtente]
-        );    
+        );
 
         // se l'email esiste, lancio un errore
         if (utenteEsistente) {
-            return res.status(400).json({ 
-                success: false, 
+            return res.status(400).json({
+                success: false,
                 error: 'Email o Nome Utente già in uso'
             });
         }
@@ -59,38 +59,38 @@ router.post('/register', async (req, res) => {
             ruolo: nuovoUtente.ruolo
         };
 
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             messaggio: 'Registrazione completata',
-            utente: req.session.utente 
+            utente: req.session.utente
         });
 
     } catch (err) {
         console.error('Errore registrazione:', err);
-        res.status(500).json({ 
-            success: false, 
-            error: 'Errore' 
+        res.status(500).json({
+            success: false,
+            error: 'Errore'
         });
     }
 });
 
 // Login
 router.post('/login', async (req, res) => {
-    const { 
+    const {
         identificatore, // email o nomeutente 
-        password 
+        password
     } = req.body;
 
     try {
         const utente = await db.oneOrNone(
-            'SELECT * FROM Utente WHERE (Email = $1 OR NomeUtente = $1) AND IsAttivo = TRUE', 
+            'SELECT * FROM Utente WHERE (Email = $1 OR NomeUtente = $1) AND IsAttivo = TRUE',
             [identificatore]
         );
-        
+
         if (!utente) {
-            return res.status(401).json({ 
-                success: false, 
-                error: 'Credenziali non valide' 
+            return res.status(401).json({
+                success: false,
+                error: 'Credenziali non valide'
             });
         }
 
@@ -98,9 +98,9 @@ router.post('/login', async (req, res) => {
         const passwordOk = await bcrypt.compare(password, utente.passwordhash);
 
         if (!passwordOk) {
-            return res.status(401).json({ 
-                success: false, 
-                error: 'Password errata' 
+            return res.status(401).json({
+                success: false,
+                error: 'Password errata'
             });
         }
 
@@ -113,19 +113,19 @@ router.post('/login', async (req, res) => {
             saldo: utente.saldo,
             email: utente.email,
             ruolo: utente.ruolo,
-            fotoProfilo_URL: utente.fotoprofilo_url 
+            fotoProfilo_URL: utente.fotoprofilo_url
         };
 
-        res.json({ 
-            success: true, 
-            utente: req.session.utente 
+        res.json({
+            success: true,
+            utente: req.session.utente
         });
 
     } catch (err) {
         console.error('Errore login:', err);
-        res.status(500).json({ 
-            success: false, 
-            error: 'Errore interno'     
+        res.status(500).json({
+            success: false,
+            error: 'Errore interno'
         });
     }
 });
@@ -149,7 +149,7 @@ router.put('/change-password', async (req, res) => {
 
         // Confronto la password inserita con l'hash nel DB
         const passwordOk = await bcrypt.compare(currentPassword, utente.passwordhash);
-        
+
         if (!passwordOk) {
             return res.status(401).json({ success: false, error: 'La password attuale è errata' });
         }
@@ -172,19 +172,19 @@ router.put('/change-password', async (req, res) => {
 router.get('/profile', async (req, res) => {
     // Controllo se l'utente ha una sessione attiva
     if (!req.session.utente || !req.session.utente.id) {
-        return res.status(401).json({ 
-            success: false, 
-            error: 'Non autorizzato. Effettua il login.' 
+        return res.status(401).json({
+            success: false,
+            error: 'Non autorizzato. Effettua il login.'
         });
     }
 
     try {
         // Cerco l'utente nel DB tramite il suo ID (salvato nella sessione)
         // N.B: NON selezioniamo la password (PasswordHash) per sicurezza!
-        
+
         const utente = await db.oneOrNone(
             `SELECT id_utente, nome, cognome, nomeutente, email, telefono, codiceFiscale, fotoprofilo_url, ruolo, saldo 
-            FROM Utente WHERE id_utente = $1`, 
+            FROM Utente WHERE id_utente = $1`,
             [req.session.utente.id]
         );
 
@@ -193,9 +193,9 @@ router.get('/profile', async (req, res) => {
         }
 
         // Restituisco i dati al frontend
-        res.json({ 
-            success: true, 
-            data: utente 
+        res.json({
+            success: true,
+            data: utente
         });
 
     } catch (err) {
@@ -209,9 +209,9 @@ router.get('/profile', async (req, res) => {
 router.put('/profile', async (req, res) => {
     //  Controllo sicurezza: l'utente è loggato?
     if (!req.session.utente || !req.session.utente.id) {
-        return res.status(401).json({ 
-            success: false, 
-            error: 'Non autorizzato. Effettua il login.' 
+        return res.status(401).json({
+            success: false,
+            error: 'Non autorizzato. Effettua il login.'
         });
     }
 
@@ -220,14 +220,14 @@ router.put('/profile', async (req, res) => {
     try {
         // Controllo se l'utente sta cercando di usare un'email già presa da qualcun altro, controllo anche il nome utente
         const datiEsistenti = await db.oneOrNone(
-            'SELECT id_utente FROM Utente WHERE (Email = $1 OR NomeUtente = $2) AND id_utente != $3', 
+            'SELECT id_utente FROM Utente WHERE (Email = $1 OR NomeUtente = $2) AND id_utente != $3',
             [email, nomeUtente, req.session.utente.id]
         );
 
         if (datiEsistenti) {
-            return res.status(400).json({ 
-                success: false, 
-                error: 'Questa email o nome utente è già in uso da un altro account' 
+            return res.status(400).json({
+                success: false,
+                error: 'Questa email o nome utente è già in uso da un altro account'
             });
         }
 
@@ -245,8 +245,8 @@ router.put('/profile', async (req, res) => {
         req.session.utente.nomeUtente = utenteAggiornato.nomeutente;
         req.session.utente.email = utenteAggiornato.email;
 
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             messaggio: 'Profilo aggiornato con successo',
             utente: req.session.utente // Rimandiamo indietro l'utente aggiornato
         });
@@ -303,9 +303,9 @@ router.delete('/delete-account', async (req, res) => {
 
 // Sincronizzazione del frontend con sessione reale sul server
 router.get('/me', isLoggato, (req, res) => {
-    res.json({ 
-        success: true, 
-        utente: req.session.utente 
+    res.json({
+        success: true,
+        utente: req.session.utente
     });
 });
 
@@ -318,14 +318,14 @@ router.post('/upload-avatar', upload.single('avatar'), async (req, res) => {
     try {
         const file = req.file;
         const utenteId = req.session.utente.id;
-        
+
         // RECUPERO E CANCELLO LA FOTO VECCHIA (se esiste)
         const vecchiaUrl = req.session.utente.fotoProfilo_URL;
-        
+
         if (vecchiaUrl) {
             // Estrapolo solo il nome del file finale dall'URL (es: 12_avatar_1690000.jpg)
             const vecchioNomeFile = vecchiaUrl.split('/').pop();
-            
+
             // Dico a Supabase di cancellarlo dal bucket
             await supabase.storage.from('avatars').remove([vecchioNomeFile]);
         }
@@ -333,7 +333,7 @@ router.post('/upload-avatar', upload.single('avatar'), async (req, res) => {
         //CREO LA NUOVA FOTO
         const estensione = file.originalname.split('.').pop();
         const nomeFile = `${utenteId}_avatar_${Date.now()}.${estensione}`;
-        
+
         // Carico il file su Supabase Storage nel bucket 'avatars'
         const { data, error } = await supabase
             .storage
@@ -364,6 +364,35 @@ router.post('/upload-avatar', upload.single('avatar'), async (req, res) => {
     } catch (error) {
         console.error('Errore upload:', error);
         res.status(500).json({ success: false, error: 'Errore durante il caricamento' });
+    }
+});
+
+// Endpoint per promuovere un utente a GESTORE
+router.put('/upgrade-role', isLoggato, async (req, res) => {
+    try {
+        const utenteId = req.session.utente.id;
+
+        // 1. Aggiornamento sul database: impostiamo il ruolo a 'GESTORE'
+        const utenteAggiornato = await db.one(
+            'UPDATE Utente SET Ruolo = $1 WHERE id_utente = $2 RETURNING ruolo',
+            ['GESTORE', utenteId]
+        );
+
+        // 2. Sincronizzazione della sessione: 
+        req.session.utente.ruolo = utenteAggiornato.ruolo;
+
+        res.json({
+            success: true,
+            messaggio: 'Congratulazioni! Ora sei un Gestore su Parkly.',
+            utente: req.session.utente
+        });
+
+    } catch (err) {
+        console.error('Errore durante l\'upgrade del ruolo:', err);
+        res.status(500).json({
+            success: false,
+            error: 'Errore interno durante l\'aggiornamento del profilo.'
+        });
     }
 });
 

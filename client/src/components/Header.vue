@@ -46,10 +46,10 @@ const closeLoginModal = () => {
         loginIdentificatore.value = ''
         loginPassword.value = ''
         isPasswordVisible.value = false
-        
+
         resolve()
       },
-      { once: true } 
+      { once: true }
     )
 
     modalInstance.hide()
@@ -98,38 +98,41 @@ const handleLogout = async () => {
         </button>
       </template>
 
-      <div 
-        v-else 
-        class="logged-user-zone position-relative"
-        @mouseenter="isMenuOpen = true"
-        @mouseleave="isMenuOpen = false"
-      >
-        
+      <div v-else class="logged-user-zone position-relative" @mouseenter="isMenuOpen = true"
+        @mouseleave="isMenuOpen = false">
+
         <button class="btn user-name-btn d-flex align-items-center gap-2">
-          
-          <img 
-            :src="authStore.utente?.fotoProfilo_URL || '/default-avatar.png'" 
-            alt="Avatar" 
-            class="rounded-circle border"
-            style="width: 28px; height: 28px; object-fit: cover; border-color: #dee2e6;"
-          >
-          
+
+          <img :src="authStore.utente?.fotoProfilo_URL || '/default-avatar.png'" alt="Avatar"
+            class="rounded-circle border" style="width: 28px; height: 28px; object-fit: cover; border-color: #dee2e6;">
+
           <span>Ciao, <strong>{{ authStore.utente.nome }}</strong></span>
-          
+
         </button>
-        
-        <ul 
-          v-if="isMenuOpen" 
-          class="dropdown-menu show shadow border-0 parkly-dropdown" 
-          style="position: absolute; right: 0; top: 100%; margin-top: 0;"
-        >
+
+        <ul v-if="isMenuOpen" class="dropdown-menu show shadow border-0 parkly-dropdown"
+          style="position: absolute; right: 0; top: 100%; margin-top: 0;">
           <template v-if="authStore.utente?.ruolo === 'GESTORE'">
             <li>
-              <RouterLink class="dropdown-item fw-bold text-primary" to="/dashboard-gestore" @click="isMenuOpen = false">
-                <i class="fas fa-chart-line me-2"></i> Area Gestore
+              <RouterLink class="dropdown-item fw-bold text-primary" to="/dashboard-gestore"
+                @click="isMenuOpen = false">
+                Area Gestore
               </RouterLink>
             </li>
-            <li><hr class="dropdown-divider"></li>
+            <li>
+              <hr class="dropdown-divider">
+            </li>
+          </template>
+
+          <template v-else-if="authStore.utente?.ruolo === 'CLIENTE'">
+            <li>
+              <RouterLink class="dropdown-item fw-bold text-primary" to="/diventa-gestore" @click="isMenuOpen = false">
+                Diventa Gestore
+              </RouterLink>
+            </li>
+            <li>
+              <hr class="dropdown-divider">
+            </li>
           </template>
 
           <li>
@@ -147,7 +150,9 @@ const handleLogout = async () => {
               Il Tuo Portafoglio
             </RouterLink>
           </li>
-          <li><hr class="dropdown-divider"></li>
+          <li>
+            <hr class="dropdown-divider">
+          </li>
           <li>
             <a class="dropdown-item text-danger fw-bold" href="#" @click.prevent="handleLogout">
               Esci
@@ -159,23 +164,12 @@ const handleLogout = async () => {
     </div>
   </header>
 
-  <div
-    class="modal fade"
-    id="modalLogin"
-    ref="modalElement"
-    tabindex="-1"
-    aria-labelledby="modalLoginLabel"
-    aria-hidden="true"
-  >
+  <div class="modal fade" id="modalLogin" ref="modalElement" tabindex="-1" aria-labelledby="modalLoginLabel"
+    aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content parkly-modal">
         <div class="modal-header border-0">
-          <button
-            type="button"
-            class="btn-close"
-            data-bs-dismiss="modal"
-            aria-label="Close"
-          ></button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
 
         <div class="modal-body text-center px-4 pb-5">
@@ -184,34 +178,16 @@ const handleLogout = async () => {
 
           <form @submit.prevent="handleLogin">
             <div class="mb-3">
-                <input
-                    type="text"
-                    class="form-control modal-input"
-                    placeholder="Email o Nome Utente"
-                    v-model="loginIdentificatore"
-                    required
-                />
+              <input type="text" class="form-control modal-input" placeholder="Email o Nome Utente"
+                v-model="loginIdentificatore" required />
             </div>
             <div class="mb-3">
               <div class="input-group password-group">
-                <input
-                  :type="isPasswordVisible ? 'text' : 'password'"
-                  class="form-control password-field"
-                  placeholder="Password"
-                  v-model="loginPassword"
-                  required
-                />
-                <button
-                  class="btn toggle-password-btn"
-                  type="button"
-                  @click="isPasswordVisible = !isPasswordVisible"
-                  tabindex="-1"
-                >
-                  <img
-                    :src="isPasswordVisible ? eyeClosedUrl : eyeUrl"
-                    class="password-icon"
-                    alt="Toggle Password"
-                  />
+                <input :type="isPasswordVisible ? 'text' : 'password'" class="form-control password-field"
+                  placeholder="Password" v-model="loginPassword" required />
+                <button class="btn toggle-password-btn" type="button" @click="isPasswordVisible = !isPasswordVisible"
+                  tabindex="-1">
+                  <img :src="isPasswordVisible ? eyeClosedUrl : eyeUrl" class="password-icon" alt="Toggle Password" />
                 </button>
               </div>
             </div>
@@ -406,18 +382,18 @@ const handleLogout = async () => {
   transition: all 0.3s;
 }
 
-.user-name-btn:hover, .user-name-btn:focus {
+.user-name-btn:hover,
+.user-name-btn:focus {
   background-color: #e9ecef;
   border-color: #ced4da;
 }
 
 .parkly-dropdown {
   border-radius: 16px;
-  overflow: hidden; /* Mantiene i bordi arrotondati anche all'hover degli item */
-
-  border-top: 10px solid transparent; 
-  background-clip: padding-box; 
-  margin-top: 0 !important; /* Assicuriamoci che non ci siano margini residui */
+  overflow: hidden;
+  border-top: 10px solid transparent;
+  background-clip: padding-box;
+  margin-top: 0 !important;
 }
 
 .parkly-dropdown .dropdown-item {
