@@ -7,7 +7,6 @@
   <img src="https://img.shields.io/badge/Vite-B73BFE?style=for-the-badge&logo=vite&logoColor=FFD62E" alt="Vite" />
   <img src="https://img.shields.io/badge/Bootstrap-563D7C?style=for-the-badge&logo=bootstrap&logoColor=white" alt="Bootstrap" />
   <img src="https://img.shields.io/badge/Leaflet-199900?style=for-the-badge&logo=leaflet&logoColor=white" alt="Leaflet" />
-  
   <img src="https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white" alt="Node.js" />
   <img src="https://img.shields.io/badge/Express.js-404D59?style=for-the-badge&logo=express&logoColor=white" alt="Express.js" />
   <img src="https://img.shields.io/badge/Socket.io-010101?style=for-the-badge&logo=socket.io&logoColor=white" alt="Socket.io" />
@@ -23,39 +22,54 @@ Parkly è un'applicazione web full-stack per la gestione e la prenotazione di pa
 - [Struttura del progetto](#struttura-del-progetto)
 - [Schema del database](#schema-del-database)
 - [Funzionalità](#funzionalità)
-  - [Pubblicazione di un garage](#pubblicazione-di-un-garage)
-  - [Chat interattiva](#chat-interattiva)
+  - [Flusso di autenticazione](#flusso-di-autenticazione)
   - [Ricerca dei garage](#ricerca-dei-garage)
-  - [Flusso di prenotazione](#flusso-di-prenotazione)
-  - [Gestione del saldo](#gestione-del-saldo)
+  - [Prenotazione di un parcheggio](#prenotazione-di-un-parcheggio)
+  - [Gestione del portafoglio](#gestione-del-portafoglio)
+  - [Il ruolo Gestore e la pubblicazione di un garage](#il-ruolo-gestore-e-la-pubblicazione-di-un-garage)
   - [Sistema di recensioni](#sistema-di-recensioni)
+  - [Chat interattiva](#chat-interattiva)
 - [Viste](#viste)
 - [Installazione](#installazione)
+  - [Prerequisiti](#prerequisiti)
+  - [Installazione delle dipendenze](#installazione-delle-dipendenze)
+  - [Configurazione del database](#configurazione-del-database)
+  - [Variabili d'ambiente](#variabili-dambiente)
+  - [Avvio](#avvio)
 - [Autori](#autori)
 
 ## Architettura e tecnologie utilizzate
 
-Il progetto segue un'architettura client-server. Il frontend è una single-page application costruita con Vue.js e Vite, comunica con il backend tramite API REST esposte da un server Express. I dati sono affidati ad un'istanza di PostgreSQL. L'autenticazione è gestita tramite sessioni server-side con `express-session`: al login i dati dell'utente vengono scritti in una sessione e il browser conserva esclusivamente il cookie. Ad ogni richiesta protetta, il middleware verifica la presenza e la validità della sessione prima di procedere.
+Il progetto è strutturato secondo un'architettura client-server, separando l'interfaccia utente dalle API e dalla gestione dei dati.
+
+Il frontend è basato su Vue.js e Vite. L'interfaccia è costruita con Bootstrap, mentre per il rendering e l'integrazione della mappa geografica è stato utilizzato Leaflet.
+
+Il backend è un server Node.js basato su Express. Per l'autenticazione abbiamo utilizzato express-session e cookie, proteggendo le password con bcrypt.
+
+Per quanto riguarda i dati abbiamo scelto un database relazionale, PostgreSQL (hostato tramite Supabase). Oltre al database, sfruttiamo il bucket di Supabase Storage (interfacciato tramite multer in memoria sul server) per la gestione di alcuni file statici, come le foto profilo degli utenti.
+
+Infine, per le funzionalità in tempo reale della chat abbiamo integrato Socket.IO.
 
 ## Struttura del progetto
+
 ```
 parkly/
 ├── client/
 │   └── src/
-│       ├── assets/          # Icone SVG e immagini statiche
+│       ├── assets/          # Immagini e icone
 │       ├── components/      # Componenti UI riutilizzabili
 │       ├── composables/     # Logica reattiva incapsulata
 │       ├── router/          # Routing lato client
 │       ├── store/           # Stato applicativo
 │       ├── utils/           # Funzioni ausiliarie
-│       └── views/           # Componenti a livello di pagina
+│       └── views/           # Viste
 └── server/
     ├── database/
     │   ├── parkly.sql       # Definizione dello schema
     │   └── seed.sql         # Dati di esempio
     ├── middleware/
     │   └── authMiddleware.js
-    ├── routes/              # Endpoint REST
+    ├── routes/              # Endpoint API
     └── index.js
 ```
 
@@ -76,46 +90,58 @@ Il database è composto da sette tabelle. `Utente` è l'entità centrale: un ute
 - Sistema di recensioni vincolate alle prenotazioni concluse.
 - Dashboard gestore con occupazione in tempo reale, statistiche mensili e planimetria interattiva del garage.
 
-### Pubblicazione di un garage
+### Flusso di autenticazione
 
-La creazione di un garage è uno dei flussi più interessanti dell'applicazione e si articola in tre fasi sequenziali, gestite interamente nella dashboard del gestore.
-
-La prima fase riguarda la posizione. Il gestore compila un form e il sistema invoca un'API di geocodifica per calcolare le coordinate e centrare la mappa sul risultato. Le coordinate sono poi affinabili con un click diretto sulla mappa per migliorare la precisione e prevenire errori del server. 
-
-La seconda fase è la configurazione dei posti. Per ogni posto il gestore specifica un codice alfanumerico, il tipo di veicolo (il sistema supporta AUTO, MOTO, FURGONE) e i flag booleani per posti dotati di ricarica elettrica, accessibilità per persone con disabilità e copertura. Il codice può essere lasciato vuoto, in questo caso sarà il sistema a generarlo automaticamente in base al tipo.
-
-La terza fase è il disegno della planimetria. Dopo aver "creato" i posti del garage, una griglia CSS a dimensioni configurabili rappresenta lo spazio fisico da riempire. Il gestore seleziona un posto dal menù degli strumenti e lo posiziona sulla griglia, disegnando la planimetria desiderata. In particolare ogni posto occupa un'area proporzionale al tipo di veicolo (MOTO: 1x1, AUTO: 2x1, FURGONE: 2x2). Man mano che la griglia viene riempita, il componente `PlanimetriaGarage` renderizza l'anteprima in tempo reale, effettuando il parsing di una stringa testuale. Questa stringa, che descrive il layout disegnato dall'utente, viene infine salvata nel campo `MappaTestuale` del database e utilizzata dal client per visualizzare la piantina definitiva.
-
-### Chat interattiva
-
-todo
+L'accesso è gestito tramite sessioni e password criptate. Gli utenti possono gestire il proprio profilo, personalizzare l'avatar, aggiornare i dati personali o richiedere il ruolo di Gestore. Il sistema supporta anche l'eliminazione dell'account tramite soft-delete per preservare l'integrità dello storico.
 
 ### Ricerca dei garage
 
-todo
+La ricerca combina il posizionamento geografico e la disponibilità temporale. Lato client, il sistema calcola la distanza tra destinazione e garage, ordinando i risultati per vicinanza. I filtri reattivi permettono di affinare la ricerca per tipo di veicolo e servizi accessori come ricarica elettrica, accesso disabili e copertura del posto auto.
 
-### Flusso di prenotazione
+Lato backend, il sistema verifica l'effettiva disponibilità dei posti interrogando il database con la clausola `OVERLAPS`. Questo incrocio temporale esclude i garage già occupati negli orari selezionati, garantendo all'utente solo risultati prenotabili.
 
-todo
+### Prenotazione di un parcheggio
 
-### Gestione del saldo
+Il flusso di prenotazione garantisce la massima coerenza dei dati attraverso transazioni atomiche. L'utente seleziona il posto dalla planimetria interattiva e il client valida formalmente i dati calcolando il preventivo.
 
-todo
+Per prevenire conflitti di prenotazione simultanea, il server applica un lock a livello di tupla sul database. All'interno della stessa transazione, il sistema verifica il saldo, addebita il costo sul portafoglio e genera il ticket.
+
+### Gestione del portafoglio
+
+Parkly integra un portafoglio virtuale per semplificare i pagamenti, permettendo ricariche comprese tra 5€ e 1000€. L'uso di transazioni atomiche nel backend garantisce che l'aggiornamento del saldo e la registrazione del movimento nello storico avvengano simultaneamente.
+
+Gli utenti possono consultare lo storico completo delle proprie attività tramite una lista cronologica paginata, che distingue esplicitamente ricariche, pagamenti e rimborsi.
+
+### Il ruolo Gestore e la pubblicazione di un garage
+
+La dashboard dedicata ai gestori permette di pubblicare nuovi garage su Parkly attraverso un flusso guidato in tre fasi. 
+
+Nella prima fase viene definita la posizione del garage: partendo da un indirizzo, il sistema interroga un'API di geocodifica e genera delle coordinate, per garantire la massima precisione è permesso all'utente di affinare manualmente le coordinate tramite click diretto sulla mappa.
+
+La seconda fase riguarda la configurazione tecnica dei posti auto. Il gestore definisce ogni parcheggio specificando la tipologia di veicolo e i servizi inclusi, come la ricarica elettrica, l'accessibilità per disabili o la copertura. Per velocizzare l'inserimento e migliorare l'esperienza dell'utente, il sistema è in grado di generare automaticamente i codici identificativi dei posti in base alla categoria selezionata.
+
+L'ultima fase consiste nel disegno della planimetria tramite una griglia interattiva. Ogni posto occupa uno spazio proporzionale alle dimensioni del veicolo e il componente PlanimetriaGarage ne renderizza l'anteprima in tempo reale elaborando i dati inseriti. Il layout finale viene salvato nel database come stringa testuale, permettendo al client di ricostruire fedelmente la piantina durante il processo di prenotazione.
 
 ### Sistema di recensioni
 
-todo
+Al termine di una sosta, l'utente ha la possibilità di valutare la propria esperienza assegnando un voto da 1 a 5 stelle e lasciando un commento. Per garantire l'affidabilità e l'autenticità dei feedback mostrati agli altri utenti, il sistema permette di recensire esclusivamente i garage in cui si è effettivamente completata una prenotazione.
+
+### Chat interattiva
+
+Per facilitare la coordinazione tra utenti, Parkly integra un sistema di messaggistica in tempo reale basato su Socket.IO. 
+
+La chat è strettamente legata a una specifica prenotazione: il backend instrada i messaggi attraverso "room" private e verifica l'identità dei partecipanti prima di ogni invio.
 
 ## Viste
 
 | Rotta | Componente | Descrizione |
 |---|---|---|
-| `/` | `HomeView` | Pagina principale dell'applicazione |
+| `/` | `HomeView` | Homepage |
 | `/garage` | `GarageView` | Lista garage con mappa interattiva e filtri |
 | `/garage/:id` | `GarageDetailView` | Dettaglio garage, disponibilità e prenotazione |
 | `/prenotazioni` | `BookingsView` | Storico e prenotazioni attive dell'utente |
 | `/portafoglio` | `WalletView` | Gestione saldo e storico transazioni |
-| `/dashboard-gestore` | `GestoreDashboardView` | Statistiche e amministrazione garage (gestore) |
+| `/dashboard-gestore` | `GestoreDashboardView` | Dashboard del gestore |
 | `/profile` | `ProfileView` | Impostazioni account ed eliminazione |
 | `/register` | `RegisterView` | Registrazione sulla piattaforma |
 | `/diventa-gestore` | `BecomeGestoreView` | Richiesta ruolo gestore |
@@ -156,15 +182,19 @@ SUPABASE_URL
 SUPABASE_SERVICE_KEY
 ```
 
+> [!NOTE]  
+> Le variabili d'ambiente possono differire in base alla configurazione del database.
+> Durante lo sviluppo di Parkly Supabase è stato usato per creare l'istanza PostgreSQL e semplificare la collaborazione, dunque sono presenti le variabili `SUPABASE_URL` e `SUPABASE_SERVICE_KEY`.
+
 ### Avvio
+
+Assicurarsi di essere nella root del progetto ed eseguire:
 
 ```bash
 npm run dev
 ```
 
-Il client sarà disponibile su `http://localhost:5173`, il server su `http://localhost:3000`. Per testare il server collegarsi a:
-
-`localhost:3000/test-db`
+Il client sarà disponibile su `http://localhost:5173`, il server su `http://localhost:3000`. Per testare il server collegarsi a `localhost:3000/test-db`.
 
 Se il server risponde con successo, l'applicazione è connessa correttamente.
 
