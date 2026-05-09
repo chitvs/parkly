@@ -83,7 +83,7 @@ router.post('/contabilizza-ricavi', async (req, res) => {
                 JOIN Prenotazione p ON t.ID_Prenotazione = p.ID_Prenotazione
                 WHERE t.ID_Utente = $1 
                   AND t.Tipo = 'INCASSO_SOSPESO' 
-                  AND p.FineSosta < (NOW() + INTERVAL '2 hours')
+                  AND p.FineSosta < (NOW() AT TIME ZONE 'Europe/Rome')
                 FOR UPDATE OF t
             `, [id_gestore]);
 
