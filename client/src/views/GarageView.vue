@@ -37,7 +37,7 @@ const { isLoading, garages, fetchGarages } = useGarages()
 
 const {
     filter24h, maxPrice, minHeight, filterCoperto,
-    filterElettrico, filterDisabili, filterTipoVeicolo,
+    filterElettrico, filterDisabili, filterTipoVeicolo, raggioKm,
     resetTechnicalFilters, passaFiltriTecnici
 } = useGarageFilters()
 
@@ -56,7 +56,7 @@ const {
     matchedPOI,
     garagesFiltrati,
     hasMoreResults
-} = useSpatialSearch(searchLocation, garages, passaFiltriTecnici)
+} = useSpatialSearch(searchLocation, garages, passaFiltriTecnici, raggioKm)
 
 const paginaCorrente = ref(1)
 const elementiPerPagina = ref(5)
@@ -291,7 +291,7 @@ const handleSuggestionSelected = (place) => {
                     <div class="map-overlay">
                         <button class="map-view-btn" @click="openMapFullscreen">
                             <img src="../assets/pin.svg" class="icon-card" alt="Pin"
-                                            style="transform: scale(1.5) translateY(-1px); filter:  invert(1);" /> Vedi su mappa
+                                style="transform: scale(1.5) translateY(-1px); filter: invert(1);" /> Vedi su mappa
                         </button>
                         <Teleport to="body">
                             <Transition name="fs-fade">
@@ -302,20 +302,23 @@ const handleSuggestionSelected = (place) => {
 
                                             <div class="fs-col-filters">
                                                 <div class="fs-panel-header">
-                                                    <h3
-                                                        style="display: flex; justify-content: space-between; width: 100%;">
+                                                    <h3 style="display: flex; justify-content: space-between; width: 100%;">
                                                         Filtri
                                                         <button @click="resetFilters" class="reset-btn"
                                                             style="color: white;">Reset</button>
                                                     </h3>
                                                 </div>
                                                 <div class="fs-scroll-content">
-                                                    <GarageFilters v-model:filterTipoVeicolo="filterTipoVeicolo"
-                                                        v-model:maxPrice="maxPrice" v-model:filter24h="filter24h"
+                                                    <GarageFilters
+                                                        v-model:filterTipoVeicolo="filterTipoVeicolo"
+                                                        v-model:maxPrice="maxPrice"
+                                                        v-model:filter24h="filter24h"
                                                         v-model:filterCoperto="filterCoperto"
                                                         v-model:filterElettrico="filterElettrico"
                                                         v-model:filterDisabili="filterDisabili"
-                                                        v-model:minHeight="minHeight" />
+                                                        v-model:minHeight="minHeight"
+                                                        v-model:raggioKm="raggioKm"
+                                                        :hasLocation="!!searchLocation" />
                                                 </div>
                                             </div>
 
@@ -329,15 +332,13 @@ const handleSuggestionSelected = (place) => {
                                                         @mouseenter="setHover(garage, true)"
                                                         @click="selectGarage(garage)">
                                                         <div class="mini-thumb">
-                                                            <div class="gcard-letter-box">{{ garage.nome.charAt(0) }}
-                                                            </div>
+                                                            <div class="gcard-letter-box">{{ garage.nome.charAt(0) }}</div>
                                                         </div>
                                                         <div class="mini-details">
                                                             <h4>{{ garage.nome }}</h4>
                                                             <p>{{ garage.indirizzo.slice(0, 30) }}...</p>
                                                             <p v-if="garage.displayPOIName">
-                                                                a {{ garage.displayDistanceLabel }} da {{
-                                                                    garage.displayPOIName }}
+                                                                a {{ garage.displayDistanceLabel }} da {{ garage.displayPOIName }}
                                                             </p>
                                                             <span class="mini-price">€{{ getDisplayPrice(garage) }}/ora</span>
                                                         </div>
@@ -350,7 +351,7 @@ const handleSuggestionSelected = (place) => {
                                                     </div>
 
                                                     <div v-if="hasMoreResults" class="fs-extended-results-mini">
-                                                        <p>Ci sono altri parcheggi entro 5km</p>
+                                                        <p>Ci sono altri parcheggi oltre {{ raggioKm }}km</p>
                                                         <button @click.stop="showExtendedResults = true"
                                                             class="btn-show-more-mini">
                                                             Mostra altri
@@ -369,8 +370,7 @@ const handleSuggestionSelected = (place) => {
                                                         placeholder="Cerca sulla mappa..."
                                                         @suggestion-selected="handleSuggestionSelected" />
                                                 </div>
-                                                <button class="fs-reset-view" @click="resetMapView"
-                                                    title="Ripristina visuale">
+                                                <button class="fs-reset-view" @click="resetMapView" title="Ripristina visuale">
                                                     <span style="font-size: 1.2rem;"><img src="../assets/refresh.svg"
                                                             class="icon-card" alt="Pin"
                                                             style="transform:translateX(3px) translateY(-0.5px) scale(1.7)" /></span>
@@ -392,10 +392,16 @@ const handleSuggestionSelected = (place) => {
                         <button @click="resetFilters" class="reset-btn">Reset</button>
                     </div>
 
-                    <GarageFilters v-model:filterTipoVeicolo="filterTipoVeicolo" v-model:maxPrice="maxPrice"
-                        v-model:filter24h="filter24h" v-model:filterCoperto="filterCoperto"
-                        v-model:filterElettrico="filterElettrico" v-model:filterDisabili="filterDisabili"
-                        v-model:minHeight="minHeight" />
+                    <GarageFilters
+                        v-model:filterTipoVeicolo="filterTipoVeicolo"
+                        v-model:maxPrice="maxPrice"
+                        v-model:filter24h="filter24h"
+                        v-model:filterCoperto="filterCoperto"
+                        v-model:filterElettrico="filterElettrico"
+                        v-model:filterDisabili="filterDisabili"
+                        v-model:minHeight="minHeight"
+                        v-model:raggioKm="raggioKm"
+                        :hasLocation="!!searchLocation" />
                 </div>
             </aside>
 
@@ -477,6 +483,15 @@ const handleSuggestionSelected = (place) => {
                                 </div>
                             </div>
                         </div>
+                        
+                        <div v-if="hasMoreResults" class="extended-results-container">
+                            <p class="extended-info">
+                                Ci sono altri parcheggi tra {{ raggioKm }}km e {{ Math.max(raggioKm + 3, 5) }}km...
+                            </p>
+                            <button @click.stop="showExtendedResults = true" class="btn-show-more">
+                                Visualizza altri parcheggi
+                            </button>
+                        </div>
 
                         <div v-if="garagesFiltrati.length > 0" class="mt-3 px-2 pagination-container">
                             <Pagination 
@@ -487,12 +502,6 @@ const handleSuggestionSelected = (place) => {
                             />
                         </div>
 
-                        <div v-if="hasMoreResults" class="extended-results-container">
-                            <p class="extended-info">Ci sono altri parcheggi un po' più distanti...</p>
-                            <button @click.stop="showExtendedResults = true" class="btn-show-more">
-                                Visualizza altri parcheggi (entro 5km)
-                            </button>
-                        </div>
                     </div>
                 </template>
             </main>
