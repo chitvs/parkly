@@ -9,6 +9,10 @@ import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 import ChatBox from '../components/ChatBox.vue'
 
+// Icone dei bottoni annulla e contatta
+import IconCancel from '../icons/IconCancel.vue'
+import IconMessage from '../icons/IconMessage.vue'
+
 // variabili per i filtri e l'ordinamento
 const filtroStato = ref('') // '' = Tutte, 'ATTIVA', 'CONCLUSA', 'ANNULLATA'
 const filtroGarage = ref('') // '' = Tutti, oppure l'id_garage
@@ -327,10 +331,7 @@ const chiudiChat = () => {
                       class="custom-btn btn-cancel"
                       title="Annulla Prenotazione"
                   >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M18 6L6 18M6 6l12 12"/>
-                  </svg>
+                  <IconCancel width="18" height="18" />
                   Annulla
                   </button>
 
@@ -343,10 +344,7 @@ const chiudiChat = () => {
                   >
                     <!--pallino notifica-->
                     <span v-if="booking.nonletti > 0" class="chat-notification-dot"></span>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                      </svg>
+                      <IconMessage width="18" height="18" />
                         Contatta
                   </button>
 
