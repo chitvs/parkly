@@ -55,7 +55,7 @@ const handleRegister = async () => {
           <div class="register-card">
             <div class="text-center mb-4">
               <img
-                src="../assets/Primo_Logo_00408A.svg"
+                src="../assets/LogoParklyBlu.svg"
                 alt="logo parkly"
                 width="100"
                 class="mb-3 logo-img"

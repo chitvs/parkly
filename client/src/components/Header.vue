@@ -2,8 +2,8 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import * as bootstrap from 'bootstrap'
-import logoUrl from '../assets/Primo_Logo_00408A.svg'
-import logoInteroUrl from '../assets/parkly-logo-intero.svg'
+import logoUrl from '../assets/LogoParklyBlu.svg'
+import logoInteroUrl from '../assets/LogoParklyIntero.svg'
 import { authStore } from '../store/auth.js' // Importa lo store
 
 //foto profilo standard
