@@ -59,13 +59,11 @@ const paginaVisibili = computed(() => {
         @click="cambiaPagina(paginaCorrente - 1)"
         aria-label="Pagina precedente"
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="15 18 9 12 15 6"/>
-        </svg>
+        <img src="../assets/chevron-left.svg" class="icon" alt="Precedente">
       </button>
 
       <span class="pag-compact__info">
-        {{ rangeInizio }}–{{ rangeFine }}<span class="pag-compact__of"> / {{ totaleElementi }}</span>
+        {{ rangeInizio }}-{{ rangeFine }}<span class="pag-compact__of"> / {{ totaleElementi }}</span>
       </span>
 
       <button
@@ -74,9 +72,7 @@ const paginaVisibili = computed(() => {
         @click="cambiaPagina(paginaCorrente + 1)"
         aria-label="Pagina successiva"
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="9 18 15 12 9 6"/>
-        </svg>
+        <img src="../assets/chevron-right.svg" class="icon" alt="Successiva">
       </button>
     </div>
 
@@ -91,22 +87,18 @@ const paginaVisibili = computed(() => {
           per pagina
         </label>
         <span class="pag-full__counter">
-          {{ rangeInizio }}–{{ rangeFine }} di <strong>{{ totaleElementi }}</strong>
+          {{ rangeInizio }}-{{ rangeFine }} di <strong>{{ totaleElementi }}</strong>
         </span>
       </div>
 
       <div class="pag-full__right">
 
         <button class="pag-full__btn" :disabled="paginaCorrente === 1" @click="cambiaPagina(1)" title="Prima pagina">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/>
-          </svg>
+          <img src="../assets/chevron-left-double.svg" class="icon" alt="Prima pagina">
         </button>
 
         <button class="pag-full__btn" :disabled="paginaCorrente === 1" @click="cambiaPagina(paginaCorrente - 1)" title="Precedente">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="15 18 9 12 15 6"/>
-          </svg>
+          <img src="../assets/chevron-left.svg" class="icon" alt="Precedente">
         </button>
 
         <template v-for="(p, i) in paginaVisibili" :key="i">
@@ -120,15 +112,11 @@ const paginaVisibili = computed(() => {
         </template>
 
         <button class="pag-full__btn" :disabled="paginaCorrente === totalePagine" @click="cambiaPagina(paginaCorrente + 1)" title="Successiva">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="9 18 15 12 9 6"/>
-          </svg>
+          <img src="../assets/chevron-right.svg" class="icon" alt="Successiva">
         </button>
 
         <button class="pag-full__btn" :disabled="paginaCorrente === totalePagine" @click="cambiaPagina(totalePagine)" title="Ultima pagina">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/>
-          </svg>
+          <img src="../assets/chevron-right-double.svg" class="icon" alt="Ultima pagina">
         </button>
 
       </div>
@@ -295,5 +283,10 @@ const paginaVisibili = computed(() => {
     justify-content: center;
     width: 100%;
   }
+}
+
+.icon {
+    width: 18px;
+    height: 18px;
 }
 </style>
