@@ -4,6 +4,7 @@ import { authStore } from '../store/auth.js'
 import { walletStore } from '../store/wallet.js'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
+import 'bootstrap-icons/font/bootstrap-icons.css'
 import Pagination from '../components/Pagination.vue'
 
 const isLoading = ref(false)
@@ -93,6 +94,8 @@ const limitaImporto = () => {
     // se l'utente digita un numero maggiore di 1000, lo forziamo a 1000
     if (formRicarica.importo > 1000) {
         formRicarica.importo = 1000
+    } else if (formRicarica.importo < 0) {
+        formRicarica.importo = 0
     }
 }
 
@@ -121,7 +124,7 @@ const handleRicarica = async () => {
     // validazione scadenza carta
     if (formRicarica.scadenza.length === 5) {
         const [meseStr, annoStr] = formRicarica.scadenza.split('/')
-        
+
         // controlliamo che mese e anno siano effettivamente numeri validi
         const numMese = parseInt(meseStr, 10)
         const numAnno = parseInt(annoStr, 10)
@@ -135,7 +138,7 @@ const handleRicarica = async () => {
         const dataOggi = new Date()
         const meseAttuale = dataOggi.getMonth() + 1 // i mesi in JS partono da 0
         // prendi le ultime due cifre dell'anno corrente e convertile in numero in modo sicuro
-        const annoAttuale = dataOggi.getFullYear() % 100 
+        const annoAttuale = dataOggi.getFullYear() % 100
 
         // controlla se l'anno è passato, oppure se è l'anno corrente ma il mese è passato
         if (numAnno < annoAttuale || (numAnno === annoAttuale && numMese < meseAttuale)) {
@@ -175,6 +178,96 @@ const handleRicarica = async () => {
         isLoading.value = false
     }
 }
+
+const tabAttiva = ref('ricarica')
+const prelievoForm = reactive({
+    importo: null,
+    metodo: 'Bonifico Bancario',
+    intestatario: '',
+    coordinate: ''
+})
+
+const formattaCoordinate = () => {
+    if (prelievoForm.metodo === 'Bonifico Bancario') {
+        // Rimuove spazi e caratteri speciali, converte in maiuscolo
+        let val = prelievoForm.coordinate.replace(/[^A-Z0-9]/ig, '').toUpperCase()
+        // Aggiunge uno spazio ogni 4 caratteri
+        val = val.replace(/(.{4})/g, '$1 ').trim()
+        prelievoForm.coordinate = val.substring(0, 34) // Lunghezza max IBAN con spazi
+    }
+}
+
+// Funzione per gestire il prelievo
+const handlePrelievo = async () => {
+    messaggio.value = null
+
+    if (!prelievoForm.importo || prelievoForm.importo <= 0) {
+        messaggio.value = { tipo: 'error', testo: "Inserisci un importo valido." }
+        return
+    }
+    if (prelievoForm.importo < 5) {
+        messaggio.value = { tipo: 'error', testo: "L'importo minimo per il prelievo è di 5,00€." }
+        return
+    }
+    if (prelievoForm.importo > saldoAttuale.value) {
+        messaggio.value = { tipo: 'error', testo: "Saldo insufficiente." }
+        return
+    }
+
+    if (!prelievoForm.coordinate.trim()) {
+        messaggio.value = { tipo: 'error', testo: "Inserisci le coordinate per l'accredito." }
+        return
+    }
+
+    if (prelievoForm.metodo === 'Bonifico Bancario') {
+        const ibanRegex = /^[A-Z]{2}\d{2}[A-Z0-9]{1,30}$/
+        const ibanPulito = prelievoForm.coordinate.replace(/\s/g, '').toUpperCase()
+        if (!ibanRegex.test(ibanPulito)) {
+            messaggio.value = { tipo: 'error', testo: "Formato IBAN non valido." }
+            return
+        }
+    } else if (prelievoForm.metodo === 'PayPal') {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        if (!emailRegex.test(prelievoForm.coordinate)) {
+            messaggio.value = { tipo: 'error', testo: "Inserisci un indirizzo email PayPal valido." }
+            return
+        }
+    }
+
+    isLoading.value = true
+    try {
+        // Prepariamo una dicitura breve per la UI
+        let dicituraBreve = '';
+        
+        if (prelievoForm.metodo === 'Bonifico Bancario') {
+            const ultimeCifre = prelievoForm.coordinate.slice(-4);
+            dicituraBreve = `Bonifico (***${ultimeCifre})`;
+        } else if (prelievoForm.metodo === 'PayPal') {
+            const [nome, dominio] = prelievoForm.coordinate.split('@');
+            const nomeMascherato = nome.length > 3 ? nome.substring(0, 3) + '***' : nome + '***';
+            dicituraBreve = `PayPal (${nomeMascherato}@${dominio})`;
+        }
+
+        const response = await walletStore.prelevaFondi({
+            importo: parseFloat(prelievoForm.importo),
+            metodo: dicituraBreve
+        })
+
+        if (response.success) {
+            messaggio.value = { tipo: 'success', testo: "Prelievo effettuato con successo." }
+            prelievoForm.importo = null
+            prelievoForm.coordinate = ''
+            await fetchTransazioni()
+        } else {
+            messaggio.value = { tipo: 'error', testo: response.error }
+        }
+    } catch (error) {
+        messaggio.value = { tipo: 'error', testo: "Errore durante l'operazione." }
+    } finally {
+        isLoading.value = false
+    }
+}
+
 </script>
 
 <template>
@@ -203,60 +296,98 @@ const handleRicarica = async () => {
             <div class="layout-grid wallet-grid">
 
                 <div class="card shadow-sm">
-                    <div class="card-header">
-                        <h2>Ricarica Saldo</h2>
+                    <div class="card-tabs">
+                        <button class="tab-btn" :class="{ active: tabAttiva === 'ricarica' }"
+                            @click="tabAttiva = 'ricarica'">
+                            Ricarica Saldo
+                        </button>
+                        <button class="tab-btn" :class="{ active: tabAttiva === 'prelievo' }"
+                            @click="tabAttiva = 'prelievo'">
+                            Preleva
+                        </button>
                     </div>
-                    <div class="card-body">
-                        <form @submit.prevent="handleRicarica">
 
+                    <div class="card-body">
+                        <form v-if="tabAttiva === 'ricarica'" @submit.prevent="handleRicarica">
                             <div class="form-group highlight-box">
                                 <label>Importo da ricaricare (€)</label>
-                                <input 
-                                    type="number" 
-                                    step="0.01" 
-                                    min="5" 
-                                    max="1000" 
-                                    class="amount-input"
-                                    v-model="formRicarica.importo" 
-                                    @input="limitaImporto"
-                                    placeholder="es. 50.00" 
-                                    required
-                                >
-                                <small class="hint-text">Importo minimo: 5,00 € | Massimo: 1.000,00 €</small>
+                                <input type="number" step="0.01" class="amount-input" v-model="formRicarica.importo"
+                                    @input="limitaImporto" placeholder="es. 50.00" required>
+                                <small class="hint-text">Min: 5,00 € | Max: 1.000,00 €</small>
                             </div>
-
                             <h3 class="section-subtitle">Dati Carta</h3>
-
                             <div class="form-group">
                                 <label>Titolare della Carta</label>
                                 <input type="text" v-model="formRicarica.titolare" @input="formattaTitolare"
                                     placeholder="MARIO ROSSI" required>
                             </div>
-
                             <div class="form-group">
                                 <label>Numero della Carta</label>
                                 <input type="text" class="font-monospace" v-model="formRicarica.numeroCarta"
-                                    @input="formattaNumeroCarta" placeholder="0000 0000 0000 0000" pattern="[\d\s]{19}"
-                                    required>
+                                    @input="formattaNumeroCarta" placeholder="0000 0000 0000 0000" required>
                             </div>
-
                             <div class="form-row">
                                 <div class="form-group">
                                     <label>Scadenza</label>
                                     <input type="text" class="text-center font-monospace"
                                         v-model="formRicarica.scadenza" @input="formattaScadenza" placeholder="MM/YY"
-                                        pattern="(0[1-9]|1[0-2])\/[0-9]{2}" required>
+                                        required>
                                 </div>
                                 <div class="form-group">
                                     <label>CVV</label>
                                     <input type="text" class="text-center font-monospace" v-model="formRicarica.cvv"
-                                        @input="formattaCVV" placeholder="123" pattern="[0-9]{3,4}" required>
+                                        @input="formattaCVV" placeholder="123" required>
                                 </div>
+                            </div>
+                            <button type="submit" class="btn fill w-100" :disabled="isLoading">
+                                {{ isLoading ? 'Elaborazione...' : 'Conferma Ricarica' }}
+                            </button>
+                        </form>
+
+                        <form v-else-if="tabAttiva === 'prelievo'" @submit.prevent="handlePrelievo">
+
+                            <div v-if="saldoAttuale < 5" class="info-prelievo"
+                                style="border-left: 3px solid #c62828; color: #c62828; background: #fff5f5;">
+                                Saldo insufficiente per richiedere un prelievo. Il minimo è di 5,00€.
+                            </div>
+
+                            <div class="form-group highlight-box">
+                                <label>Importo da prelevare (€)</label>
+                                <input type="number" step="0.01" min="5" class="amount-input"
+                                    v-model.number="prelievoForm.importo" :max="saldoAttuale" placeholder="es. 50.00"
+                                    required>
+                                <small class="hint-text">Disponibile: {{ formattaValuta(saldoAttuale) }}</small>
+                            </div>
+
+                            <h3 class="section-subtitle">Dati Accredito</h3>
+
+                            <div class="form-group">
+                                <label>Metodo di Accredito</label>
+                                <select v-model="prelievoForm.metodo" required>
+                                    <option value="Bonifico Bancario">Bonifico Bancario (IBAN)</option>
+                                    <option value="PayPal">PayPal (Email)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group" v-if="prelievoForm.metodo === 'Bonifico Bancario'">
+                                <label>Intestatario del Conto</label>
+                                <input type="text" v-model="prelievoForm.intestatario"
+                                    @input="prelievoForm.intestatario = prelievoForm.intestatario.toUpperCase()"
+                                    placeholder="MARIO ROSSI" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label>{{ prelievoForm.metodo === 'PayPal' ? 'Email PayPal' : 'Codice IBAN' }}</label>
+                                <input type="text" class="font-monospace" v-model="prelievoForm.coordinate"
+                                    @input="formattaCoordinate"
+                                    :placeholder="prelievoForm.metodo === 'PayPal' ? 'mario.rossi@email.it' : 'IT00 A000 0000 0000 0000 0000 000'"
+                                    required>
                             </div>
 
                             <button type="submit" class="btn fill w-100" :disabled="isLoading">
-                                {{ isLoading ? 'Elaborazione in corso...' : 'Conferma Ricarica' }}
+                                {{ isLoading ? 'Elaborazione...' : 'Conferma Prelievo' }}
                             </button>
+
                         </form>
                     </div>
                 </div>
@@ -279,15 +410,27 @@ const handleRicarica = async () => {
                             <div class="transaction-list">
                                 <div v-for="tx in transazioniPaginate" :key="tx.id" class="transaction-item">
                                     <div class="tx-left">
-                                        <div class="tx-icon" :class="tx.importo > 0 ? 'icon-in' : 'icon-out'">
-                                            {{ tx.importo > 0 ? '↓' : '↑' }}
+                                        <div class="tx-icon" :class="{
+                                            'icon-in': tx.importo > 0 && tx.tipo !== 'INCASSO_SOSPESO',
+                                            'icon-out': tx.importo < 0,
+                                            'icon-pending': tx.tipo === 'INCASSO_SOSPESO'
+                                        }">
+                                            <i v-if="tx.tipo === 'INCASSO_SOSPESO'" class="bi bi-clock-history"
+                                                style="translate: 1.3px;"></i>
+                                            <template v-else>{{ tx.importo > 0 ? '↓' : '↑' }}</template>
                                         </div>
+
                                         <div class="tx-info">
                                             <strong class="tx-desc">{{ tx.descrizione }}</strong>
                                             <small class="tx-date">{{ formattaData(tx.data) }}</small>
                                         </div>
                                     </div>
-                                    <div class="tx-amount" :class="tx.importo > 0 ? 'text-success' : 'text-danger'">
+
+                                    <div class="tx-amount" :class="{
+                                        'text-success': tx.importo > 0 && tx.tipo !== 'INCASSO_SOSPESO',
+                                        'text-danger': tx.importo < 0,
+                                        'text-pending': tx.tipo === 'INCASSO_SOSPESO'
+                                    }">
                                         {{ tx.importo > 0 ? '+' : '' }}{{ formattaValuta(tx.importo) }}
                                     </div>
                                 </div>
@@ -337,7 +480,6 @@ const handleRicarica = async () => {
 }
 
 .basic-hero.centered-hero {
-    background: var(--primary-blue, #00408A);
     background: linear-gradient(135deg, #00408A 0%, #042571 100%);
     color: var(--white, #fff);
     padding: 56px 20px 48px;
@@ -508,7 +650,8 @@ const handleRicarica = async () => {
     color: #888;
 }
 
-.form-group input {
+.form-group input,
+.form-group select {
     width: 100%;
     padding: 10px 12px;
     border: 0.5px solid var(--border-light, #e0e0e0);
@@ -521,7 +664,8 @@ const handleRicarica = async () => {
     transition: all 0.2s;
 }
 
-.form-group input:focus {
+.form-group input:focus,
+.form-group select:focus {
     border-color: var(--primary-blue, #00408A);
     background: white;
     box-shadow: 0 0 0 3px rgba(0, 64, 138, 0.08);
@@ -699,5 +843,70 @@ const handleRicarica = async () => {
 
 .text-danger {
     color: #c62828;
+}
+
+.card-tabs {
+    display: flex;
+    background: #f1f1f1;
+    border-bottom: 0.5px solid #e0e0e0;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 14px;
+    border: none;
+    background: none;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #888;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.tab-btn.active {
+    background: white;
+    color: var(--primary-blue);
+    border-bottom: 2px solid var(--primary-blue);
+}
+
+.info-prelievo {
+    font-size: 0.75rem;
+    color: #666;
+    margin: 15px 0;
+    padding: 10px;
+    background: #f9f9f9;
+    border-radius: 6px;
+}
+
+
+.tx-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    line-height: 0;
+}
+
+.tx-icon i {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+}
+
+.icon-pending {
+    background-color: #FFF4E5;
+    color: #FF9800;
+}
+
+.text-pending {
+    color: #e98c00 !important;
 }
 </style>

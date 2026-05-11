@@ -1,8 +1,8 @@
 <script setup>
-import { ref, onMounted, onUnmounted, watch, nextTick,computed } from 'vue'
+import { ref, onMounted, onUnmounted, watch, nextTick, computed, reactive } from 'vue'
 import { prenotazioniStore } from '../store/prenotazioni.js'
 import { useRecensione } from '../composables/useRecensione.js'
-import { getSocket } from '../composables/useChat.js' 
+import { getSocket } from '../composables/useChat.js'
 
 import 'bootstrap-icons/font/bootstrap-icons.css'
 import Header from '../components/Header.vue'
@@ -50,7 +50,7 @@ let socket = null;
 const handleNuovoMessaggio = (msg) => {
   // Cerca la prenotazione di riferimento nell'elenco
   const bookingToUpdate = bookings.value.find(b => Number(b.id_prenotazione) === Number(msg.id_prenotazione));
-  
+
   if (bookingToUpdate) {
     // Controlla se l'utente ha già la chat aperta per quella specifica prenotazione
     const chatAperta = chatSelezionata.value && chatSelezionata.value.idPrenotazione === Number(msg.id_prenotazione);
@@ -65,7 +65,7 @@ const handleNuovoMessaggio = (msg) => {
 onMounted(async () => {
   // Carica i dati appena il componente viene montato
   await caricaPrenotazioni()
-  
+
   // Inizializza il WebSocket e metti in ascolto gli eventi globali di notifica
   socket = getSocket();
   socket.on('nuovo_messaggio', handleNuovoMessaggio);
@@ -155,7 +155,8 @@ const formatDate = (dateString) => {
     month: 'long',
     year: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
+    timeZone: 'Europe/Rome'
   }).format(date)
 }
 
@@ -168,21 +169,66 @@ const getStatusBadgeClass = (stato) => {
   }
 }
 
-// Gestione della cancellazione di una prenotazione
-const handleCancelBooking = async (codice) => {
-  const confermato = confirm("Sei sicuro di voler annullare questa prenotazione? L'operazione non può essere annullata.");
-  
-  if (!confermato) return; // Se clicca "Annulla" nel popup, fermiamo tutto
+// Variabili per il modale di annullamento
+const showCancelModal = ref(false)
+const bookingToCancel = ref(null)
+const infoAnnullamento = reactive({
+  rimborso: 0,
+  messaggio: '',
+  motivazione: '',
+  classe: ''
+})
 
-  const response = await prenotazioniStore.cancelBooking(codice);
+// Funzione per calcolare il rimborso "al volo" per la UI
+const calcolaAnteprimaAnnullamento = (booking) => {
+  const oraAttuale = new Date()
+  const inizioSosta = new Date(booking.iniziososta)
+  const dataCreazione = new Date(booking.datacreazione)
 
-  // Aggiornamento dell'interfaccia utente (UI) senza ricaricare tutto
-  if (response.success) {
-    const bookingToUpdate = bookings.value.find(b => b.codiceprenotazione === codice)
-    if (bookingToUpdate) bookingToUpdate.stato = 'ANNULLATA'
-    alert("Prenotazione annullata con successo.")
+  const oreAllInizio = (inizioSosta - oraAttuale) / (1000 * 60 * 60)
+  const minutiDallaCreazione = (oraAttuale - dataCreazione) / (1000 * 60)
+  const prezzo = parseFloat(booking.prezzototale)
+
+  if (oreAllInizio > 12 || minutiDallaCreazione <= 15) {
+    infoAnnullamento.percentuale = 100
+    infoAnnullamento.rimborso = prezzo
+    infoAnnullamento.messaggio = 'Cancellazione Gratuita! Riceverai un rimborso completo.'
+    infoAnnullamento.classe = 'text-success'
+  } else if (oreAllInizio > 0) {
+    infoAnnullamento.percentuale = 50
+    infoAnnullamento.rimborso = prezzo * 0.5
+    infoAnnullamento.messaggio = 'Annullamento tardivo: riceverai un rimborso del 50%.'
+    infoAnnullamento.classe = 'text-warning'
   } else {
-    alert(response.error || "Impossibile annullare la prenotazione.")
+    infoAnnullamento.percentuale = 0
+    infoAnnullamento.rimborso = 0
+    infoAnnullamento.messaggio = 'Sosta già iniziata: non è previsto alcun rimborso.'
+    infoAnnullamento.classe = 'text-danger'
+  }
+}
+
+const apriModaleAnnullamento = async (booking) => {
+  bookingToCancel.value = booking
+  // Chiamata all'API di anteprima che abbiamo appena aggiornato
+  const res = await prenotazioniStore.getAnteprimaAnnullamento(booking.codiceprenotazione)
+  if (res.success) {
+    Object.assign(infoAnnullamento, res.dati)
+    showCancelModal.value = true
+  }
+}
+
+// Gestione della cancellazione di una prenotazione
+const handleConfirmCancel = async () => {
+  if (!bookingToCancel.value) return
+
+  const response = await prenotazioniStore.cancelBooking(bookingToCancel.value.codiceprenotazione)
+
+  if (response.success) {
+    bookingToCancel.value.stato = 'ANNULLATA'
+    showCancelModal.value = false
+    alert(`Prenotazione annullata. Rimborsati: €${infoAnnullamento.rimborso.toFixed(2)}`)
+  } else {
+    alert(response.error || "Errore durante l'annullamento")
   }
 }
 
@@ -214,17 +260,17 @@ const categories = [
 const apriChat = async (booking) => {
   // Rimuove il pallino rosso (notifica letta)
   booking.nonletti = 0;
-  
+
   // Tecnica per forzare il re-mount del componente figlio (ChatBox):
   // Impostandolo a null lo rimuoviamo dal DOM
-  chatSelezionata.value = null; 
-  
+  chatSelezionata.value = null;
+
   // Aspetta un "tick" del ciclo di rendering di Vue per assicurarsi che il DOM sia aggiornato
   await nextTick();
-  
+
   // Reimposta l'oggetto ricreando il componente ChatBox fresco
   chatSelezionata.value = {
-    idPrenotazione: Number(booking.id_prenotazione), 
+    idPrenotazione: Number(booking.id_prenotazione),
     idDestinatario: Number(booking.id_gestore),
     nomeDestinatario: booking.nomegestore || booking.nomegarage || 'Gestore'
   }
@@ -293,7 +339,8 @@ const chiudiChat = () => {
       <div v-else-if="prenotazioniFiltrate.length === 0" class="text-center py-5 empty-state">
         <h5 class="fw-bold text-muted">Nessun risultato</h5>
         <p class="text-muted">Nessuna prenotazione corrisponde ai filtri selezionati.</p>
-        <button class="btn btn-outline-primary mt-2" @click="filtroStato=''; filtroGarage=''; ordinamento='creazione_desc'">Resetta Filtri</button>
+        <button class="btn btn-outline-primary mt-2"
+          @click="filtroStato = ''; filtroGarage = ''; ordinamento = 'creazione_desc'">Resetta Filtri</button>
       </div>
 
       <div v-else class="row g-4">
@@ -309,24 +356,20 @@ const chiudiChat = () => {
                   <small class="text-muted"><i class="bi bi-geo-alt-fill me-1"></i>{{ booking.indirizzo }}</small>
                 </div>
                 <div class="action-group d-flex align-items-center gap-2">
-  
+
                   <!-- Badge Stato  -->
                   <span class="custom-badge" :class="'badge-' + booking.stato.toLowerCase()">
                     {{ booking.stato }}
                   </span>
 
                   <!-- Pulsante Annulla  -->
-                  <button 
-                      v-if="booking.stato === 'ATTIVA'" 
-                      @click="handleCancelBooking(booking.codiceprenotazione)" 
-                      class="custom-btn btn-cancel"
-                      title="Annulla Prenotazione"
-                  >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M18 6L6 18M6 6l12 12"/>
-                  </svg>
-                  Annulla
+                  <button v-if="booking.stato === 'ATTIVA'" @click="apriModaleAnnullamento(booking)"
+                    class="custom-btn btn-cancel" title="Annulla Prenotazione">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                      stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                    Annulla
                   </button>
 
                   <!-- Pulsante Chat -->
@@ -338,11 +381,11 @@ const chiudiChat = () => {
                   >
                     <!-- Pallino notifica-->
                     <span v-if="booking.nonletti > 0" class="chat-notification-dot"></span>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                      </svg>
-                        Contatta
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                      stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                    </svg>
+                    Contatta
                   </button>
 
                   <!--Pulsante Recensioni-->
@@ -417,13 +460,8 @@ const chiudiChat = () => {
 
     <!-- Componente ChatBox montato come Popup fluttuante -->
     <div v-if="chatSelezionata" class="chat-popup-container">
-      <ChatBox 
-        :idPrenotazione="chatSelezionata.idPrenotazione" 
-        :idDestinatario="chatSelezionata.idDestinatario"
-        :nomeDestinatario="chatSelezionata.nomeDestinatario"
-        ruoloDestinatario="Gestore"
-        @chiudi="chiudiChat"
-      />
+      <ChatBox :idPrenotazione="chatSelezionata.idPrenotazione" :idDestinatario="chatSelezionata.idDestinatario"
+        :nomeDestinatario="chatSelezionata.nomeDestinatario" ruoloDestinatario="Gestore" @chiudi="chiudiChat" />
     </div>
 
     <Footer />
@@ -519,6 +557,32 @@ const chiudiChat = () => {
         </Transition>
       </div>
     </Transition>
+    <Transition name="overlay-fade">
+      <div v-if="showCancelModal" class="review-overlay" @click.self="showCancelModal = false">
+        <Transition name="modal-slide" appear>
+          <div class="review-modal p-4 text-center">
+            <h3 class="fw-bold mb-3" style="color: #00408A">ANNULLA PRENOTAZIONE</h3>
+            <p class="text-muted">Stai per annullare la sosta per: <br>
+              <strong>{{ bookingToCancel?.nomegarage }}</strong> ({{ bookingToCancel?.codiceprenotazione }})
+            </p>
+
+            <div class="my-4 p-3 rounded-3 bg-light border">
+              <div :class="['fs-5 fw-bold', infoAnnullamento.classe]">
+                {{ infoAnnullamento.messaggio }}: € {{ infoAnnullamento.rimborso.toFixed(2) }}
+              </div>
+              <p class="small text-dark mt-2 mb-0" style="line-height: 1.3;">
+                {{ infoAnnullamento.motivazione }}
+              </p>
+            </div>
+
+            <div class="d-flex gap-2">
+              <button class="cta-btn cta-btn--ghost w-50" @click="showCancelModal = false">Indietro</button>
+              <button class="cta-btn cta-btn--danger-ghost w-50" @click="handleConfirmCancel">Conferma</button>
+            </div>
+          </div>
+        </Transition>
+      </div>
+    </Transition>
 
   </div>
 </template>
@@ -563,6 +627,7 @@ const chiudiChat = () => {
 .btn-primary:hover {
   background-color: #00336E;
 }
+
 /* Stile per replicare l'estetica delle targhe */
 .font-monospace {
   letter-spacing: 2px;
@@ -586,18 +651,20 @@ const chiudiChat = () => {
 
 /* --- UNITÀ STILISTICA: BADGE E PULSANTI --- */
 .action-group {
-  flex-wrap: wrap; /* Evita che si schiaccino su schermi molto piccoli */
+  flex-wrap: wrap;
+  /* Evita che si schiaccino su schermi molto piccoli */
 }
 
 /* Base comune per altezza, font e bordi */
-.custom-badge, .custom-btn {
+.custom-badge,
+.custom-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-size: 0.85rem;
   font-weight: 600;
   padding: 0.4rem 0.85rem;
-  border-radius: 8px; 
+  border-radius: 8px;
   border: 1px solid transparent;
   transition: all 0.2s ease;
   height: 36px;
@@ -609,18 +676,22 @@ const chiudiChat = () => {
   font-size: 0.75rem;
   letter-spacing: 0.5px;
   cursor: default;
-  border-radius: 99px; /* Raggio diverso perchè lo stato NON è un bottone*/
+  border-radius: 99px;
+  /* Raggio diverso perchè lo stato NON è un bottone*/
 }
+
 .badge-attiva {
   background-color: #137333;
   color: #ffffff;
   border-color: #137333;
 }
+
 .badge-conclusa {
   background-color: #4a4d51;
   color: #ffffff;
   border-color: #4a4d51;
 }
+
 .badge-annullata {
   background-color: #c5221f;
   color: #ffffff;
@@ -635,20 +706,22 @@ const chiudiChat = () => {
   gap: 0.4rem;
   position: relative;
 }
+
 .btn-chat:hover {
   background-color: var(--primary-blue, #00408A);
   color: white;
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 64, 138, 0.15);
 }
+
 .chat-notification-dot {
   position: absolute;
   top: -4px;
   right: -4px;
   width: 12px;
   height: 12px;
-  background-color: #ef4444; 
-  border: 2px solid #ffffff; 
+  background-color: #ef4444;
+  border: 2px solid #ffffff;
   border-radius: 50%;
   box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
   z-index: 2;
@@ -662,6 +735,7 @@ const chiudiChat = () => {
   cursor: pointer;
   gap: 0.3rem;
 }
+
 .btn-cancel:hover {
   background-color: #c5221f;
   color: white;
@@ -670,8 +744,15 @@ const chiudiChat = () => {
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .trigger-stars i {
