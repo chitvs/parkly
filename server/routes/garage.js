@@ -270,7 +270,7 @@ router.get('/:id/occupazione', async (req, res) => {
           SELECT COUNT(*) as occ FROM Prenotazione p
           JOIN PostoAuto pa ON p.ID_Posto = pa.ID_Posto
           WHERE pa.ID_Garage = $1 AND p.Stato = 'ATTIVA' 
-          AND NOW() BETWEEN p.InizioSosta AND p.FineSosta
+          AND (NOW() AT TIME ZONE 'Europe/Rome') BETWEEN p.InizioSosta AND p.FineSosta
       `, [idGarage]);
 
     const tot = parseInt(resultPosti.tot);

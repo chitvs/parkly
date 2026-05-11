@@ -400,6 +400,17 @@ const distribuzioneVoti = computed(() => {
                                     <span>€ {{ prezzoTotale }}</span>
                                 </div>
                             </div>
+                            <div class="policy-box">
+                                <div class="policy-header">
+                                    <i class="bi bi-info-circle-fill"></i>
+                                    <strong>Politica di annullamento</strong>
+                                </div>
+                                <ul class="policy-list">
+                                    <li><strong>Rimborso del 100%</strong> per disdette effettuate con almeno 12 ore di preavviso, o per ripensamenti entro 15 minuti dalla prenotazione.</li>
+                                    <li><strong>Rimborso del 50%</strong> per le cancellazioni effettuate a meno di 12 ore dall'arrivo.</li>
+                                    <li><strong>Non rimborsabile</strong> se la sosta è già iniziata.</li>
+                                </ul>
+                            </div>
                         </div>
 
                         <button class="btn fill" :disabled="!isMapConfirmed || !postoSelezionato || !targa || !isTargaValida || (postoSelezionato.isdisabili && !isCudeValido)"
@@ -1168,6 +1179,46 @@ const distribuzioneVoti = computed(() => {
 
 .special-line .prezzo-valore-small span {
     opacity: 0.7;
+}
+
+/* --- POLICY DI CANCELLAZIONE BOX --- */
+.policy-box {
+    background-color: #f0f7ff;
+    border: 1px solid #cce3fd;
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 16px;
+    color: var(--primary-blue, #00408A);
+}
+
+.policy-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+    font-size: 0.85rem;
+}
+
+.policy-header i {
+    font-size: 1rem;
+}
+
+.policy-list {
+    margin: 0;
+    padding-left: 24px;
+    color: #475569;
+    font-size: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.policy-list li {
+    line-height: 1.4;
+}
+
+.policy-list li strong {
+    color: var(--text-dark, #333);
 }
 
 @media (max-width: 600px) {

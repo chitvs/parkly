@@ -43,5 +43,16 @@ export const prenotazioniStore = reactive({
       console.error("Errore durante l'annullamento:", error);
       return { success: false, error: "Errore di connessione al server" };
     }
+  },
+
+  async getAnteprimaAnnullamento(codice) {
+      try {
+          const response = await fetch(`/api/prenotazioni/${codice}/anteprima-annullamento`);
+          return await response.json();
+      } catch (error) {
+          console.error("Errore:", error);
+          return { success: false, error: "Errore di connessione" };
+      }
   }
+  
 })
