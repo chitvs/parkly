@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img src="https://raw.githubusercontent.com/chitvs/parkly/readme/client/src/assets/parkly_logo-intero-00408A.svg" width="280" alt="Parkly">
+  <img src="https://raw.githubusercontent.com/chitvs/parkly/readme/client/src/assets/parkly_intero_y.svg" width="280" alt="Parkly">
 </h1>
 
 <p align="center">
