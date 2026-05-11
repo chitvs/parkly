@@ -8,8 +8,11 @@ import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 
 // Importiamo le icone SVG per le password
-import eyeUrl from '../assets/eye-gray.svg'
-import eyeClosedUrl from '../assets/eye-closed-gray.svg'
+import eyeUrl from '../icons/eye-open.svg'
+import eyeClosedUrl from '../icons/eye-closed.svg'
+
+//foto profilo standard
+import defaultAvatarUrl from '../assets/default-avatar.png'
 
 const router = useRouter()
 
@@ -205,7 +208,7 @@ const submitChangePassword = async () => {
 
           <div class="text-center mb-4 pb-3 border-bottom">
             <img 
-              :src="formData.fotoProfilo_URL || '/default-avatar.png'" 
+              :src="formData.fotoProfilo_URL || defaultAvatarUrl" 
               alt="Foto Profilo" 
               class="rounded-circle mb-3 shadow-sm" 
               style="width: 120px; height: 120px; object-fit: cover; border: 3px solid var(--primary-blue, #00408A);"

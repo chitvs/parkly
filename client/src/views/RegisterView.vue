@@ -2,8 +2,9 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { authStore } from '../store/auth.js' // Importa lo store
-import eyeUrl from '../assets/eye-gray.svg'
-import eyeClosedUrl from '../assets/eye-closed-gray.svg'
+//import svg password
+import eyeUrl from '../icons/eye-open.svg'
+import eyeClosedUrl from '../icons/eye-closed.svg'
 
 const nome = ref('')
 const cognome = ref('')
