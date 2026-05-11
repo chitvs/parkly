@@ -134,7 +134,7 @@ const handleLogout = async () => {
           </button>
 
           <ul v-if="isMenuOpen" class="dropdown-menu show shadow border-0 parkly-dropdown"
-            style="position: absolute; right: 0; top: 100%; margin-top: 0;">
+            style="position: absolute; right: 0; top: 100%">
             <template v-if="authStore.utente?.ruolo === 'GESTORE'">
               <li>
                 <RouterLink class="dropdown-item fw-bold text-primary d-flex align-items-center" to="/dashboard-gestore"
@@ -217,7 +217,7 @@ const handleLogout = async () => {
               </div>
             </div>
             <div class="d-grid mt-4">
-              <button type="submit" class="btn btn-primary modal-submit-btn">Accedi</button>
+              <button type="submit" class="modal-submit-btn">Accedi</button>
             </div>
           </form>
 
@@ -250,7 +250,6 @@ const handleLogout = async () => {
 
 .logo-image {
   height: 50px;
-  width: auto;
   transition: filter 0.3s ease, transform 0.3s ease;
 }
 
@@ -302,7 +301,6 @@ const handleLogout = async () => {
 }
 
 .register-btn {
-  background-color: transparent;
   color: #00408a !important;
   border: 1.8px solid #00408a;
 }
@@ -317,7 +315,9 @@ const handleLogout = async () => {
   transition: all 0.3s;
 }
 
-.login-btn:hover, .user-name-btn:hover {
+.login-btn:hover, 
+.user-name-btn:hover,
+.register-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0,0,0,0.12);
 }
