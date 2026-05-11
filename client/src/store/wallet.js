@@ -81,6 +81,7 @@ export const walletStore = reactive({
       const data = await res.json();
       if (data.success) {
         authStore.utente.saldo = data.nuovoSaldo;
+        authStore.setUtente(authStore.utente);
       }
       return data;
     } catch (error) {

@@ -101,6 +101,8 @@ const limitaImporto = () => {
     // se l'utente digita un numero maggiore di 1000, lo forziamo a 1000
     if (formRicarica.importo > 1000) {
         formRicarica.importo = 1000
+    } else if (formRicarica.importo < 5) {
+        formRicarica.importo = 5
     }
 }
 
@@ -184,13 +186,22 @@ const handleRicarica = async () => {
     }
 }
 
-// Aggiungi queste variabili reattive
-const tabAttiva = ref('ricarica') // 'ricarica' o 'prelievo'
+const tabAttiva = ref('ricarica')
 const prelievoForm = reactive({
     importo: null,
     metodo: 'Bonifico Bancario',
-    coordinate: '' // IBAN o Email PayPal
+    coordinate: ''
 })
+
+const formattaCoordinate = () => {
+    if (prelievoForm.metodo === 'Bonifico Bancario') {
+        // Rimuove spazi e caratteri speciali, converte in maiuscolo
+        let val = prelievoForm.coordinate.replace(/[^A-Z0-9]/ig, '').toUpperCase()
+        // Aggiunge uno spazio ogni 4 caratteri
+        val = val.replace(/(.{4})/g, '$1 ').trim()
+        prelievoForm.coordinate = val.substring(0, 34) // Lunghezza max IBAN con spazi
+    }
+}
 
 // Funzione per gestire il prelievo
 const handlePrelievo = async () => {
@@ -286,7 +297,7 @@ const handlePrelievo = async () => {
                         </button>
                         <button class="tab-btn" :class="{ active: tabAttiva === 'prelievo' }"
                             @click="tabAttiva = 'prelievo'">
-                            Preleva Saldo
+                            Preleva
                         </button>
                     </div>
 
@@ -329,22 +340,24 @@ const handlePrelievo = async () => {
 
                         <form v-else-if="tabAttiva === 'prelievo'" @submit.prevent="handlePrelievo">
 
-                            <!-- Avviso saldo insufficiente -->
                             <div v-if="saldoAttuale < 5" class="info-prelievo"
                                 style="border-left: 3px solid #c62828; color: #c62828; background: #fff5f5;">
                                 Saldo insufficiente per richiedere un prelievo. Il minimo è di 5,00€.
                             </div>
 
-                            <div class="form-group highlight-box-alt">
+                            <div class="form-group highlight-box">
                                 <label>Importo da prelevare (€)</label>
-                                <input type="number" step="0.01" class="amount-input-alt" v-model="prelievoForm.importo"
-                                    :max="saldoAttuale" placeholder="0.00" required>
+                                <input type="number" step="0.01" min="5" class="amount-input"
+                                    v-model.number="prelievoForm.importo" :max="saldoAttuale" placeholder="es. 50.00"
+                                    required>
                                 <small class="hint-text">Disponibile: {{ formattaValuta(saldoAttuale) }}</small>
                             </div>
 
-                            <div class="form-group mt-3">
+                            <h3 class="section-subtitle">Dati Accredito</h3>
+
+                            <div class="form-group">
                                 <label>Metodo di Accredito</label>
-                                <select class="form-input-select" v-model="prelievoForm.metodo">
+                                <select v-model="prelievoForm.metodo" required>
                                     <option value="Bonifico Bancario">Bonifico Bancario (IBAN)</option>
                                     <option value="PayPal">PayPal (Email)</option>
                                 </select>
@@ -352,14 +365,14 @@ const handlePrelievo = async () => {
 
                             <div class="form-group">
                                 <label>{{ prelievoForm.metodo === 'PayPal' ? 'Email PayPal' : 'Codice IBAN' }}</label>
-                                <input type="text" v-model="prelievoForm.coordinate"
-                                    :placeholder="prelievoForm.metodo === 'PayPal' ? 'email@esempio.it' : 'IT00X00000...'"
+                                <input type="text" class="font-monospace" v-model="prelievoForm.coordinate"
+                                    @input="formattaCoordinate"
+                                    :placeholder="prelievoForm.metodo === 'PayPal' ? 'mario.rossi@email.it' : 'IT00 A000 0000 0000 0000 0000 000'"
                                     required>
                             </div>
 
-                            <!-- Tasto sempre attivo, la validazione avviene al submit -->
-                            <button type="submit" class="btn btn-success-fill w-100" :disabled="isLoading">
-                                {{ isLoading ? 'Trasferimento in corso...' : 'Invia Richiesta di Prelievo' }}
+                            <button type="submit" class="btn fill w-100" :disabled="isLoading">
+                                {{ isLoading ? 'Elaborazione...' : 'Conferma Prelievo' }}
                             </button>
 
                         </form>
@@ -389,7 +402,8 @@ const handlePrelievo = async () => {
                                             'icon-out': tx.importo < 0,
                                             'icon-pending': tx.tipo === 'INCASSO_SOSPESO'
                                         }">
-                                            <i v-if="tx.tipo === 'INCASSO_SOSPESO'" class="bi bi-clock-history" style="translate: 1.3px;"></i>
+                                            <i v-if="tx.tipo === 'INCASSO_SOSPESO'" class="bi bi-clock-history"
+                                                style="translate: 1.3px;"></i>
                                             <template v-else>{{ tx.importo > 0 ? '↓' : '↑' }}</template>
                                         </div>
 
@@ -629,7 +643,8 @@ const handlePrelievo = async () => {
     color: #888;
 }
 
-.form-group input {
+.form-group input,
+.form-group select {
     width: 100%;
     padding: 10px 12px;
     border: 0.5px solid var(--border-light, #e0e0e0);
@@ -642,7 +657,8 @@ const handlePrelievo = async () => {
     transition: all 0.2s;
 }
 
-.form-group input:focus {
+.form-group input:focus,
+.form-group select:focus {
     border-color: var(--primary-blue, #00408A);
     background: white;
     box-shadow: 0 0 0 3px rgba(0, 64, 138, 0.08);
@@ -900,41 +916,6 @@ const handlePrelievo = async () => {
     border-bottom: 2px solid var(--primary-blue);
 }
 
-.highlight-box-alt {
-    background: #e8f5e9;
-    padding: 16px;
-    border-radius: 8px;
-    border: 1px dashed #27ae60;
-}
-
-.amount-input-alt {
-    width: 100%;
-    background: transparent;
-    border: none;
-    font-size: 1.2rem;
-    font-weight: bold;
-    color: #2e7d32;
-    outline: none;
-}
-
-.form-input-select {
-    width: 100%;
-    padding: 10px;
-    border-radius: 7px;
-    border: 1px solid #ddd;
-    background: #fafafa;
-}
-
-.btn-success-fill {
-    background: #27ae60;
-    color: white;
-    margin-top: 10px;
-}
-
-.btn-success-fill:hover:not(:disabled) {
-    background: #219150;
-}
-
 .info-prelievo {
     font-size: 0.75rem;
     color: #666;
@@ -945,7 +926,6 @@ const handlePrelievo = async () => {
 }
 
 
-/* Assicurati che .tx-icon sia configurato così per la centratura perfetta */
 .tx-icon {
     width: 36px;
     height: 36px;
@@ -955,7 +935,7 @@ const handlePrelievo = async () => {
     justify-content: center;
     font-size: 1.1rem;
     flex-shrink: 0;
-    line-height: 0; /* Impedisce che l'altezza del testo sballi l'icona */
+    line-height: 0;
 }
 
 .tx-icon i {
@@ -974,5 +954,4 @@ const handlePrelievo = async () => {
 .text-pending {
     color: #e98c00 !important;
 }
-
 </style>
