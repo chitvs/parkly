@@ -9,6 +9,9 @@ import PlanimetriaGarage from '../components/PlanimetriaGarage.vue'
 import ChatBox from '../components/ChatBox.vue'
 import { getSocket } from '../composables/useChat.js'
 
+//foto profilo standard
+import defaultAvatarUrl from '../assets/default-avatar.png'
+
 // ─── Permessi ───────────────────────────────────────────────────────────────
 const isGestore = computed(() => authStore.utente?.ruolo === 'GESTORE')
 
@@ -573,7 +576,7 @@ const navItems = [
           </a>
         </nav>
         <div class="sidebar-user">
-          <img :src="authStore.utente?.fotoProfilo_URL || '/default-avatar.png'" alt="Avatar" class="sidebar-avatar" />
+          <img :src="authStore.utente?.fotoProfilo_URL || defaultAvatarUrl" alt="Avatar" class="sidebar-avatar" />
           <div class="sidebar-user-info">
             <span class="sidebar-user-name">{{ authStore.utente?.nome }} {{ authStore.utente?.cognome }}</span>
             <span class="sidebar-user-role">Gestore</span>
