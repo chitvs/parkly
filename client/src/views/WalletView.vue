@@ -101,8 +101,8 @@ const limitaImporto = () => {
     // se l'utente digita un numero maggiore di 1000, lo forziamo a 1000
     if (formRicarica.importo > 1000) {
         formRicarica.importo = 1000
-    } else if (formRicarica.importo < 5) {
-        formRicarica.importo = 5
+    } else if (formRicarica.importo < 0) {
+        formRicarica.importo = 0
     }
 }
 
@@ -190,6 +190,7 @@ const tabAttiva = ref('ricarica')
 const prelievoForm = reactive({
     importo: null,
     metodo: 'Bonifico Bancario',
+    intestatario: '',
     coordinate: ''
 })
 
@@ -242,13 +243,25 @@ const handlePrelievo = async () => {
 
     isLoading.value = true
     try {
+        // Prepariamo una dicitura breve per la UI
+        let dicituraBreve = '';
+        
+        if (prelievoForm.metodo === 'Bonifico Bancario') {
+            const ultimeCifre = prelievoForm.coordinate.slice(-4);
+            dicituraBreve = `Bonifico (***${ultimeCifre})`;
+        } else if (prelievoForm.metodo === 'PayPal') {
+            const [nome, dominio] = prelievoForm.coordinate.split('@');
+            const nomeMascherato = nome.length > 3 ? nome.substring(0, 3) + '***' : nome + '***';
+            dicituraBreve = `PayPal (${nomeMascherato}@${dominio})`;
+        }
+
         const response = await walletStore.prelevaFondi({
             importo: parseFloat(prelievoForm.importo),
-            metodo: `${prelievoForm.metodo}: ${prelievoForm.coordinate}`
+            metodo: dicituraBreve
         })
 
         if (response.success) {
-            messaggio.value = { tipo: 'success', testo: "Richiesta di prelievo inviata con successo." }
+            messaggio.value = { tipo: 'success', testo: "Prelievo effettuato con successo." }
             prelievoForm.importo = null
             prelievoForm.coordinate = ''
             await fetchTransazioni()
@@ -363,6 +376,13 @@ const handlePrelievo = async () => {
                                 </select>
                             </div>
 
+                            <div class="form-group" v-if="prelievoForm.metodo === 'Bonifico Bancario'">
+                                <label>Intestatario del Conto</label>
+                                <input type="text" v-model="prelievoForm.intestatario"
+                                    @input="prelievoForm.intestatario = prelievoForm.intestatario.toUpperCase()"
+                                    placeholder="MARIO ROSSI" required>
+                            </div>
+
                             <div class="form-group">
                                 <label>{{ prelievoForm.metodo === 'PayPal' ? 'Email PayPal' : 'Codice IBAN' }}</label>
                                 <input type="text" class="font-monospace" v-model="prelievoForm.coordinate"
@@ -472,7 +492,6 @@ const handlePrelievo = async () => {
 }
 
 .basic-hero.centered-hero {
-    background: var(--primary-blue, #00408A);
     background: linear-gradient(135deg, #00408A 0%, #042571 100%);
     color: var(--white, #fff);
     padding: 56px 20px 48px;

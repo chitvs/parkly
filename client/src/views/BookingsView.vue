@@ -572,7 +572,7 @@ const chiudiChat = () => {
       <div v-if="showCancelModal" class="review-overlay" @click.self="showCancelModal = false">
         <Transition name="modal-slide" appear>
           <div class="review-modal p-4 text-center">
-            <h3 class="fw-bold mb-3">Annulla Prenotazione</h3>
+            <h3 class="fw-bold mb-3" style="color: #00408A">ANNULLA PRENOTAZIONE</h3>
             <p class="text-muted">Stai per annullare la sosta per: <br>
               <strong>{{ bookingToCancel?.nomegarage }}</strong> ({{ bookingToCancel?.codiceprenotazione }})
             </p>
