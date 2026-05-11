@@ -9,6 +9,10 @@ import Footer from '../components/Footer.vue'
 import PlanimetriaGarage from '../components/PlanimetriaGarage.vue'
 import ChatBox from '../components/ChatBox.vue'
 import { getSocket } from '../composables/useChat.js'
+import { Chart as ChartJS, CategoryScale, LinearScale, RadialLinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js'
+import { Line, Doughnut, Radar, Bar } from 'vue-chartjs'
+
+ChartJS.register(CategoryScale, LinearScale, RadialLinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement)
 
 // ─── Permessi ───────────────────────────────────────────────────────────────
 const isGestore = computed(() => authStore.utente?.ruolo === 'GESTORE')
@@ -28,8 +32,26 @@ const occupazioneGarage    = ref({})
 const postiPerGarage       = ref({})
 const reRenderKey          = ref(0)
 
-const filtroInizio = ref('')
-const filtroFine   = ref('')
+// ─── Utility date ────────────────────────────────────────────────────────────
+// Formats a Date to YYYY-MM-DD (required by <input type="date">)
+const formattaPerInputDate = (d) => {
+  const y   = d.getFullYear()
+  const m   = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+// Formats a Date to a YYYY-MM-DD key for grouping bookings by day
+const formattaChiaveData = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+// Current month range — used to pre-fill the date filter
+const dataCorrente    = new Date()
+const primoGiornoMese = new Date(dataCorrente.getFullYear(), dataCorrente.getMonth(), 1)
+const ultimoGiornoMese = new Date(dataCorrente.getFullYear(), dataCorrente.getMonth() + 1, 0)
+
+const filtroInizio = ref(formattaPerInputDate(primoGiornoMese))
+const filtroFine   = ref(formattaPerInputDate(ultimoGiornoMese))
 
 // ─── Chat in tempo reale ─────────────────────────────────────────────────────
 const chatSelezionata = ref(null)
@@ -312,27 +334,18 @@ const postiConvertitiPerAnteprima = computed(() =>
   }))
 )
 
-// ─── Computed statistiche ────────────────────────────────────────────────────
+// ─── Computed navigazione ────────────────────────────────────────────────────
 const menuFiltrato = computed(() => {
   if (mieiGarage.value.length === 0) {
-    return navItems.filter(item => item.id === 'aggiungi') 
+    return navItems.filter(item => item.id === 'aggiungi')
   }
   return navItems
 })
 
-const guadagnoMese = computed(() => {
-  const ora = new Date()
-  return storicoPrenotazioni.value
-    .filter(p => p.stato !== 'ANNULLATA'
-      && new Date(p.iniziososta).getMonth()    === ora.getMonth()
-      && new Date(p.iniziososta).getFullYear() === ora.getFullYear())
-    .reduce((acc, p) => acc + parseFloat(p.prezzototale || 0), 0)
-    .toFixed(2)
-})
 const prenotazioniAttive = computed(() => storicoPrenotazioni.value.filter(p => p.stato === 'ATTIVA').length)
 const getOccupancy = (idGarage) => occupazioneGarage.value[idGarage] ?? 0
 
-// ─── Utility ─────────────────────────────────────────────────────────────────
+// ─── Utility display ─────────────────────────────────────────────────────────
 const formatData = (iso) => {
   if (!iso) return '-'
   const d = new Date(iso)
@@ -354,22 +367,34 @@ const caricaDati = async () => {
 }
 
 const caricaGarage = async () => {
-  const res = await fetch('/api/garage/garages-gestore', { credentials: 'include' })
-  if (!res.ok) return
-  const data = await res.json()
-  mieiGarage.value = data
+  const res = await fetch('/api/garage/garages-gestore', { credentials: 'include' });
+  if (!res.ok) return;
+  const data = await res.json();
+
+  // Usiamo contenitori temporanei invece di aggiornare i ref uno per uno
+  const nuoviPosti = {};
+  const nuovaOccupazione = {};
+
   await Promise.all(data.map(async (g) => {
     try {
-      const r = await fetch(`/api/garage/${g.id_garage}/posti`, { credentials: 'include' })
-      if (r.ok) postiPerGarage.value[g.id_garage] = (await r.json()).posti
-    } catch { }
-    try {
-      const r = await fetch(`/api/garage/${g.id_garage}/occupazione`, { credentials: 'include' })
-      if (r.ok) occupazioneGarage.value[g.id_garage] = Math.round((await r.json()).percentuale)
-    } catch { }
-  }))
-  reRenderKey.value++
-}
+      const [rPosti, rOcc] = await Promise.all([
+        fetch(`/api/garage/${g.id_garage}/posti`, { credentials: 'include' }),
+        fetch(`/api/garage/${g.id_garage}/occupazione`, { credentials: 'include' })
+      ]);
+      
+      if (rPosti.ok) nuoviPosti[g.id_garage] = (await rPosti.json()).posti;
+      if (rOcc.ok) nuovaOccupazione[g.id_garage] = Math.round((await rOcc.json()).percentuale);
+    } catch (e) {
+      console.error(`Errore dati garage ${g.id_garage}:`, e);
+    }
+  }));
+
+  // AGGIORNAMENTO UNICO: Vue reagirà a questi cambiamenti in un colpo solo
+  postiPerGarage.value = nuoviPosti;
+  occupazioneGarage.value = nuovaOccupazione;
+  mieiGarage.value = data;
+  reRenderKey.value++; 
+};
 
 const aggiornaMappaOrari = async () => {
   if (!filtroInizio.value || !filtroFine.value) {
@@ -508,20 +533,40 @@ let infoModalInstance  = null
 const openInfoModal    = () => { if (infoModalInstance) infoModalInstance.show() }
 
 // ─── Lifecycle ───────────────────────────────────────────────────────────────
+
 onMounted(async () => {
-  ridimensionaGriglia()
-  await walletStore.contabilizzaRicavi()
-  await walletStore.caricaSaldoSospeso()
-  await caricaDati()
-  if (mieiGarage.value.length === 0) {
-    vistaAttiva.value = 'aggiungi'
+  isLoading.value = true; // Iniziamo il caricamento globale
+  ridimensionaGriglia();
+
+  try {
+    // Eseguiamo tutto in parallelo per massimizzare la velocità
+    await Promise.all([
+      walletStore.contabilizzaRicavi(),
+      walletStore.caricaSaldoSospeso(),
+      caricaGarage(),
+      caricaStorico(),
+      caricaStato()
+    ]);
+
+    // Decidiamo la vista SOLO ora che i dati sono completi
+    if (mieiGarage.value.length === 0) {
+      vistaAttiva.value = 'aggiungi';
+    } else {
+      vistaAttiva.value = 'statistiche';
+    }
+  } catch (err) {
+    console.error("Errore durante il caricamento:", err);
+  } finally {
+    isLoading.value = false; // Solo ora mostriamo la UI
   }
+
+  // Inizializzazione modali e socket
   if (infoModalElement.value) {
-    infoModalInstance = new bootstrap.Modal(infoModalElement.value)
+    infoModalInstance = new bootstrap.Modal(infoModalElement.value);
   }
-  socket = getSocket()
-  socket.on('nuovo_messaggio', handleNuovoMessaggio)
-})
+  socket = getSocket();
+  socket.on('nuovo_messaggio', handleNuovoMessaggio);
+});
 
 onUnmounted(() => {
   if (infoModalInstance) infoModalInstance.dispose()
@@ -545,6 +590,192 @@ const navItems = [
   { id: 'storico',     label: 'Storico',         icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>' },
   { id: 'aggiungi',    label: 'Aggiungi Garage', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' },
 ]
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ─── STATISTICHE ──────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ─── Filtro garage & range di date ───────────────────────────────────────────
+const garageSelezionato = ref('TUTTI')
+
+/**
+ * Parsed date range — single source of truth for inizio/fine.
+ * Used by both `prenotazioniFiltrate` and `chartDataRevenue` to avoid
+ * duplicated `new Date()` + `setHours()` calls.
+ */
+const dateRange = computed(() => {
+  const inizio = new Date(filtroInizio.value)
+  inizio.setHours(0, 0, 0, 0)
+  const fine = new Date(filtroFine.value)
+  fine.setHours(23, 59, 59, 999)
+  return { inizio, fine }
+})
+
+const prenotazioniFiltrate = computed(() => {
+  const { inizio, fine } = dateRange.value
+  return storicoPrenotazioni.value.filter(p => {
+    const dataP        = new Date(p.iniziososta)
+    const matchesGarage = garageSelezionato.value === 'TUTTI' || Number(p.id_garage) === Number(garageSelezionato.value)
+    const matchesData   = dataP >= inizio && dataP <= fine
+    return matchesGarage && matchesData
+  })
+})
+
+// ─── KPI helpers ─────────────────────────────────────────────────────────────
+/**
+ * Sums the revenue of a booking list, excluding cancelled bookings.
+ * Returns a string formatted to 2 decimal places.
+ */
+const calcolaIncasso = (prenotazioni) =>
+  prenotazioni
+    .filter(p => p.stato !== 'ANNULLATA')
+    .reduce((acc, p) => acc + parseFloat(p.prezzototale || 0), 0)
+    .toFixed(2)
+
+// ─── KPI Dinamici ────────────────────────────────────────────────────────────
+const kpiData = computed(() => {
+  // 1. Calcoliamo i dati comuni basandoci sulle prenotazioni già filtrate per data e garage
+  const attive = prenotazioniFiltrate.value.filter(p => p.stato === 'ATTIVA').length
+  const incasso = calcolaIncasso(prenotazioniFiltrate.value)
+
+  // 2. Calcoliamo il valore "In Arrivo" (somma prezzototale delle sole attive)
+  // Questo valore ora è coerente sia per "TUTTI" che per il singolo garage
+  const inArrivo = prenotazioniFiltrate.value
+    .filter(p => p.stato === 'ATTIVA')
+    .reduce((acc, p) => acc + parseFloat(p.prezzototale || 0), 0)
+    .toFixed(2)
+
+  // Caso: Panoramica Generale (TUTTI)
+  if (garageSelezionato.value === 'TUTTI') {
+    return [
+      { id: 1, label: 'Garage Totali',       value: mieiGarage.value.length,  icon: 'bi-building',      color: 'blue'  },
+      { id: 2, label: 'Incasso Totale',      value: `€ ${incasso}`,          icon: 'bi-cash-coin',     color: 'green' },
+      { id: 3, label: 'In Arrivo (Attive)',  value: `€ ${inArrivo}`,         icon: 'bi-clock-history', color: 'amber' },
+      { id: 4, label: 'Prenot. Attive',      value: attive,                  icon: 'bi-car-front',     color: 'blue'  },
+    ]
+  }
+
+  // Caso: Singolo Garage
+  return [
+    { id: 1, label: 'Prenotazioni Tot.',  value: prenotazioniFiltrate.value.length, icon: 'bi-journal-check', color: 'blue'  },
+    { id: 2, label: 'Incasso Generato',   value: `€ ${incasso}`,                   icon: 'bi-cash-coin',     color: 'green' },
+    { id: 3, label: 'In Arrivo (Attive)', value: `€ ${inArrivo}`,                  icon: 'bi-clock-history', color: 'amber' },
+    { id: 4, label: 'Prenot. Attive',     value: attive,                            icon: 'bi-car-front',     color: 'blue'  },
+  ]
+})
+
+// ─── Colori grafici (unica fonte di verità) ───────────────────────────────────
+const CHART_COLORS = {
+  blue:        '#0066CC',
+  blueAlpha:   'rgba(0, 102, 204, 0.2)',
+  darkBlue:    '#00408A',
+  green:       '#27AE60',
+  greenAlpha:  'rgba(39, 174, 96, 0.2)',
+  red:         '#C0392B',
+}
+
+// ─── Opzioni Chart.js condivise ───────────────────────────────────────────────
+const chartOptions = { responsive: true, maintainAspectRatio: false }
+
+const chartOptionsRadar = {
+  responsive:          true,
+  maintainAspectRatio: false,
+  scales: { r: { min: 0, max: 5, ticks: { stepSize: 1 } } },
+}
+
+// ─── Chart: Trend Ricavi (Line) ───────────────────────────────────────────────
+const chartDataRevenue = computed(() => {
+  const { inizio, fine } = dateRange.value
+  const mappaIncassi   = {}
+  const chiaviOrdinate = []
+  const labels         = []
+
+  // Build a continuous daily axis from inizio to fine
+  const cursore = new Date(inizio)
+  while (cursore <= fine) {
+    const chiave = formattaChiaveData(cursore)
+    mappaIncassi[chiave] = 0
+    chiaviOrdinate.push(chiave)
+    labels.push(cursore.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' }))
+    cursore.setDate(cursore.getDate() + 1)
+  }
+
+  // Accumulate revenue per day
+  prenotazioniFiltrate.value.forEach(p => {
+    if (p.stato !== 'ANNULLATA') {
+      const chiave = formattaChiaveData(new Date(p.iniziososta))
+      if (chiave in mappaIncassi) mappaIncassi[chiave] += parseFloat(p.prezzototale || 0)
+    }
+  })
+
+  return {
+    labels,
+    datasets: [{
+      label:           'Incasso Giornaliero (€)',
+      backgroundColor: CHART_COLORS.blueAlpha,
+      borderColor:     CHART_COLORS.blue,
+      data:            chiaviOrdinate.map(k => mappaIncassi[k]),
+      tension:         0.3,
+      fill:            true,
+    }],
+  }
+})
+
+// ─── Chart: Stato Prenotazioni (Doughnut) ─────────────────────────────────────
+const chartDataStato = computed(() => {
+  const conteggio = prenotazioniFiltrate.value.reduce(
+    (acc, p) => { if (p.stato in acc) acc[p.stato]++; return acc },
+    { ATTIVA: 0, CONCLUSA: 0, ANNULLATA: 0 }
+  )
+  return {
+    labels: ['Attive', 'Concluse', 'Annullate'],
+    datasets: [{
+      backgroundColor: [CHART_COLORS.darkBlue, CHART_COLORS.green, CHART_COLORS.red],
+      data: [conteggio.ATTIVA, conteggio.CONCLUSA, conteggio.ANNULLATA],
+    }],
+  }
+})
+
+// ─── Chart: Qualità Media Recensioni (Radar) ──────────────────────────────────
+const CATEGORIE_RADAR = ['posizione', 'prezzo', 'pulizia', 'spazio', 'sicurezza']
+
+const chartDataRadar = computed(() => {
+  const garageTarget = garageSelezionato.value === 'TUTTI'
+    ? mieiGarage.value
+    : mieiGarage.value.filter(g => Number(g.id_garage) === Number(garageSelezionato.value))
+
+  const medie = CATEGORIE_RADAR.map(cat => {
+    const somma = garageTarget.reduce((acc, g) => acc + parseFloat(g[`media${cat}`] || 0), 0)
+    return garageTarget.length ? somma / garageTarget.length : 0
+  })
+
+  return {
+    labels: ['Posizione', 'Prezzo', 'Pulizia', 'Spazio', 'Sicurezza'],
+    datasets: [{
+      label:                'Voto Medio',
+      backgroundColor:      CHART_COLORS.greenAlpha,
+      borderColor:          CHART_COLORS.green,
+      pointBackgroundColor: CHART_COLORS.green,
+      data:                 medie,
+    }],
+  }
+})
+
+// ─── Chart: Confronto Incassi per Garage (Bar) ────────────────────────────────
+const chartDataRevenuePerGarage = computed(() => ({
+  labels: mieiGarage.value.map(g => g.nome),
+  datasets: [{
+    label:           'Incasso per Garage (€)',
+    backgroundColor: CHART_COLORS.blue,
+    borderRadius:    6,
+    data: mieiGarage.value.map(g =>
+      prenotazioniFiltrate.value
+        .filter(p => Number(p.id_garage) === Number(g.id_garage) && p.stato !== 'ANNULLATA')
+        .reduce((acc, p) => acc + parseFloat(p.prezzototale || 0), 0)
+    ),
+  }],
+}))
+
 </script>
 
 <template>
@@ -598,55 +829,104 @@ const navItems = [
             <button @click="messaggio = null" class="close-btn">×</button>
           </div>
 
-          <!-- ── STATISTICHE ─────────────────────────────────────────────── -->
+          <!-- ══════════════════════════════════════════════════════════════ -->
+          <!-- ── STATISTICHE ───────────────────────────────────────────── -->
+          <!-- ══════════════════════════════════════════════════════════════ -->
           <section v-if="vistaAttiva === 'statistiche'" class="vista fade-in centered-container">
-            <div class="page-header">
+
+            <!-- Header + filtri -->
+            <div class="page-header stats-page-header">
               <div>
                 <h1>Dashboard</h1>
-                <p class="subtitle">Panoramica dei tuoi parcheggi</p>
+                <p class="subtitle">
+                  {{ garageSelezionato === 'TUTTI'
+                    ? 'Panoramica di tutti i tuoi parcheggi'
+                    : 'Statistiche di dettaglio del parcheggio' }}
+                </p>
+              </div>
+
+              <div class="stats-filters">
+                <div class="form-group stats-filters__group">
+                  <label class="form-label stats-filters__label">Seleziona Garage</label>
+                  <select class="form-input stats-filters__select" v-model="garageSelezionato">
+                    <option value="TUTTI">Tutti i Garage</option>
+                    <option v-for="g in mieiGarage" :key="g.id_garage" :value="g.id_garage">{{ g.nome }}</option>
+                  </select>
+                </div>
+                <div class="form-group stats-filters__group">
+                  <label class="form-label stats-filters__label">Dal</label>
+                  <input type="date" class="form-input stats-filters__date" v-model="filtroInizio">
+                </div>
+                <div class="form-group stats-filters__group">
+                  <label class="form-label stats-filters__label">Al</label>
+                  <input type="date" class="form-input stats-filters__date" v-model="filtroFine">
+                </div>
               </div>
             </div>
+
+            <!-- KPI cards -->
             <div class="stats-grid">
-              <div class="stat-card">
-                <div class="stat-icon stat-icon--blue">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg>
+              <div v-for="kpi in kpiData" :key="kpi.id" class="stat-card">
+                <div :class="['stat-icon', `stat-icon--${kpi.color}`]">
+                  <i :class="['bi', kpi.icon]" style="font-size: 1.2rem;"></i>
                 </div>
                 <div class="stat-body">
-                  <span class="stat-label">Garage Totali</span>
-                  <span class="stat-value">{{ mieiGarage.length }}</span>
-                </div>
-              </div>
-
-              <div class="stat-card">
-                <div class="stat-icon stat-icon--green">
-                  <i class="bi bi-wallet2" style="font-size: 1.2rem;"></i>
-                </div>
-                <div class="stat-body">
-                  <span class="stat-label">Saldo Disponibile</span>
-                  <span class="stat-value">€ {{ authStore.utente?.saldo || '0.00' }}</span>
-                </div>
-              </div>
-
-              <div class="stat-card">
-                <div class="stat-icon stat-icon--amber">
-                  <i class="bi bi-clock-history" style="font-size: 1.2rem;"></i>
-                </div>
-                <div class="stat-body">
-                  <span class="stat-label">In Arrivo</span>
-                  <span class="stat-value">€ {{ walletStore.saldoSospeso || '0.00' }}</span>
-                </div>
-              </div>
-
-              <div class="stat-card">
-                <div class="stat-icon stat-icon--blue">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                </div>
-                <div class="stat-body">
-                  <span class="stat-label">Prenot. Attive</span>
-                  <span class="stat-value">{{ prenotazioniAttive }}</span>
+                  <span class="stat-label">{{ kpi.label }}</span>
+                  <span class="stat-value">{{ kpi.value }}</span>
                 </div>
               </div>
             </div>
+
+            <!-- Riga grafici principale: trend + doughnut -->
+            <div class="charts-row">
+              <div class="chart-card chart-card--wide">
+                <div class="chart-header">
+                  <h3 class="chart-title">Trend Ricavi</h3>
+                  <p v-if="filtroInizio && filtroFine" class="chart-subtitle">
+                    Periodo: {{ new Date(filtroInizio).toLocaleDateString('it-IT') }} –
+                    {{ new Date(filtroFine).toLocaleDateString('it-IT') }}
+                  </p>
+                </div>
+                <div class="chart-body">
+                  <Line v-if="chartDataRevenue.labels.length" :data="chartDataRevenue" :options="chartOptions" />
+                  <div v-else class="chart-empty">Seleziona un intervallo di date per visualizzare il trend</div>
+                </div>
+              </div>
+
+              <div class="chart-card">
+                <div class="chart-header">
+                  <h3 class="chart-title">Stato Prenotazioni</h3>
+                </div>
+                <div class="chart-body chart-body--centered">
+                  <Doughnut v-if="prenotazioniFiltrate.length" :data="chartDataStato" :options="chartOptions" />
+                  <div v-else class="chart-empty">Dati insufficienti</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Grafico inferiore: bar (tutti) o radar (singolo garage) -->
+            <div class="charts-row charts-row--single">
+              <div class="chart-card chart-card--centered">
+                <template v-if="garageSelezionato === 'TUTTI'">
+                  <div class="chart-header chart-header--center">
+                    <h3 class="chart-title">Confronto Incassi per Garage</h3>
+                  </div>
+                  <div class="chart-body">
+                    <Bar v-if="mieiGarage.length" :data="chartDataRevenuePerGarage" :options="chartOptions" />
+                    <div v-else class="chart-empty">Nessun garage registrato</div>
+                  </div>
+                </template>
+                <template v-else>
+                  <div class="chart-header chart-header--center">
+                    <h3 class="chart-title">Qualità Media (Recensioni storiche)</h3>
+                  </div>
+                  <div class="chart-body">
+                    <Radar :data="chartDataRadar" :options="chartOptionsRadar" />
+                  </div>
+                </template>
+              </div>
+            </div>
+
           </section>
 
           <!-- ── I MIEI GARAGE ──────────────────────────────────────────── -->
@@ -1199,6 +1479,14 @@ const navItems = [
 .section-header { margin-bottom: 12px; }
 .section-header h2 { font-size: 1rem; font-weight: 600; color: var(--deep-blue, #00204A); }
 
+/* ── Statistiche: header + filtri ────────────────────────────────────────── */
+.stats-page-header  { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 16px; }
+.stats-filters      { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.stats-filters__group { margin-bottom: 0; }
+.stats-filters__label { font-size: 0.65rem; }
+.stats-filters__select { height: 38px; min-width: 200px; background-color: #fff; cursor: pointer; }
+.stats-filters__date   { height: 38px; width: 140px; background-color: #fff; }
+
 /* ── Stat cards ──────────────────────────────────────────────────────────── */
 .stats-grid       { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 40px; }
 .stat-card        { background: #fff; border: 0.5px solid #E8E8E8; border-radius: 12px; padding: 20px; display: flex; align-items: center; gap: 16px; }
@@ -1209,6 +1497,22 @@ const navItems = [
 .stat-body  { display: flex; flex-direction: column; gap: 2px; }
 .stat-label { font-size: 0.72rem; color: #999; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
 .stat-value { font-size: 1.5rem; font-weight: 700; color: var(--deep-blue, #00204A); letter-spacing: -0.5px; line-height: 1; }
+
+/* ── Charts layout ───────────────────────────────────────────────────────── */
+.charts-row         { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 24px; }
+.charts-row--single { grid-template-columns: 1fr; justify-items: center; margin-bottom: 40px; }
+
+/* ── Chart card ──────────────────────────────────────────────────────────── */
+.chart-card          { background: #fff; border: 0.5px solid #E8E8E8; border-radius: 12px; padding: 20px; }
+.chart-card--wide    { /* inherits from .chart-card */ }
+.chart-card--centered { width: 100%; max-width: 600px; }
+.chart-header        { margin-bottom: 16px; }
+.chart-header--center { text-align: center; }
+.chart-title         { font-size: 1rem; color: #00204A; margin: 0; font-weight: 600; }
+.chart-subtitle      { font-size: 0.75rem; color: #888; margin: 4px 0 0; }
+.chart-body          { height: 250px; position: relative; }
+.chart-body--centered { display: flex; justify-content: center; }
+.chart-empty         { display: flex; height: 100%; align-items: center; justify-content: center; color: #aaa; font-size: 0.85rem; text-align: center; }
 
 /* ── Table ───────────────────────────────────────────────────────────────── */
 .table-card { background: #fff; border: 0.5px solid #E8E8E8; border-radius: 12px; overflow: hidden; }
@@ -1366,7 +1670,8 @@ const navItems = [
 @media (max-width: 900px) {
   .sidebar         { display: none; }
   .main-content    { padding: 24px 20px; }
-  .stats-grid      { grid-template-columns: 1fr; }
+  .stats-grid      { grid-template-columns: 1fr 1fr; }
+  .charts-row      { grid-template-columns: 1fr; }
   .form-row--2col  { grid-template-columns: 1fr; }
   .form-row--3col  { grid-template-columns: 1fr; }
   .posto-creator   { grid-template-columns: 1fr; }
