@@ -7,6 +7,7 @@ import 'bootstrap-icons/font/bootstrap-icons.css'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 import PlanimetriaGarage from '../components/PlanimetriaGarage.vue'
+import Pagination from '../components/Pagination.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -224,6 +225,18 @@ const distribuzioneVoti = computed(() => {
         distrib[i] = (distrib[i] / totale) * 100
     }
     return distrib
+})
+
+const recensioniPerPagina = ref(4)
+const paginaRecensioniCorrente = ref(1)
+
+const recensioniPaginate = computed(() => {
+    const inizio = (paginaRecensioniCorrente.value - 1) * recensioniPerPagina.value
+    return garageStore.recensioni.slice(inizio, inizio + recensioniPerPagina.value)
+})
+
+watch(paginaRecensioniCorrente, () => {
+    commentiEspansi.value.clear()
 })
 
 </script>
@@ -478,7 +491,7 @@ const distribuzioneVoti = computed(() => {
 
                         <div class="user-comments-section mt-5 pt-4 border-top">
                             <div class="comments-grid">
-                                <div v-for="(recensione, index) in garageStore.recensioni" :key="index"
+                                <div v-for="(recensione, index) in recensioniPaginate" :key="index"
                                     class="comment-card">
                                     <div class="comment-header">
                                         <div class="user-avatar">
@@ -514,6 +527,15 @@ const distribuzioneVoti = computed(() => {
                                         {{ commentiEspansi.has(index) ? 'Mostra meno' : 'Mostra altro' }}
                                     </button>
                                 </div>
+                            </div>
+                            
+                            <div class="pagination-wrapper mt-5 d-flex justify-content-center" v-if="garageStore.recensioni.length > 0">
+                                <Pagination
+                                    compact
+                                    v-model:paginaCorrente="paginaRecensioniCorrente"
+                                    v-model:elementiPerPagina="recensioniPerPagina"
+                                    :totaleElementi="garageStore.recensioni.length"
+                                />
                             </div>
                         </div>
 
@@ -1168,6 +1190,13 @@ const distribuzioneVoti = computed(() => {
 
 .special-line .prezzo-valore-small span {
     opacity: 0.7;
+}
+
+.pagination-wrapper {
+    margin-top: 3rem;
+    display: flex;
+    justify-content: center;
+    width: 100%;
 }
 
 @media (max-width: 600px) {

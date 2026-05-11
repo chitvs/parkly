@@ -56,6 +56,15 @@ const paginaVisibili = computed(() => {
       <button
         class="pag-compact__btn"
         :disabled="paginaCorrente === 1"
+        @click="cambiaPagina(1)"
+        aria-label="Prima pagina"
+      >
+        <img src="../assets/chevron-left-double.svg" class="icon" alt="Prima pagina">
+      </button>
+
+      <button
+        class="pag-compact__btn"
+        :disabled="paginaCorrente === 1"
         @click="cambiaPagina(paginaCorrente - 1)"
         aria-label="Pagina precedente"
       >
@@ -73,6 +82,15 @@ const paginaVisibili = computed(() => {
         aria-label="Pagina successiva"
       >
         <img src="../assets/chevron-right.svg" class="icon" alt="Successiva">
+      </button>
+
+      <button
+        class="pag-compact__btn"
+        :disabled="paginaCorrente === totalePagine"
+        @click="cambiaPagina(totalePagine)"
+        aria-label="Ultima pagina"
+      >
+        <img src="../assets/chevron-right-double.svg" class="icon" alt="Ultima pagina">
       </button>
     </div>
 
@@ -129,46 +147,49 @@ const paginaVisibili = computed(() => {
 .pag-compact {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
 .pag-compact__btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: 1px solid #e2e8f0;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #cbd5e1;
   border-radius: 6px;
-  background: #fff;
-  color: #475569;
+  background: #f8fafc;
+  color: #4b5563;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition: all 0.2s;
   padding: 0;
 }
 
 .pag-compact__btn:hover:not(:disabled) {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
-  color: #0f172a;
+  background: #e2e8f0;
+  border-color: #00408A;
+  color: #00408A;
 }
 
 .pag-compact__btn:disabled {
-  opacity: 0.35;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
 .pag-compact__info {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #334155;
-  padding: 0 6px;
+  font-size: 0.9rem;
+  color: #4b5563;
+  padding: 0 8px;
   white-space: nowrap;
+  
+  display: inline-block;
+  min-width: 100px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 .pag-compact__of {
   color: #94a3b8;
-  font-weight: 400;
 }
 
 .pag-full {
@@ -177,11 +198,10 @@ const paginaVisibili = computed(() => {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
-  padding: 10px 16px;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, .04);
+  padding: 12px 16px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
 }
 
 .pag-full__left {
@@ -194,22 +214,22 @@ const paginaVisibili = computed(() => {
 .pag-full__label {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.8rem;
-  color: #64748b;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: #4b5563;
   white-space: nowrap;
 }
 
 .pag-full__select {
-  border: 1px solid #e2e8f0;
+  border: 1px solid #cbd5e1;
   border-radius: 6px;
-  padding: 3px 6px;
-  font-size: 0.8rem;
-  color: #334155;
-  background: #f8fafc;
+  padding: 6px 10px;
+  font-size: 0.9rem;
+  color: #4b5563;
+  background-color: #f8fafc;
   outline: none;
   cursor: pointer;
-  transition: border-color 0.15s;
+  transition: border-color 0.2s;
 }
 
 .pag-full__select:focus {
@@ -217,15 +237,15 @@ const paginaVisibili = computed(() => {
 }
 
 .pag-full__counter {
-  font-size: 0.8rem;
-  color: #64748b;
+  font-size: 0.9rem;
+  color: #4b5563;
   white-space: nowrap;
 }
 
 .pag-full__right {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
 }
 
 .pag-full__btn {
@@ -234,24 +254,24 @@ const paginaVisibili = computed(() => {
   justify-content: center;
   min-width: 32px;
   height: 32px;
-  padding: 0 6px;
+  padding: 0 8px;
   border: 1px solid transparent;
-  border-radius: 7px;
+  border-radius: 6px;
   background: transparent;
-  color: #475569;
-  font-size: 0.82rem;
-  font-weight: 500;
+  color: #4b5563;
+  font-size: 0.9rem;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition: all 0.2s;
 }
 
 .pag-full__btn:hover:not(:disabled):not(.pag-full__btn--active) {
-  background: #f1f5f9;
-  color: #0f172a;
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #00408A;
 }
 
 .pag-full__btn:disabled {
-  opacity: 0.3;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
@@ -262,16 +282,16 @@ const paginaVisibili = computed(() => {
 
 .pag-full__btn--active {
   background: #00408A;
-  color: #fff;
+  color: #ffffff;
   border-color: #00408A;
-  font-weight: 700;
+  font-weight: 600;
   cursor: default;
 }
 
 .pag-full__dots {
   color: #94a3b8;
-  font-size: 0.85rem;
-  padding: 0 2px;
+  font-size: 0.9rem;
+  padding: 0 4px;
   user-select: none;
 }
 
@@ -286,7 +306,7 @@ const paginaVisibili = computed(() => {
 }
 
 .icon {
-    width: 18px;
-    height: 18px;
+  width: 16px;
+  height: 16px;
 }
 </style>

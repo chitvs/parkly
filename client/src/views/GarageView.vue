@@ -66,7 +66,24 @@ const garagesPaginati = computed(() => {
     return garagesFiltrati.value.slice(inizio, inizio + elementiPerPagina.value)
 })
 
-const scrollInAlto = () => window.scrollTo({ top: 0, behavior: 'smooth' })
+const elementiVisibiliFS = ref(6)
+
+const garagesMostratiFS = computed(() => {
+    return garagesFiltrati.value.slice(0, elementiVisibiliFS.value)
+})
+
+const caricaAltriFS = () => {
+    elementiVisibiliFS.value += 6
+}
+
+const scrollInAlto = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+    
+    const fsScroll = document.querySelector('.fs-scroll-content')
+    if (fsScroll) {
+        fsScroll.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+}
 
 watch(searchLocation, () => {
     if (!searchLocation.value.trim() && searchMarkerInstance) {
@@ -88,6 +105,8 @@ watch([checkIn, checkOut], async ([newIn, newOut]) => {
 
 watch(garagesFiltrati, (newGarages) => {
     paginaCorrente.value = 1
+    elementiVisibiliFS.value = 6
+    
     if (!fullMapInstance) return
     const activeIds = newGarages.map(g => g.id_garage)
     Object.keys(markersRefs).forEach(id => {
@@ -305,7 +324,7 @@ const handleSuggestionSelected = (place) => {
                                                     <h3>{{ garagesFiltrati.length }} Risultati</h3>
                                                 </div>
                                                 <div class="fs-scroll-content">
-                                                    <div v-for="garage in garagesPaginati"
+                                                    <div v-for="garage in garagesMostratiFS"
                                                         :key="'fs-' + garage.id_garage" class="fs-mini-card"
                                                         @mouseenter="setHover(garage, true)"
                                                         @click="selectGarage(garage)">
@@ -324,12 +343,10 @@ const handleSuggestionSelected = (place) => {
                                                         </div>
                                                     </div>
 
-                                                    <div v-if="garagesFiltrati.length > 0"
-                                                        class="mt-3 d-flex justify-content-center">
-                                                        <Pagination compact v-model:paginaCorrente="paginaCorrente"
-                                                            v-model:elementiPerPagina="elementiPerPagina"
-                                                            :totaleElementi="garagesFiltrati.length"
-                                                            @cambio-pagina="scrollInAlto" />
+                                                    <div v-if="elementiVisibiliFS < garagesFiltrati.length" class="load-more-container">
+                                                        <button @click="caricaAltriFS" class="btn-load-more">
+                                                            Mostra altri risultati
+                                                        </button>
                                                     </div>
 
                                                     <div v-if="hasMoreResults" class="fs-extended-results-mini">
@@ -461,10 +478,13 @@ const handleSuggestionSelected = (place) => {
                             </div>
                         </div>
 
-                        <div v-if="garagesFiltrati.length > 0" class="mt-3 px-2">
-                            <Pagination v-model:paginaCorrente="paginaCorrente"
+                        <div v-if="garagesFiltrati.length > 0" class="mt-3 px-2 pagination-container">
+                            <Pagination 
+                                v-model:paginaCorrente="paginaCorrente"
                                 v-model:elementiPerPagina="elementiPerPagina"
-                                :totaleElementi="garagesFiltrati.length" />
+                                :totaleElementi="garagesFiltrati.length" 
+                                @cambio-pagina="scrollInAlto" 
+                            />
                         </div>
 
                         <div v-if="hasMoreResults" class="extended-results-container">
@@ -507,7 +527,8 @@ const handleSuggestionSelected = (place) => {
     margin: 2rem auto;
     padding: 0 0.5rem;
     gap: 1.5rem;
-    align-items: flex-start;
+    align-items: stretch;
+    flex: 1;
 }
 
 .sidebar {
@@ -615,11 +636,14 @@ const handleSuggestionSelected = (place) => {
 
 .zone-results {
     flex: 1;
+    display: flex;
+    flex-direction: column;
 }
 
 .garage-list {
     display: flex;
     flex-direction: column;
+    flex: 1;
 }
 
 .garage-card {
@@ -1015,6 +1039,42 @@ const handleSuggestionSelected = (place) => {
 .btn-show-more-mini:hover {
     background-color: #00408A;
     color: white;
+}
+
+.load-more-container {
+    display: flex;
+    justify-content: center;
+    padding: 1rem 0;
+    margin-bottom: 1rem;
+}
+
+.btn-load-more {
+    background-color: #f8fafc;
+    color: #00408A;
+    border: 1px solid #cbd5e1;
+    padding: 8px 24px;
+    border-radius: 50px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-load-more:hover {
+    background-color: #e2e8f0;
+    border-color: #94a3b8;
+}
+
+.pagination-container {
+    margin-top: auto !important;
+    margin-bottom: 0rem;
+    background-color: transparent;
+    padding-top: 2rem;
+}
+
+.icon {
+  width: 16px;
+  height: 16px;
 }
 
 :deep(.custom-search-marker) {
