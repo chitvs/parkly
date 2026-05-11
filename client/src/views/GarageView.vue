@@ -1,8 +1,9 @@
 <script setup>
-import { ref, onMounted, nextTick, watch } from 'vue'
+import { ref, onMounted, nextTick, watch, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
+import Pagination from '../components/Pagination.vue'
 import SearchBar from '../components/SearchBar.vue'
 import GarageFilters from '../components/GarageFilters.vue'
 import { useGarages } from '../composables/useGarages.js'
@@ -57,6 +58,16 @@ const {
     hasMoreResults
 } = useSpatialSearch(searchLocation, garages, passaFiltriTecnici)
 
+const paginaCorrente = ref(1)
+const elementiPerPagina = ref(5)
+
+const garagesPaginati = computed(() => {
+    const inizio = (paginaCorrente.value - 1) * elementiPerPagina.value
+    return garagesFiltrati.value.slice(inizio, inizio + elementiPerPagina.value)
+})
+
+const scrollInAlto = () => window.scrollTo({ top: 0, behavior: 'smooth' })
+
 watch(searchLocation, () => {
     if (!searchLocation.value.trim() && searchMarkerInstance) {
         searchMarkerInstance.remove()
@@ -76,6 +87,7 @@ watch([checkIn, checkOut], async ([newIn, newOut]) => {
 })
 
 watch(garagesFiltrati, (newGarages) => {
+    paginaCorrente.value = 1
     if (!fullMapInstance) return
     const activeIds = newGarages.map(g => g.id_garage)
     Object.keys(markersRefs).forEach(id => {
@@ -293,7 +305,7 @@ const handleSuggestionSelected = (place) => {
                                                     <h3>{{ garagesFiltrati.length }} Risultati</h3>
                                                 </div>
                                                 <div class="fs-scroll-content">
-                                                    <div v-for="garage in garagesFiltrati"
+                                                    <div v-for="garage in garagesPaginati"
                                                         :key="'fs-' + garage.id_garage" class="fs-mini-card"
                                                         @mouseenter="setHover(garage, true)"
                                                         @click="selectGarage(garage)">
@@ -310,6 +322,14 @@ const handleSuggestionSelected = (place) => {
                                                             </p>
                                                             <span class="mini-price">€{{ getDisplayPrice(garage) }}/ora</span>
                                                         </div>
+                                                    </div>
+
+                                                    <div v-if="garagesFiltrati.length > 0"
+                                                        class="mt-3 d-flex justify-content-center">
+                                                        <Pagination compact v-model:paginaCorrente="paginaCorrente"
+                                                            v-model:elementiPerPagina="elementiPerPagina"
+                                                            :totaleElementi="garagesFiltrati.length"
+                                                            @cambio-pagina="scrollInAlto" />
                                                     </div>
 
                                                     <div v-if="hasMoreResults" class="fs-extended-results-mini">
@@ -381,7 +401,7 @@ const handleSuggestionSelected = (place) => {
                     </div>
 
                     <div class="garage-list">
-                        <div v-for="garage in garagesFiltrati" :key="garage.id_garage" class="garage-card"
+                        <div v-for="garage in garagesPaginati" :key="garage.id_garage" class="garage-card"
                             @click="goToDetail(garage)">
 
                             <div class="gcard-thumb">
@@ -439,6 +459,12 @@ const handleSuggestionSelected = (place) => {
                                     <span class="price-value">€{{ getDisplayPrice(garage) }}/ora</span>
                                 </div>
                             </div>
+                        </div>
+
+                        <div v-if="garagesFiltrati.length > 0" class="mt-3 px-2">
+                            <Pagination v-model:paginaCorrente="paginaCorrente"
+                                v-model:elementiPerPagina="elementiPerPagina"
+                                :totaleElementi="garagesFiltrati.length" />
                         </div>
 
                         <div v-if="hasMoreResults" class="extended-results-container">

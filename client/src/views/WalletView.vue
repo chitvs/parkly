@@ -4,6 +4,7 @@ import { authStore } from '../store/auth.js'
 import { walletStore } from '../store/wallet.js'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
+import Pagination from '../components/Pagination.vue'
 
 const isLoading = ref(false)
 const isLoadingTransazioni = ref(false)
@@ -12,7 +13,7 @@ const messaggio = ref(null)
 
 // paginazione
 const paginaCorrente = ref(1)
-const elementiPerPagina = 5
+const elementiPerPagina = ref(5)
 
 const saldoAttuale = computed(() => {
     return parseFloat(authStore.utente?.saldo || 0)
@@ -51,17 +52,9 @@ onMounted(async () => {
 })
 
 const transazioniPaginate = computed(() => {
-    const inizio = (paginaCorrente.value - 1) * elementiPerPagina
-    return transazioni.value.slice(inizio, inizio + elementiPerPagina)
+    const inizio = (paginaCorrente.value - 1) * elementiPerPagina.value
+    return transazioni.value.slice(inizio, inizio + elementiPerPagina.value)
 })
-
-const totalePagine = computed(() => Math.ceil(transazioni.value.length / elementiPerPagina))
-
-const cambiaPagina = (pag) => {
-    if (pag >= 1 && pag <= totalePagine.value) {
-        paginaCorrente.value = pag
-    }
-}
 
 // formattazione
 const formattaTitolare = () => {
@@ -300,18 +293,13 @@ const handleRicarica = async () => {
                                 </div>
                             </div>
 
-                            <div class="pagination-horizontal" v-if="totalePagine > 1">
-                                <button class="page-btn" :disabled="paginaCorrente === 1"
-                                    @click="cambiaPagina(paginaCorrente - 1)">«</button>
-
-                                <div class="page-numbers">
-                                    <span v-for="p in totalePagine" :key="p" class="page-dot"
-                                        :class="{ active: paginaCorrente === p }" @click="cambiaPagina(p)">{{ p
-                                        }}</span>
-                                </div>
-
-                                <button class="page-btn" :disabled="paginaCorrente === totalePagine"
-                                    @click="cambiaPagina(paginaCorrente + 1)">»</button>
+                            <div v-if="transazioni.length > 0" class="mt-3 d-flex justify-content-center">
+                                <Pagination
+                                    compact
+                                    v-model:paginaCorrente="paginaCorrente"
+                                    v-model:elementiPerPagina="elementiPerPagina"
+                                    :totaleElementi="transazioni.length"
+                                />
                             </div>
 
                         </div>
@@ -602,6 +590,18 @@ const handleRicarica = async () => {
     flex-grow: 1;
 }
 
+.d-flex {
+    display: flex;
+}
+
+.justify-content-center {
+    justify-content: center;
+}
+
+.mt-3 {
+    margin-top: 1rem;
+}
+
 .msg-box {
     text-align: center;
     padding: 40px;
@@ -699,69 +699,5 @@ const handleRicarica = async () => {
 
 .text-danger {
     color: #c62828;
-}
-
-.pagination-horizontal {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    margin-top: 24px;
-    padding-top: 16px;
-    border-top: 1px solid #f0f0f0;
-}
-
-.page-btn {
-    background: none;
-    border: 1px solid #eee;
-    border-radius: 6px;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    color: #555;
-    font-weight: bold;
-    transition: 0.2s;
-}
-
-.page-btn:hover:not(:disabled) {
-    background: #f4f7fb;
-    border-color: #c0d3e8;
-    color: var(--primary-blue, #00408A);
-}
-
-.page-btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-}
-
-.page-numbers {
-    display: flex;
-    gap: 6px;
-}
-
-.page-dot {
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 6px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: #666;
-    cursor: pointer;
-    transition: 0.2s;
-}
-
-.page-dot:hover {
-    background: #f0f0f0;
-}
-
-.page-dot.active {
-    background: var(--primary-blue, #00408A);
-    color: white;
 }
 </style>
