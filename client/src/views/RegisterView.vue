@@ -53,22 +53,27 @@ const handleRegister = async () => {
     <Header />
 
     <main class="register-main">
-      <div class="container py-5">
+      <!-- Sezione hero blu -->
+      <div class="register-hero">
+        <h1 class="hero-title">Crea il tuo account</h1>
+        <p class="hero-sub">Unisciti alla community di Parkly ed esplora le migliori opzioni di parcheggio.</p>
+      </div>
+
+      <!-- Card sovrapposta -->
+      <div class="container register-card-container">
         <div class="row justify-content-center">
           <div class="col-12 col-md-10 col-lg-8 col-xl-6">
             <div class="register-card">
-              <!-- Header della card -->
+              <!-- Logo nella card -->
               <div class="text-center mb-4">
                 <router-link to="/">
                   <img
                     src="../assets/Primo_Logo_00408A.svg"
                     alt="logo parkly"
-                    width="110"
-                    class="mb-3 logo-img"
+                    width="90"
+                    class="mb-2 logo-img"
                   />
                 </router-link>
-                <h2 class="fw-bold title-text">Crea il tuo account</h2>
-                <p class="text-muted subtitle-text">Unisciti alla community di Parkly ed esplora le migliori opzioni di parcheggio.</p>
               </div>
 
               <!-- Divisore -->
@@ -80,31 +85,19 @@ const handleRegister = async () => {
                 
                 <div class="row g-3 mb-3">
                   <div class="col-md-6">
-                    <div class="form-floating">
-                      <input type="text" class="form-control custom-input" id="nome" placeholder="Nome" v-model="nome" required />
-                      <label for="nome">Nome</label>
-                    </div>
+                    <input type="text" class="form-control custom-input" id="nome" placeholder="Nome" v-model="nome" required />
                   </div>
                   <div class="col-md-6">
-                    <div class="form-floating">
-                      <input type="text" class="form-control custom-input" id="cognome" placeholder="Cognome" v-model="cognome" required />
-                      <label for="cognome">Cognome</label>
-                    </div>
+                    <input type="text" class="form-control custom-input" id="cognome" placeholder="Cognome" v-model="cognome" required />
                   </div>
                 </div>
 
                 <div class="row g-3 mb-4">
                   <div class="col-md-6">
-                    <div class="form-floating">
-                      <input type="text" class="form-control custom-input" id="cf" placeholder="Codice Fiscale" v-model="cf" />
-                      <label for="cf">Codice Fiscale (opzionale)</label>
-                    </div>
+                    <input type="text" class="form-control custom-input" id="cf" placeholder="Codice Fiscale (opzionale)" v-model="cf" />
                   </div>
                   <div class="col-md-6">
-                    <div class="form-floating">
-                      <input type="tel" class="form-control custom-input" id="telefono" placeholder="Telefono" v-model="telefono" />
-                      <label for="telefono">Telefono (opzionale)</label>
-                    </div>
+                    <input type="tel" class="form-control custom-input" id="telefono" placeholder="Telefono (opzionale)" v-model="telefono" />
                   </div>
                 </div>
 
@@ -113,35 +106,27 @@ const handleRegister = async () => {
 
                 <div class="row g-3 mb-3">
                   <div class="col-md-6">
-                    <div class="form-floating">
-                      <input type="text" class="form-control custom-input" id="nomeUtente" placeholder="Nome Utente" v-model="nomeUtente" required />
-                      <label for="nomeUtente">Nome Utente</label>
-                    </div>
+                    <input type="text" class="form-control custom-input" id="nomeUtente" placeholder="Nome Utente" v-model="nomeUtente" required />
                   </div>
                   <div class="col-md-6">
-                    <div class="form-floating">
-                      <input type="email" class="form-control custom-input" id="email" placeholder="Indirizzo Email" v-model="email" required />
-                      <label for="email">Indirizzo Email</label>
-                    </div>
+                    <input type="email" class="form-control custom-input" id="email" placeholder="Indirizzo Email" v-model="email" required />
                   </div>
                 </div>
 
                 <div class="row g-3 mb-4">
                   <div class="col-md-6">
-                    <div class="form-floating position-relative">
-                      <input :type="isPasswordVisible1 ? 'text' : 'password'" class="form-control custom-input pe-5" id="password" placeholder="Password" v-model="password" required />
-                      <label for="password">Password</label>
+                    <div class="input-group password-group">
+                      <input :type="isPasswordVisible1 ? 'text' : 'password'" class="form-control password-field" id="password" placeholder="Password" v-model="password" required />
                       <button class="btn toggle-password-btn" type="button" @click="isPasswordVisible1 = !isPasswordVisible1" tabindex="-1">
-                        <img :src="isPasswordVisible1 ? eyeClosedUrl : eyeUrl" class="password-icon" />
+                        <img :src="isPasswordVisible1 ? eyeClosedUrl : eyeUrl" class="password-icon" alt="Toggle Password" />
                       </button>
                     </div>
                   </div>
                   <div class="col-md-6">
-                    <div class="form-floating position-relative">
-                      <input :type="isPasswordVisible2 ? 'text' : 'password'" class="form-control custom-input pe-5" id="passwordConfirm" placeholder="Ripeti Password" v-model="passwordConfirm" required />
-                      <label for="passwordConfirm">Ripeti Password</label>
+                    <div class="input-group password-group">
+                      <input :type="isPasswordVisible2 ? 'text' : 'password'" class="form-control password-field" id="passwordConfirm" placeholder="Ripeti Password" v-model="passwordConfirm" required />
                       <button class="btn toggle-password-btn" type="button" @click="isPasswordVisible2 = !isPasswordVisible2" tabindex="-1">
-                        <img :src="isPasswordVisible2 ? eyeClosedUrl : eyeUrl" class="password-icon" />
+                        <img :src="isPasswordVisible2 ? eyeClosedUrl : eyeUrl" class="password-icon" alt="Toggle Password" />
                       </button>
                     </div>
                   </div>
@@ -155,10 +140,6 @@ const handleRegister = async () => {
               </form>
 
               <div class="text-center mt-4 pt-3 border-top">
-                <p class="small text-muted footer-text mb-2">
-                  Hai già un account? 
-                  <a href="#" @click.prevent="$router.push('/')" class="fw-bold login-link">Torna alla Home per accedere</a>
-                </p>
                 <p class="small text-muted footer-text mb-0">
                   Effettuando la registrazione accetti i
                   <a href="#">Termini e Condizioni</a> e l'
@@ -185,6 +166,35 @@ const handleRegister = async () => {
 .register-main {
   flex: 1;
   background: #ffffff;
+}
+
+.register-hero {
+  background: radial-gradient(circle at center, #002d5e 0%, #001D3D 100%);
+  color: #ffffff;
+  text-align: center;
+  padding: 3rem 2rem 16rem;
+}
+
+.hero-title {
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  margin-bottom: 0.6rem;
+}
+
+.hero-sub {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.65);
+  max-width: 480px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+.register-card-container {
+  margin-top: -14rem;
+  position: relative;
+  z-index: 10;
+  padding-bottom: 3rem;
 }
 
 .register-card {
@@ -242,8 +252,9 @@ const handleRegister = async () => {
   border: 1px solid #e0e0e0;
   background-color: #f8fafc;
   transition: all 0.2s ease;
-  height: 58px;
+  height: 52px;
   font-size: 15px;
+  padding: 10px 18px;
 }
 
 .custom-input:focus {
@@ -253,37 +264,34 @@ const handleRegister = async () => {
   outline: none;
 }
 
-.form-floating > label {
-  color: #64748b;
-  padding-left: 1rem;
+.password-group {
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  overflow: hidden;
+  background-color: #f8fafc;
+  transition: all 0.2s ease;
 }
 
-.form-floating > .form-control:focus ~ label,
-.form-floating > .form-control:not(:placeholder-shown) ~ label {
-  color: #00408a;
-  font-weight: 500;
-  opacity: 0.9;
+.password-group:focus-within {
+  border-color: #00408a;
+  box-shadow: 0 0 0 3px rgba(0, 64, 138, 0.1);
+  background-color: #ffffff;
 }
 
-.toggle-password-btn {
-  position: absolute;
-  top: 50%;
-  right: 12px;
-  transform: translateY(-50%);
+.password-field {
   border: none !important;
   box-shadow: none !important;
   background: transparent !important;
-  z-index: 10;
-  padding: 0.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: background-color 0.2s;
+  font-size: 15px;
+  padding: 10px 18px;
 }
 
-.toggle-password-btn:hover {
-  background-color: rgba(0, 0, 0, 0.05) !important;
+.toggle-password-btn {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  align-items: center;
+  padding: 0.5rem;
 }
 
 .password-icon {
@@ -351,7 +359,7 @@ const handleRegister = async () => {
   }
 
   .custom-input {
-    font-size: 16px; /* evita zoom automatico su iOS */
+    font-size: 16px;
   }
 }
 </style>
