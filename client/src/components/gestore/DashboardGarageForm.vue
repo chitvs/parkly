@@ -49,7 +49,7 @@ onMounted(async () => {
                 isElettrica: p.iselettrica, isDisabili: p.isdisabili, isCoperto: p.iscoperto
             }))
         }
-        ricostruisciGriglia(g.mappatestuale, g.n_righe || 10, g.n_colonne || 15)
+        ricostruisciGriglia(g.mappatestuale, g.nrighe, g.ncolonne)
     }
 
     await nextTick()
@@ -119,7 +119,7 @@ const validaForm = () => {
 
 const inviaDati = () => {
     if (!validaForm()) return
-    emit('save', { ...localGarage.value, mappatestuale: stringaMappaGenerata.value, posti: postiConfigurati.value, n_righe: dimensioniMappa.value.righe, n_colonne: dimensioniMappa.value.colonne })
+    emit('save', { ...localGarage.value, mappatestuale: stringaMappaGenerata.value, posti: postiConfigurati.value, nrighe: dimensioniMappa.value.righe, ncolonne: dimensioniMappa.value.colonne })
 }
 </script>
 

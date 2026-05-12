@@ -122,7 +122,8 @@ router.post('/garages-gestore', async (req, res) => {
     const {
       nome, descrizione, indirizzo, latitudine, longitudine,
       tariffabase, tariffamoto, tariffafurgone, sovrapprezzoelettrica, scontodisabili,
-      altezzamassima, orarioapertura, orariochiusura, is24h, mappatestuale, posti 
+      altezzamassima, orarioapertura, orariochiusura, is24h, mappatestuale, posti, 
+      nrighe, ncolonne 
     } = req.body;
 
     if (!nome || !indirizzo || !tariffabase || !latitudine || !longitudine) {
@@ -136,9 +137,9 @@ router.post('/garages-gestore', async (req, res) => {
     const result = await db.tx(async t => {
       const garage = await t.one(
         `INSERT INTO Garage
-          (ID_Gestore, Nome, Descrizione, Indirizzo, Latitudine, Longitudine, AltezzaMassima, TariffaAuto, TariffaMoto, TariffaFurgone, SovrapprezzoElettrica, ScontoDisabili, OrarioApertura, OrarioChiusura, Is24h, MappaTestuale, IsAttivo)
+          (ID_Gestore, Nome, Descrizione, Indirizzo, Latitudine, Longitudine, AltezzaMassima, TariffaAuto, TariffaMoto, TariffaFurgone, SovrapprezzoElettrica, ScontoDisabili, OrarioApertura, OrarioChiusura, Is24h, MappaTestuale, NRighe, NColonne, IsAttivo)
          VALUES
-          ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, TRUE)
+          ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18 TRUE)
          RETURNING *`,
         [
           idGestore,
@@ -156,7 +157,9 @@ router.post('/garages-gestore', async (req, res) => {
           apertura,
           chiusura,
           is24h || false,
-          mappa
+          mappa,
+          nrighe,
+          ncolonne
         ]
       );
 
@@ -347,14 +350,14 @@ router.put('/garages-gestore/:id', async (req, res) => {
           Nome = $1, Descrizione = $2, Indirizzo = $3, Latitudine = $4, Longitudine = $5,
           AltezzaMassima = $6, TariffaAuto = $7, TariffaMoto = $8, TariffaFurgone = $9,
           SovrapprezzoElettrica = $10, ScontoDisabili = $11, OrarioApertura = $12,
-          OrarioChiusura = $13, Is24h = $14, MappaTestuale = $15
-        WHERE ID_Garage = $16
+          OrarioChiusura = $13, Is24h = $14, MappaTestuale = $15, NRighe = $16, NColonne = $17,
+        WHERE ID_Garage = $18
         RETURNING *
       `, [
         nome, descrizione || null, indirizzo, latitudine, longitudine,
         altezzamassima || null, tariffabase, tariffamoto || null, tariffafurgone || null,
         sovrapprezzoelettrica || null, scontodisabili || null, apertura, chiusura,
-        is24h || false, mappa, idGarage
+        is24h || false, mappa, nrighe, ncolonne, idGarage
       ]);
 
       // 3. Gestione Posti Auto (Upsert & Soft-Delete)

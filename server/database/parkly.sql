@@ -34,6 +34,8 @@ CREATE TABLE Garage (
     OrarioChiusura TIME NOT NULL,
     Is24h BOOLEAN DEFAULT FALSE,
     MappaTestuale TEXT,
+    NRighe INT NOT NULL,  
+    NColonne INT NOT NULL,
     IsAttivo BOOLEAN DEFAULT TRUE,  
     DataCreazione TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'Europe/Rome'),
     MediaGenerale DECIMAL(3,2) DEFAULT 0.00,
