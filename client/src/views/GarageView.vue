@@ -1,8 +1,9 @@
 <script setup>
-import { ref, onMounted, nextTick, watch } from 'vue'
+import { ref, onMounted, nextTick, watch, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
+import Pagination from '../components/Pagination.vue'
 import SearchBar from '../components/SearchBar.vue'
 import GarageFilters from '../components/GarageFilters.vue'
 import { useGarages } from '../composables/useGarages.js'
@@ -36,7 +37,7 @@ const { isLoading, garages, fetchGarages } = useGarages()
 
 const {
     filter24h, maxPrice, minHeight, filterCoperto,
-    filterElettrico, filterDisabili, filterTipoVeicolo,
+    filterElettrico, filterDisabili, filterTipoVeicolo, raggioKm,
     resetTechnicalFilters, passaFiltriTecnici
 } = useGarageFilters()
 
@@ -55,7 +56,34 @@ const {
     matchedPOI,
     garagesFiltrati,
     hasMoreResults
-} = useSpatialSearch(searchLocation, garages, passaFiltriTecnici)
+} = useSpatialSearch(searchLocation, garages, passaFiltriTecnici, raggioKm)
+
+const paginaCorrente = ref(1)
+const elementiPerPagina = ref(5)
+
+const garagesPaginati = computed(() => {
+    const inizio = (paginaCorrente.value - 1) * elementiPerPagina.value
+    return garagesFiltrati.value.slice(inizio, inizio + elementiPerPagina.value)
+})
+
+const elementiVisibiliFS = ref(6)
+
+const garagesMostratiFS = computed(() => {
+    return garagesFiltrati.value.slice(0, elementiVisibiliFS.value)
+})
+
+const caricaAltriFS = () => {
+    elementiVisibiliFS.value += 6
+}
+
+const scrollInAlto = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+    
+    const fsScroll = document.querySelector('.fs-scroll-content')
+    if (fsScroll) {
+        fsScroll.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+}
 
 watch(searchLocation, () => {
     if (!searchLocation.value.trim() && searchMarkerInstance) {
@@ -76,6 +104,9 @@ watch([checkIn, checkOut], async ([newIn, newOut]) => {
 })
 
 watch(garagesFiltrati, (newGarages) => {
+    paginaCorrente.value = 1
+    elementiVisibiliFS.value = 6
+    
     if (!fullMapInstance) return
     const activeIds = newGarages.map(g => g.id_garage)
     Object.keys(markersRefs).forEach(id => {
@@ -260,7 +291,7 @@ const handleSuggestionSelected = (place) => {
                     <div class="map-overlay">
                         <button class="map-view-btn" @click="openMapFullscreen">
                             <img src="../assets/pin.svg" class="icon-card" alt="Pin"
-                                            style="transform: scale(1.5) translateY(-1px); filter:  invert(1);" /> Vedi su mappa
+                                style="transform: scale(1.5) translateY(-1px); filter: invert(1);" /> Vedi su mappa
                         </button>
                         <Teleport to="body">
                             <Transition name="fs-fade">
@@ -271,20 +302,23 @@ const handleSuggestionSelected = (place) => {
 
                                             <div class="fs-col-filters">
                                                 <div class="fs-panel-header">
-                                                    <h3
-                                                        style="display: flex; justify-content: space-between; width: 100%;">
+                                                    <h3 style="display: flex; justify-content: space-between; width: 100%;">
                                                         Filtri
                                                         <button @click="resetFilters" class="reset-btn"
                                                             style="color: white;">Reset</button>
                                                     </h3>
                                                 </div>
                                                 <div class="fs-scroll-content">
-                                                    <GarageFilters v-model:filterTipoVeicolo="filterTipoVeicolo"
-                                                        v-model:maxPrice="maxPrice" v-model:filter24h="filter24h"
+                                                    <GarageFilters
+                                                        v-model:filterTipoVeicolo="filterTipoVeicolo"
+                                                        v-model:maxPrice="maxPrice"
+                                                        v-model:filter24h="filter24h"
                                                         v-model:filterCoperto="filterCoperto"
                                                         v-model:filterElettrico="filterElettrico"
                                                         v-model:filterDisabili="filterDisabili"
-                                                        v-model:minHeight="minHeight" />
+                                                        v-model:minHeight="minHeight"
+                                                        v-model:raggioKm="raggioKm"
+                                                        :hasLocation="!!searchLocation" />
                                                 </div>
                                             </div>
 
@@ -293,27 +327,31 @@ const handleSuggestionSelected = (place) => {
                                                     <h3>{{ garagesFiltrati.length }} Risultati</h3>
                                                 </div>
                                                 <div class="fs-scroll-content">
-                                                    <div v-for="garage in garagesFiltrati"
+                                                    <div v-for="garage in garagesMostratiFS"
                                                         :key="'fs-' + garage.id_garage" class="fs-mini-card"
                                                         @mouseenter="setHover(garage, true)"
                                                         @click="selectGarage(garage)">
                                                         <div class="mini-thumb">
-                                                            <div class="gcard-letter-box">{{ garage.nome.charAt(0) }}
-                                                            </div>
+                                                            <div class="gcard-letter-box">{{ garage.nome.charAt(0) }}</div>
                                                         </div>
                                                         <div class="mini-details">
                                                             <h4>{{ garage.nome }}</h4>
                                                             <p>{{ garage.indirizzo.slice(0, 30) }}...</p>
                                                             <p v-if="garage.displayPOIName">
-                                                                a {{ garage.displayDistanceLabel }} da {{
-                                                                    garage.displayPOIName }}
+                                                                a {{ garage.displayDistanceLabel }} da {{ garage.displayPOIName }}
                                                             </p>
                                                             <span class="mini-price">€{{ getDisplayPrice(garage) }}/ora</span>
                                                         </div>
                                                     </div>
 
+                                                    <div v-if="elementiVisibiliFS < garagesFiltrati.length" class="load-more-container">
+                                                        <button @click="caricaAltriFS" class="btn-load-more">
+                                                            Mostra altri risultati
+                                                        </button>
+                                                    </div>
+
                                                     <div v-if="hasMoreResults" class="fs-extended-results-mini">
-                                                        <p>Ci sono altri parcheggi entro 5km</p>
+                                                        <p>Ci sono altri parcheggi oltre {{ raggioKm }}km</p>
                                                         <button @click.stop="showExtendedResults = true"
                                                             class="btn-show-more-mini">
                                                             Mostra altri
@@ -332,8 +370,7 @@ const handleSuggestionSelected = (place) => {
                                                         placeholder="Cerca sulla mappa..."
                                                         @suggestion-selected="handleSuggestionSelected" />
                                                 </div>
-                                                <button class="fs-reset-view" @click="resetMapView"
-                                                    title="Ripristina visuale">
+                                                <button class="fs-reset-view" @click="resetMapView" title="Ripristina visuale">
                                                     <span style="font-size: 1.2rem;"><img src="../assets/refresh.svg"
                                                             class="icon-card" alt="Pin"
                                                             style="transform:translateX(3px) translateY(-0.5px) scale(1.7)" /></span>
@@ -355,10 +392,16 @@ const handleSuggestionSelected = (place) => {
                         <button @click="resetFilters" class="reset-btn">Reset</button>
                     </div>
 
-                    <GarageFilters v-model:filterTipoVeicolo="filterTipoVeicolo" v-model:maxPrice="maxPrice"
-                        v-model:filter24h="filter24h" v-model:filterCoperto="filterCoperto"
-                        v-model:filterElettrico="filterElettrico" v-model:filterDisabili="filterDisabili"
-                        v-model:minHeight="minHeight" />
+                    <GarageFilters
+                        v-model:filterTipoVeicolo="filterTipoVeicolo"
+                        v-model:maxPrice="maxPrice"
+                        v-model:filter24h="filter24h"
+                        v-model:filterCoperto="filterCoperto"
+                        v-model:filterElettrico="filterElettrico"
+                        v-model:filterDisabili="filterDisabili"
+                        v-model:minHeight="minHeight"
+                        v-model:raggioKm="raggioKm"
+                        :hasLocation="!!searchLocation" />
                 </div>
             </aside>
 
@@ -381,7 +424,7 @@ const handleSuggestionSelected = (place) => {
                     </div>
 
                     <div class="garage-list">
-                        <div v-for="garage in garagesFiltrati" :key="garage.id_garage" class="garage-card"
+                        <div v-for="garage in garagesPaginati" :key="garage.id_garage" class="garage-card"
                             @click="goToDetail(garage)">
 
                             <div class="gcard-thumb">
@@ -440,13 +483,25 @@ const handleSuggestionSelected = (place) => {
                                 </div>
                             </div>
                         </div>
-
+                        
                         <div v-if="hasMoreResults" class="extended-results-container">
-                            <p class="extended-info">Ci sono altri parcheggi un po' più distanti...</p>
+                            <p class="extended-info">
+                                Ci sono altri parcheggi tra {{ raggioKm }}km e {{ Math.max(raggioKm + 3, 5) }}km...
+                            </p>
                             <button @click.stop="showExtendedResults = true" class="btn-show-more">
-                                Visualizza altri parcheggi (entro 5km)
+                                Visualizza altri parcheggi
                             </button>
                         </div>
+
+                        <div v-if="garagesFiltrati.length > 0" class="mt-3 px-2 pagination-container">
+                            <Pagination 
+                                v-model:paginaCorrente="paginaCorrente"
+                                v-model:elementiPerPagina="elementiPerPagina"
+                                :totaleElementi="garagesFiltrati.length" 
+                                @cambio-pagina="scrollInAlto" 
+                            />
+                        </div>
+
                     </div>
                 </template>
             </main>
@@ -481,7 +536,8 @@ const handleSuggestionSelected = (place) => {
     margin: 2rem auto;
     padding: 0 0.5rem;
     gap: 1.5rem;
-    align-items: flex-start;
+    align-items: stretch;
+    flex: 1;
 }
 
 .sidebar {
@@ -589,11 +645,14 @@ const handleSuggestionSelected = (place) => {
 
 .zone-results {
     flex: 1;
+    display: flex;
+    flex-direction: column;
 }
 
 .garage-list {
     display: flex;
     flex-direction: column;
+    flex: 1;
 }
 
 .garage-card {
@@ -989,6 +1048,42 @@ const handleSuggestionSelected = (place) => {
 .btn-show-more-mini:hover {
     background-color: #00408A;
     color: white;
+}
+
+.load-more-container {
+    display: flex;
+    justify-content: center;
+    padding: 1rem 0;
+    margin-bottom: 1rem;
+}
+
+.btn-load-more {
+    background-color: #f8fafc;
+    color: #00408A;
+    border: 1px solid #cbd5e1;
+    padding: 8px 24px;
+    border-radius: 50px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-load-more:hover {
+    background-color: #e2e8f0;
+    border-color: #94a3b8;
+}
+
+.pagination-container {
+    margin-top: auto !important;
+    margin-bottom: 0rem;
+    background-color: transparent;
+    padding-top: 2rem;
+}
+
+.icon {
+  width: 16px;
+  height: 16px;
 }
 
 :deep(.custom-search-marker) {
