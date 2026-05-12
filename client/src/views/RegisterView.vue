@@ -69,7 +69,7 @@ const handleRegister = async () => {
               <div class="text-center mb-4">
                 <router-link to="/">
                   <img
-                    src="../assets/Primo_Logo_00408A.svg"
+                    src="../assets/LogoParklyBlu.svg"
                     alt="logo parkly"
                     width="90"
                     class="mb-2 logo-img"
