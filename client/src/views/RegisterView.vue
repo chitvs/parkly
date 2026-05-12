@@ -285,6 +285,7 @@ const handleRegister = async () => {
   background: transparent !important;
   font-size: 15px;
   padding: 10px 18px;
+  height: 100%;
 }
 
 .toggle-password-btn {
