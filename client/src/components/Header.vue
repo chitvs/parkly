@@ -274,7 +274,7 @@ const handleLogout = async () => {
   color: #00408a;
 }
 
-/* GRUPPO BOTTONI E PILLOLA: Più grandi e coordinati */
+/* GRUPPO BOTTONI E PILLOLA UTENTE */
 .auth-buttons-group {
   display: flex;
   gap: 0.8rem;
@@ -282,13 +282,23 @@ const handleLogout = async () => {
 }
 
 .login-btn,
-.register-btn {
-  padding: 0.65rem 1.5rem;
+.register-btn,
+.user-name-btn {
+  height: 48px; 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  font-size: 1rem;
   border-radius: 25px;
   text-decoration: none;
-  font-weight: 700;
-  font-size: 1rem;
   transition: all 0.2s ease;
+}
+
+.login-btn,
+.register-btn {
+  padding: 0 1.5rem;
+  font-weight: 700;
 }
 
 .login-btn {
@@ -306,10 +316,7 @@ const handleLogout = async () => {
   background-color: #f8f9fa;
   border: 1px solid #dee2e6;
   color: #2c3e50;
-  border-radius: 30px;
-  padding: 0.65rem 1.6rem; /* Identico ai pulsanti auth */
-  font-size: 1rem; /* Identico ai pulsanti auth */
-  transition: all 0.3s;
+  padding: 0 1.6rem;
 }
 
 .login-btn:hover, 
