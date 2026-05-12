@@ -270,6 +270,7 @@ const handleRegister = async () => {
   overflow: hidden;
   background-color: #f8fafc;
   transition: all 0.2s ease;
+  height: 52px;
 }
 
 .password-group:focus-within {
