@@ -105,5 +105,41 @@ export const garageStore = reactive({
     } finally {
       this.isLoading = false
     }
-  }
+  },
+
+  async fetchGaragesGestore() {
+    this.isLoading = true;
+    try {
+      const response = await fetch('/api/garage/garages-gestore', { credentials: 'include' });
+      const data = await response.json();
+      return { success: response.ok, data };
+    } catch (err) {
+      console.error("Errore fetch garages gestore:", err);
+      return { success: false, error: 'Errore di rete' };
+    } finally {
+      this.isLoading = false;
+    }
+  },
+
+  async fetchStatoGaragesGestore() {
+    try {
+      const response = await fetch('/api/garage/stato-garages-gestore', { credentials: 'include' });
+      const data = await response.json();
+      return { success: response.ok, data };
+    } catch (err) {
+      console.error("Errore fetch stato garages gestore:", err);
+      return { success: false, error: 'Errore di rete' };
+    }
+  },
+
+  async fetchOccupazione(id) {
+    try {
+      const response = await fetch(`/api/garage/${id}/occupazione`, { credentials: 'include' });
+      const data = await response.json();
+      return { success: response.ok, percentuale: data.percentuale };
+    } catch (err) {
+      console.error(`Errore fetch occupazione garage ${id}:`, err);
+      return { success: false, percentuale: 0 };
+    }
+  },
 })
