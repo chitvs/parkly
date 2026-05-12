@@ -8,6 +8,7 @@ import 'bootstrap-icons/font/bootstrap-icons.css'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 import ChatBox from '../components/ChatBox.vue'
+import Pagination from '../components/Pagination.vue'
 
 // variabili per i filtri e l'ordinamento
 const filtroStato = ref('') // '' = Tutte, 'ATTIVA', 'CONCLUSA', 'ANNULLATA'
@@ -16,7 +17,7 @@ const ordinamento = ref('creazione_desc') // default: data creazione più recent
 
 // variabili per la paginazione
 const paginaCorrente = ref(1)
-const elementiPerPagina = 5
+const elementiPerPagina = ref(5)
 
 
 // Stati reattivi per i dati del componente
@@ -134,18 +135,12 @@ const prenotazioniFiltrate = computed(() => {
 })
 
 // logica di Paginazione calcolata sull'array filtrato
-const totalePagine = computed(() => Math.ceil(prenotazioniFiltrate.value.length / elementiPerPagina))
-
 const prenotazioniPaginate = computed(() => {
-  const inizio = (paginaCorrente.value - 1) * elementiPerPagina
-  return prenotazioniFiltrate.value.slice(inizio, inizio + elementiPerPagina)
+  const inizio = (paginaCorrente.value - 1) * elementiPerPagina.value
+  return prenotazioniFiltrate.value.slice(inizio, inizio + elementiPerPagina.value)
 })
 
-const cambiaPagina = (pag) => {
-  if (pag >= 1 && pag <= totalePagine.value) {
-    paginaCorrente.value = pag
-  }
-}
+const scrollInAlto = () => window.scrollTo({ top: 0, behavior: 'smooth' })
 
 // resetta la pagina a 1 ogni volta che cambia un filtro o l'ordinamento
 watch([filtroStato, filtroGarage, ordinamento], () => {
@@ -378,9 +373,13 @@ const chiudiChat = () => {
                   </button>
 
                   <!-- Pulsante Chat -->
-                  <button v-if="booking.stato === 'ATTIVA'" @click="apriChat(booking)" class="custom-btn btn-chat"
-                    title="Contatta il gestore">
-                    <!--pallino notifica-->
+                  <button 
+                    v-if="booking.stato === 'ATTIVA'" 
+                    @click="apriChat(booking)" 
+                    class="custom-btn btn-chat"
+                    title="Contatta il gestore"
+                  >
+                    <!-- Pallino notifica-->
                     <span v-if="booking.nonletti > 0" class="chat-notification-dot"></span>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                       stroke-linecap="round" stroke-linejoin="round">
@@ -451,19 +450,9 @@ const chiudiChat = () => {
           </div>
         </div>
 
-        <div class="col-12 mt-4" v-if="totalePagine > 1">
-          <div class="pagination-horizontal">
-            <button class="page-btn" :disabled="paginaCorrente === 1"
-              @click="cambiaPagina(paginaCorrente - 1)">«</button>
-
-            <div class="page-numbers">
-              <span v-for="p in totalePagine" :key="p" class="page-dot" :class="{ active: paginaCorrente === p }"
-                @click="cambiaPagina(p)">{{ p }}</span>
-            </div>
-
-            <button class="page-btn" :disabled="paginaCorrente === totalePagine"
-              @click="cambiaPagina(paginaCorrente + 1)">»</button>
-          </div>
+        <div class="col-12 mt-4" v-if="prenotazioniFiltrate.length > 0">
+          <Pagination v-model:paginaCorrente="paginaCorrente" v-model:elementiPerPagina="elementiPerPagina"
+            :totaleElementi="prenotazioniFiltrate.length" @cambio-pagina="scrollInAlto" />
         </div>
 
       </div>
@@ -645,7 +634,7 @@ const chiudiChat = () => {
   font-family: 'Courier New', Courier, monospace;
 }
 
-/*  CSS per il popup della chat */
+/* CSS per il popup della chat */
 .chat-popup-container {
   position: fixed;
   bottom: 24px;
