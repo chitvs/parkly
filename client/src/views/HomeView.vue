@@ -22,7 +22,7 @@ onMounted(() => {
     setTimeout(() => {
         window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
     }, 10)
-    
+
     fetchRandomGarages()
 })
 
@@ -62,7 +62,11 @@ const handleSearch = () => {
 }
 
 const goToGarage = (id) => {
-    router.push(`/garage/${id}`) 
+    router.push(`/garage/${id}`)
+}
+
+const goQuick = (loc) => {
+    router.push({ name: 'garage', query: { location: loc } })
 }
 
 const scrollGallery = (direction) => {
@@ -90,6 +94,14 @@ const checkScrollBounds = () => {
     canScrollRight.value = Math.ceil(scrollLeft + clientWidth) < scrollWidth - 2;
 }
 
+const quickSearches = [
+    { label: 'Termini', location: 'Stazione Termini' },
+    { label: 'Colosseo', location: 'Colosseo' },
+    { label: 'Vaticano', location: 'Vaticano' },
+    { label: 'Fiumicino', location: 'Aeroporto Fiumicino' },
+    { label: 'Trastevere', location: 'Trastevere' },
+]
+
 const steps = [
     { num: '01', icon: 'bi-geo-alt', title: 'Cerca', desc: 'Inserisci la destinazione e l\'orario. Vedi tutti i garage disponibili su mappa.' },
     { num: '02', icon: 'bi-grid-3x3-gap', title: 'Scegli il posto', desc: 'Seleziona un garage e dalla planimetria interattiva il posto più adatto al tuo veicolo.' },
@@ -113,7 +125,7 @@ const features = [
 
         <main class="main-content">
 
-            <section class="hero-header">
+            <section class="hero-header">   
                 <div class="hero-text">
                     <h1>Sostare non è mai stato così <span class="highlight">semplice</span>.</h1>
                     <p>La piattaforma intelligente per prenotare il tuo posto auto con semplicità, chiarezza e velocità.</p>
@@ -123,6 +135,11 @@ const features = [
             <section class="search-container">
                 <SearchBar v-model:location="searchLocation" v-model:checkIn="checkIn" v-model:checkOut="checkOut"
                     :showSubmitButton="true" @search="handleSearch" />
+                <div class="quick-searches">
+                    <span class="quick-label">Cerca vicino a:</span>
+                    <button v-for="q in quickSearches" :key="q.label" class="quick-chip" @click="goQuick(q.location)">{{
+                        q.label }}</button>
+                </div>
             </section>
 
             <section class="how">
@@ -162,15 +179,17 @@ const features = [
                             <h2 class="section-title" style="margin-bottom: 0;">I nostri garage in evidenza.</h2>
                         </div>
                         <div class="gallery-nav">
-                            <button class="nav-btn" @click="scrollGallery('left')" :disabled="!canScrollLeft" aria-label="Scorri a sinistra">
+                            <button class="nav-btn" @click="scrollGallery('left')" :disabled="!canScrollLeft"
+                                aria-label="Scorri a sinistra">
                                 <i class="bi bi-chevron-left"></i>
                             </button>
-                            <button class="nav-btn" @click="scrollGallery('right')" :disabled="!canScrollRight" aria-label="Scorri a destra">
+                            <button class="nav-btn" @click="scrollGallery('right')" :disabled="!canScrollRight"
+                                aria-label="Scorri a destra">
                                 <i class="bi bi-chevron-right"></i>
                             </button>
                         </div>
                     </div>
-                
+
                     <div class="gallery-scroll-container" ref="scrollContainer" @scroll="checkScrollBounds">
                         <div class="garage-card-wrapper" v-for="g in randomGarages" :key="g.id">
                             <div class="garage-card" @click="goToGarage(g.id)">
@@ -192,7 +211,8 @@ const features = [
                 <div class="cta">
                     <div class="cta-text">
                         <h2>Hai un garage? Lavora con noi.</h2>
-                        <p>Pubblica i tuoi posti su Parkly. Dashboard con occupazione in tempo reale, statistiche mensili, pagamenti automatici.</p>
+                        <p>Pubblica i tuoi posti su Parkly. Dashboard con occupazione in tempo reale, statistiche
+                            mensili, pagamenti automatici.</p>
                     </div>
                     <RouterLink to="/diventa-gestore" class="cta-btn">Diventa gestore</RouterLink>
                 </div>
@@ -263,6 +283,41 @@ const features = [
     margin-top: -4.5rem;
     position: relative;
     z-index: 10;
+}
+
+.quick-searches {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+    padding: 0 4px;
+}
+
+.quick-label {
+    font-size: 12px;
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+.quick-chip {
+    background: #f0f4ff;
+    border: 1px solid #dbe8ff;
+    color: #00408a;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 14px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.18s;
+}
+
+.quick-chip:hover {
+    background: #00408a;
+    color: #fff;
+    border-color: #00408a;
+    transform: translateY(-1px);
 }
 
 .section-inner {
