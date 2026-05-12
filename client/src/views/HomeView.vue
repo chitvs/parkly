@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
@@ -7,12 +7,13 @@ import SearchBar from '../components/SearchBar.vue'
 import 'bootstrap-icons/font/bootstrap-icons.css'
 
 const router = useRouter()
-
 const searchLocation = ref('')
 const checkIn = ref('')
 const checkOut = ref('')
-
 const randomGarages = ref([])
+const scrollContainer = ref(null)
+const canScrollLeft = ref(false)
+const canScrollRight = ref(true)
 
 onMounted(() => {
     if ('scrollRestoration' in history) {
@@ -40,6 +41,9 @@ const fetchRandomGarages = async () => {
                 indirizzo: g.indirizzo,
                 tariffa: Number(g.tariffabase || 0).toFixed(2)
             }))
+
+            await nextTick()
+            checkScrollBounds()
         }
     } catch (error) {
         console.error("Errore nel caricamento dei garage in evidenza:", error)
@@ -59,6 +63,31 @@ const handleSearch = () => {
 
 const goToGarage = (id) => {
     router.push(`/garage/${id}`) 
+}
+
+const scrollGallery = (direction) => {
+    if (!scrollContainer.value) return
+
+    const container = scrollContainer.value
+    const card = container.querySelector('.garage-card-wrapper')
+
+    if (!card) return
+
+    const cardWidth = card.offsetWidth
+
+    container.scrollBy({
+        left: direction === 'right' ? cardWidth : -cardWidth,
+        behavior: 'smooth'
+    })
+}
+
+const checkScrollBounds = () => {
+    if (!scrollContainer.value) return;
+    
+    const { scrollLeft, scrollWidth, clientWidth } = scrollContainer.value;
+    
+    canScrollLeft.value = scrollLeft > 2; 
+    canScrollRight.value = Math.ceil(scrollLeft + clientWidth) < scrollWidth - 2;
 }
 
 const steps = [
@@ -127,12 +156,24 @@ const features = [
 
             <section class="gallery-section" v-if="randomGarages.length > 0">
                 <div class="section-inner">
-                    <p class="eyebrow">Esplora</p>
-                    <h2 class="section-title">I nostri garage in evidenza.</h2>
+                    <div class="gallery-header">
+                        <div>
+                            <p class="eyebrow">Esplora</p>
+                            <h2 class="section-title" style="margin-bottom: 0;">I nostri garage in evidenza.</h2>
+                        </div>
+                        <div class="gallery-nav">
+                            <button class="nav-btn" @click="scrollGallery('left')" :disabled="!canScrollLeft" aria-label="Scorri a sinistra">
+                                <i class="bi bi-chevron-left"></i>
+                            </button>
+                            <button class="nav-btn" @click="scrollGallery('right')" :disabled="!canScrollRight" aria-label="Scorri a destra">
+                                <i class="bi bi-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
                 
-                    <div class="gallery-scroll-container">
-                        <div class="gallery-track">
-                            <div class="garage-card" v-for="g in randomGarages" :key="g.id" @click="goToGarage(g.id)">
+                    <div class="gallery-scroll-container" ref="scrollContainer" @scroll="checkScrollBounds">
+                        <div class="garage-card-wrapper" v-for="g in randomGarages" :key="g.id">
+                            <div class="garage-card" @click="goToGarage(g.id)">
                                 <div class="garage-img-placeholder">
                                     <i class="bi bi-car-front-fill"></i>
                                 </div>
@@ -150,11 +191,10 @@ const features = [
             <div class="cta-wrap">
                 <div class="cta">
                     <div class="cta-text">
-                        <h2>Hai un garage? Mettilo a reddito.</h2>
-                        <p>Pubblica i tuoi posti su Parkly. Dashboard con occupazione in tempo reale, statistiche
-                            mensili, pagamenti automatici.</p>
+                        <h2>Hai un garage? Lavora con noi.</h2>
+                        <p>Pubblica i tuoi posti su Parkly. Dashboard con occupazione in tempo reale, statistiche mensili, pagamenti automatici.</p>
                     </div>
-                    <RouterLink to="/diventa-gestore" class="cta-btn">Diventa gestore →</RouterLink>
+                    <RouterLink to="/diventa-gestore" class="cta-btn">Diventa gestore</RouterLink>
                 </div>
             </div>
 
@@ -337,39 +377,93 @@ const features = [
     padding: 20px 0 80px 0;
 }
 
+.gallery-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 30px;
+    gap: 1rem;
+}
+
+.gallery-nav {
+    display: flex;
+    gap: 10px;
+    padding-bottom: 5px;
+}
+
+.nav-btn {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #00408a;
+    font-size: 1.2rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.nav-btn:hover:not(:disabled) {
+    background: #eff6ff;
+    border-color: #00408a;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+}
+
+.nav-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: #f8fafc;
+    border-color: #e2e8f0;
+    color: #94a3b8;
+    box-shadow: none;
+    transform: none;
+}
+
 .gallery-scroll-container {
-    width: 100%;
+    position: relative;
+    display: flex;
+    gap: 24px;
+
+    padding-bottom: 20px;
     overflow-x: auto;
-    padding: 10px 0 40px 0; 
+
+    scroll-snap-type: x proximity;
     scroll-behavior: smooth;
+    overscroll-behavior-x: contain;
+
     -ms-overflow-style: none;
     scrollbar-width: none;
-    scroll-snap-type: x mandatory;
 }
 
 .gallery-scroll-container::-webkit-scrollbar {
     display: none;
 }
 
-.gallery-track {
-    display: flex;
-    gap: 1.5rem;
+.garage-card-wrapper {
+    flex: 0 0 250px;
+    width: 250px;
+    scroll-snap-align: start;
 }
 
 .garage-card {
-    width: 280px;
-    flex-shrink: 0; 
+    display: flex;
+    flex-direction: column;
+    height: 100%;
     background: #ffffff;
-    border: 1px solid #cbd5e1; 
+    border: 1px solid #cbd5e1;
     border-radius: 16px;
     overflow: hidden;
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
     cursor: pointer;
-    scroll-snap-align: start; 
+    box-sizing: border-box;
 }
 
 .garage-card:hover {
-    transform: translateY(-4px);
     box-shadow: 0 10px 25px rgba(0,0,0,0.08);
 }
 
@@ -381,21 +475,17 @@ const features = [
     justify-content: center;
     color: #94a3b8;
     font-size: 2rem;
-    border-bottom: 1px solid #cbd5e1; 
+    border-bottom: 1px solid #cbd5e1;
 }
 
 .garage-info {
-    padding: 16px 20px;
+    padding: 16px 16px;
 }
 
 .garage-info h4 {
     font-size: 16px;
     font-weight: 700;
-    margin-bottom: 6px;
     color: #0f172a;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .garage-addr {
@@ -467,6 +557,11 @@ const features = [
         grid-template-columns: repeat(2, 1fr);
     }
 
+    .garage-card-wrapper {
+        flex: 0 0 50%;
+        max-width: 50%;
+    }
+
     .cta {
         flex-direction: column;
         text-align: center;
@@ -478,6 +573,20 @@ const features = [
     .steps-grid,
     .features-grid {
         grid-template-columns: 1fr;
+    }
+
+    .garage-card-wrapper {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+
+    .gallery-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .gallery-nav {
+        align-self: flex-end;
     }
 }
 </style>
