@@ -78,7 +78,7 @@ const handleRegister = async () => {
               </div>
 
               <!-- Divisore -->
-              <hr class="custom-divider mb-4">
+              <hr class="custom-divider mb-4" />
 
               <form @submit.prevent="handleRegister">
                 <!-- Dati Personali -->

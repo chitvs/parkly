@@ -334,7 +334,7 @@ const chiudiChat = () => {
       </div>
 
       <div v-else-if="bookings.length === 0" class="text-center py-5 empty-state">
-        <img src="../assets/broken_car.png" alt="Nessuna prenotazione" width="120" class="mb-3 opacity-50">
+        <img src="../assets/broken_car.png" alt="Nessuna prenotazione" width="120" class="mb-3 opacity-50" />
         <h4 class="fw-bold text-muted">Nessuna prenotazione trovata</h4>
         <p class="text-muted">Non hai ancora effettuato nessuna prenotazione con noi.</p>
         <router-link to="/ricerca" class="btn btn-primary mt-3 px-4 py-2">Trova Parcheggio</router-link>
@@ -390,7 +390,7 @@ const chiudiChat = () => {
                         Contatta
                   </button>
 
-                  <!--Pulsante Recensioni-->
+                  <!-- Pulsante Recensioni-->
                   <div v-if="booking.stato === 'CONCLUSA' && !booking.ha_recensito"
                     class="d-flex align-items-center ms-3 border-start ps-3">
                     <span class="text-muted small fw-semibold me-2 d-none d-sm-inline">Com'è andata?</span>
@@ -564,7 +564,7 @@ const chiudiChat = () => {
         <Transition name="modal-slide" appear>
           <div class="review-modal p-4 text-center">
             <h3 class="fw-bold mb-3" style="color: #00408A">ANNULLA PRENOTAZIONE</h3>
-            <p class="text-muted">Stai per annullare la sosta per: <br>
+            <p class="text-muted">Stai per annullare la sosta per: <br />
               <strong>{{ bookingToCancel?.nomegarage }}</strong> ({{ bookingToCancel?.codiceprenotazione }})
             </p>
 

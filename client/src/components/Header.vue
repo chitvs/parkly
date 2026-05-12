@@ -17,14 +17,8 @@ import IconWallet from '../icons/IconWallet.vue'
 import IconLogout from '../icons/IconLogout.vue'
 import IconGarage from '../icons/IconGarage.vue'
 
-
-
 import eyeUrl from '../icons/eye-open.svg'
 import eyeClosedUrl from '../icons/eye-closed.svg'
-
-
-
-
 
 const router = useRouter()
 const route = useRoute()
@@ -132,7 +126,7 @@ const handleLogout = async () => {
 
           <button class="btn user-name-btn d-flex align-items-center gap-2">
             <img :src="authStore.utente?.fotoProfilo_URL || defaultAvatarUrl" alt="Avatar"
-              class="rounded-circle border" style="width: 30px; height: 30px; object-fit: cover; border-color: #dee2e6;">
+              class="rounded-circle border" style="width: 30px; height: 30px; object-fit: cover; border-color: #dee2e6;" />
             <span>Ciao, <strong>{{ authStore.utente.nome }}</strong></span>
           </button>
 
@@ -146,7 +140,7 @@ const handleLogout = async () => {
                   Area Gestore
                 </RouterLink>
               </li>
-              <li><hr class="dropdown-divider"></li>
+              <li><hr class="dropdown-divider" /></li>
             </template>
 
             <template v-else-if="authStore.utente?.ruolo === 'CLIENTE'">
@@ -156,7 +150,7 @@ const handleLogout = async () => {
                   Diventa Gestore
                 </RouterLink>
               </li>
-              <li><hr class="dropdown-divider"></li>
+              <li><hr class="dropdown-divider" /></li>
             </template>
 
             <li>
@@ -178,7 +172,7 @@ const handleLogout = async () => {
               </RouterLink>
             </li>
             <li>
-              <hr class="dropdown-divider">
+              <hr class="dropdown-divider" />
             </li>
             <li>
               <a class="dropdown-item text-danger fw-bold d-flex align-items-center" href="#" @click.prevent="handleLogout">
