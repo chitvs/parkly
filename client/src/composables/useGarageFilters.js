@@ -9,6 +9,7 @@ export function useGarageFilters() {
     const filterElettrico = ref(false)
     const filterDisabili = ref(false)
     const filterTipoVeicolo = ref('ALL') // può essere 'ALL', 'AUTO', 'MOTO', 'FURGONE'
+    const raggioKm = ref(2)
 
     const resetTechnicalFilters = () => {
         filter24h.value = false
@@ -18,6 +19,7 @@ export function useGarageFilters() {
         maxPrice.value = 25
         minHeight.value = 0
         filterTipoVeicolo.value = 'ALL'
+        raggioKm.value = 2
     }
 
     const passaFiltriTecnici = (g) => {
@@ -54,6 +56,7 @@ export function useGarageFilters() {
         filterElettrico,
         filterDisabili,
         filterTipoVeicolo,
+        raggioKm,
         resetTechnicalFilters,
         passaFiltriTecnici
     }

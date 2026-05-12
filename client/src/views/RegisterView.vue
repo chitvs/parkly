@@ -1,10 +1,12 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { authStore } from '../store/auth.js' // Importa lo store
 //import svg password
 import eyeUrl from '../icons/eye-open.svg'
 import eyeClosedUrl from '../icons/eye-closed.svg'
+import { authStore } from '../store/auth.js'
+import Header from '../components/Header.vue'
+import Footer from '../components/Footer.vue'
 
 const nome = ref('')
 const cognome = ref('')
@@ -48,150 +50,152 @@ const handleRegister = async () => {
 </script>
 
 <template>
-  <div class="register-wrapper">
-    <main class="container">
-      <div class="row justify-content-center align-items-center min-vh-100">
-        <div class="col-12 col-md-8 col-lg-5">
-          <div class="register-card">
-            <div class="text-center mb-4">
-              <img
-                src="../assets/LogoParklyBlu.svg"
-                alt="logo parkly"
-                width="100"
-                class="mb-3 logo-img"
-              />
-              <h2 class="fw-bold">Crea il tuo account</h2>
-              <p class="text-muted">Unisciti alla community di Parkly</p>
-            </div>
+  <div class="page-wrapper">
+    <Header />
 
-            <form @submit.prevent="handleRegister">
-              <div class="row g-3 mb-3">
-                <div class="col-md-6">
-                  <input
-                    type="text"
-                    class="form-control"
-                    placeholder="Nome"
-                    v-model="nome"
-                    required
+    <main class="register-main">
+      <!-- Sezione hero blu -->
+      <div class="register-hero">
+        <h1 class="hero-title">Crea il tuo account</h1>
+        <p class="hero-sub">Unisciti alla community di Parkly ed esplora le migliori opzioni di parcheggio.</p>
+      </div>
+
+      <!-- Card sovrapposta -->
+      <div class="container register-card-container">
+        <div class="row justify-content-center">
+          <div class="col-12 col-md-10 col-lg-8 col-xl-6">
+            <div class="register-card">
+              <!-- Logo nella card -->
+              <div class="text-center mb-4">
+                <router-link to="/">
+                  <img
+                    src="../assets/Primo_Logo_00408A.svg"
+                    alt="logo parkly"
+                    width="90"
+                    class="mb-2 logo-img"
                   />
+                </router-link>
+              </div>
+
+              <!-- Divisore -->
+              <hr class="custom-divider mb-4">
+
+              <form @submit.prevent="handleRegister">
+                <!-- Dati Personali -->
+                <h6 class="section-title mb-3"><span class="badge section-badge me-2">1</span> Dati Personali</h6>
+                
+                <div class="row g-3 mb-3">
+                  <div class="col-md-6">
+                    <input type="text" class="form-control custom-input" id="nome" placeholder="Nome" v-model="nome" required />
+                  </div>
+                  <div class="col-md-6">
+                    <input type="text" class="form-control custom-input" id="cognome" placeholder="Cognome" v-model="cognome" required />
+                  </div>
                 </div>
-                <div class="col-md-6">
-                  <input
-                    type="text"
-                    class="form-control"
-                    placeholder="Cognome"
-                    v-model="cognome"
-                    required
-                  />
+
+                <div class="row g-3 mb-4">
+                  <div class="col-md-6">
+                    <input type="text" class="form-control custom-input" id="cf" placeholder="Codice Fiscale (opzionale)" v-model="cf" />
+                  </div>
+                  <div class="col-md-6">
+                    <input type="tel" class="form-control custom-input" id="telefono" placeholder="Telefono (opzionale)" v-model="telefono" />
+                  </div>
                 </div>
-              </div>
 
-              <div class="mb-3">
-                <input
-                    type="text"
-                    class="form-control"
-                    placeholder="Nome Utente"
-                    v-model="nomeUtente"
-                    required
-                />
-              </div>
+                <!-- Dati Account -->
+                <h6 class="section-title mb-3 mt-4"><span class="badge section-badge me-2">2</span> Dati Account</h6>
 
-              <div class="mb-3">
-                <input
-                  type="text"
-                  class="form-control"
-                  placeholder="Codice Fiscale (opzionale)"
-                  v-model="cf"
-                />
-              </div>
+                <div class="row g-3 mb-3">
+                  <div class="col-md-6">
+                    <input type="text" class="form-control custom-input" id="nomeUtente" placeholder="Nome Utente" v-model="nomeUtente" required />
+                  </div>
+                  <div class="col-md-6">
+                    <input type="email" class="form-control custom-input" id="email" placeholder="Indirizzo Email" v-model="email" required />
+                  </div>
+                </div>
 
-              <div class="mb-3">
-                <input
-                  type="email"
-                  class="form-control"
-                  placeholder="Indirizzo Email"
-                  v-model="email"
-                  required
-                />
-              </div>
+                <div class="row g-3 mb-4">
+                  <div class="col-md-6">
+                    <div class="input-group password-group">
+                      <input :type="isPasswordVisible1 ? 'text' : 'password'" class="form-control password-field" id="password" placeholder="Password" v-model="password" required />
+                      <button class="btn toggle-password-btn" type="button" @click="isPasswordVisible1 = !isPasswordVisible1" tabindex="-1">
+                        <img :src="isPasswordVisible1 ? eyeClosedUrl : eyeUrl" class="password-icon" alt="Toggle Password" />
+                      </button>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="input-group password-group">
+                      <input :type="isPasswordVisible2 ? 'text' : 'password'" class="form-control password-field" id="passwordConfirm" placeholder="Ripeti Password" v-model="passwordConfirm" required />
+                      <button class="btn toggle-password-btn" type="button" @click="isPasswordVisible2 = !isPasswordVisible2" tabindex="-1">
+                        <img :src="isPasswordVisible2 ? eyeClosedUrl : eyeUrl" class="password-icon" alt="Toggle Password" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
 
-              <div class="mb-3">
-                <input
-                  type="tel"
-                  class="form-control"
-                  placeholder="Telefono (opzionale)"
-                  v-model="telefono"
-                />
-              </div>
-
-              <div class="mb-3">
-                <div class="input-group password-group">
-                  <input
-                    :type="isPasswordVisible1 ? 'text' : 'password'"
-                    class="form-control password-field"
-                    placeholder="Password"
-                    v-model="password"
-                    required
-                  />
-                  <button
-                    class="btn toggle-password-btn"
-                    type="button"
-                    @click="isPasswordVisible1 = !isPasswordVisible1"
-                    tabindex="-1"
-                  >
-                    <img :src="isPasswordVisible1 ? eyeClosedUrl : eyeUrl" class="password-icon" />
+                <div class="d-grid mt-4 pt-2">
+                  <button type="submit" class="btn btn-primary register-btn">
+                    Crea Account
                   </button>
                 </div>
-              </div>
+              </form>
 
-              <div class="mb-4">
-                <div class="input-group password-group">
-                  <input
-                    :type="isPasswordVisible2 ? 'text' : 'password'"
-                    class="form-control password-field"
-                    placeholder="Ripeti la password"
-                    v-model="passwordConfirm"
-                    required
-                  />
-                  <button
-                    class="btn toggle-password-btn"
-                    type="button"
-                    @click="isPasswordVisible2 = !isPasswordVisible2"
-                    tabindex="-1"
-                  >
-                    <img :src="isPasswordVisible2 ? eyeClosedUrl : eyeUrl" class="password-icon" />
-                  </button>
-                </div>
+              <div class="text-center mt-4 pt-3 border-top">
+                <p class="small text-muted footer-text mb-0">
+                  Effettuando la registrazione accetti i
+                  <a href="#">Termini e Condizioni</a> e l'
+                  <a href="#">Informativa sulla Privacy</a>
+                </p>
               </div>
-
-              <div class="d-grid">
-                <button type="submit" class="btn btn-primary register-btn">Registrati</button>
-              </div>
-            </form>
-
-            <div class="text-center mt-4">
-              <p class="small text-muted footer-text">
-                Effettuando l'accesso accetti i
-                <a href="#">Termini e Condizioni</a> e l'
-                <a href="#">Informativa sulla Privacy</a>
-              </p>
             </div>
           </div>
         </div>
       </div>
     </main>
+
+    <Footer />
   </div>
 </template>
 
 <style scoped>
-.register-wrapper {
-  font-family: 'Inter', sans-serif;
-  background: linear-gradient(180deg, #00408a 0%, var(--bg-crema) 100%);
-  background-attachment: fixed;
-  min-height: 100vh;
-  width: 100%;
+.page-wrapper {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.register-main {
+  flex: 1;
+  background: #ffffff;
+}
+
+.register-hero {
+  background: radial-gradient(circle at center, #002d5e 0%, #001D3D 100%);
+  color: #ffffff;
+  text-align: center;
+  padding: 3rem 2rem 16rem;
+}
+
+.hero-title {
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  margin-bottom: 0.6rem;
+}
+
+.hero-sub {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.65);
+  max-width: 480px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+.register-card-container {
+  margin-top: -14rem;
+  position: relative;
+  z-index: 10;
+  padding-bottom: 3rem;
 }
 
 .register-card {
@@ -205,27 +209,103 @@ const handleRegister = async () => {
 
 .logo-img {
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+  transition: transform 0.3s ease;
 }
 
-h2 {
+.logo-img:hover {
+  transform: scale(1.05);
+}
+
+.title-text {
   color: #00408a;
   font-size: 26px;
   letter-spacing: -0.5px;
+  margin-bottom: 8px;
 }
 
-.form-control {
-  height: 52px;
+.subtitle-text {
+  font-size: 0.95rem;
+}
+
+.custom-divider {
+  border-color: #e2e8f0;
+  opacity: 1;
+}
+
+.section-title {
+  color: #1e293b;
+  font-weight: 600;
+  font-size: 1.05rem;
+  display: flex;
+  align-items: center;
+}
+
+.section-badge {
+  background-color: rgba(0, 64, 138, 0.1);
+  color: #00408a;
+  font-size: 0.85rem;
+  padding: 0.4em 0.6em;
+  border-radius: 8px;
+}
+
+.custom-input {
   border-radius: 12px;
   border: 1px solid #e0e0e0;
-  padding: 10px 18px;
-  font-size: 15px;
+  background-color: #f8fafc;
   transition: all 0.2s ease;
+  height: 52px;
+  font-size: 15px;
+  padding: 10px 18px;
 }
 
-.form-control:focus {
+.custom-input:focus {
   border-color: #00408a;
   box-shadow: 0 0 0 3px rgba(0, 64, 138, 0.1);
+  background-color: #ffffff;
   outline: none;
+}
+
+.password-group {
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  overflow: hidden;
+  background-color: #f8fafc;
+  transition: all 0.2s ease;
+  height: 52px;
+}
+
+.password-group:focus-within {
+  border-color: #00408a;
+  box-shadow: 0 0 0 3px rgba(0, 64, 138, 0.1);
+  background-color: #ffffff;
+}
+
+.password-field {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  font-size: 15px;
+  padding: 10px 18px;
+  height: 100%;
+}
+
+.toggle-password-btn {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  align-items: center;
+  padding: 0.5rem;
+}
+
+.password-icon {
+  width: 20px;
+  height: 20px;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.toggle-password-btn:hover .password-icon {
+  opacity: 0.9;
 }
 
 .register-btn.btn-primary,
@@ -237,77 +317,52 @@ h2 {
   font-weight: 600;
   font-size: 1.1rem;
   color: white;
-  transition: background-color 0.2s;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 64, 138, 0.2);
 }
 
-.register-btn.btn-primary:hover,
 .register-btn:hover {
   background-color: #00336e;
-  border: none;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 64, 138, 0.3);
 }
 
-.register-btn.btn-primary:focus,
-.register-btn:focus {
-  background-color: #00408a;
-  border: none;
-  box-shadow: 0 0 0 3px rgba(0, 64, 138, 0.1);
-}
-
-.register-btn.btn-primary:active,
 .register-btn:active {
-  background-color: #00336e !important;
-  border: none !important;
-  box-shadow: none !important;
+  background-color: #00224a !important;
+  transform: translateY(0);
 }
 
 .footer-text {
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
-.footer-text a {
+.footer-text a,
+.login-link {
   color: #00408a;
   text-decoration: none;
-  font-weight: 700;
+  font-weight: 600;
+  transition: color 0.2s;
 }
 
-.footer-text a:hover {
+.footer-text a:hover,
+.login-link:hover {
   text-decoration: underline;
+  color: #00224a;
 }
 
-@media (max-width: 576px) {
+@media (max-width: 768px) {
   .register-card {
-    padding: 25px;
-    margin: 1rem;
+    padding: 25px 20px;
+    margin: 1rem 0;
+    border-radius: 20px;
   }
-}
 
-.password-group {
-  border: 1px solid #dee2e6;
-  border-radius: 12px;
-  overflow: hidden;
-}
+  .title-text {
+    font-size: 22px;
+  }
 
-.password-group:focus-within {
-  border-color: #00408a;
-  box-shadow: 0 0 0 3px rgba(0, 64, 138, 0.1);
-}
-
-.password-field {
-  border: none !important;
-  box-shadow: none !important;
-  background: transparent !important;
-  height: 52px;
-}
-
-.toggle-password-btn {
-  border: none !important;
-  box-shadow: none !important;
-  background: transparent !important;
-  align-items: center;
-}
-
-.password-icon {
-  width: 20px;
-  height: 20px;
+  .custom-input {
+    font-size: 16px;
+  }
 }
 </style>

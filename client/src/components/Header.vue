@@ -1,6 +1,6 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import * as bootstrap from 'bootstrap'
 import logoUrl from '../assets/LogoParklyBlu.svg'
 import logoInteroUrl from '../assets/LogoParklyIntero.svg'
@@ -27,6 +27,9 @@ import eyeClosedUrl from '../icons/eye-closed.svg'
 
 
 const router = useRouter()
+const route = useRoute()
+
+const isRegisterPage = computed(() => route.path === '/register')
 
 const loginIdentificatore = ref('')
 const loginPassword = ref('')
@@ -104,7 +107,7 @@ const handleLogout = async () => {
       </div>
     </RouterLink>
 
-    <div class="right-section">
+    <div class="right-section" v-if="!isRegisterPage">
       
       <RouterLink 
         to="/garage" 
