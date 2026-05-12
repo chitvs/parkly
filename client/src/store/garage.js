@@ -70,4 +70,40 @@ export const garageStore = reactive({
       }
     }
   },
+
+  async updateGarage(id, garageData) {
+    this.isLoading = true
+    try {
+      const response = await fetch(`/api/garage/garages-gestore/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(garageData),
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'Errore durante l\'aggiornamento')
+      return { success: true, garage: data.garage }
+    } catch (err) {
+      return { success: false, error: err.message || 'Errore di rete' }
+    } finally {
+      this.isLoading = false
+    }
+  },
+
+  async addMaintenance(idGarage, idPosto, maintenanceData) {
+    this.isLoading = true
+    try {
+      const response = await fetch(`/api/garage/garages-gestore/${idGarage}/posti/${idPosto}/manutenzione`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(maintenanceData),
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'Errore durante l\'inserimento della manutenzione')
+      return { success: true, message: data.message }
+    } catch (err) {
+      return { success: false, error: err.message || 'Errore di rete' }
+    } finally {
+      this.isLoading = false
+    }
+  }
 })

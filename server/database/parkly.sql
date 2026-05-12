@@ -54,9 +54,22 @@ CREATE TABLE PostoAuto (
     TipoVeicolo VARCHAR(10) CHECK (TipoVeicolo IN ('AUTO', 'MOTO', 'FURGONE')) DEFAULT 'AUTO',
     IsDisabili BOOLEAN DEFAULT FALSE,
     IsElettrica BOOLEAN DEFAULT FALSE,  
-    IsCoperto BOOLEAN DEFAULT TRUE,    
+    IsCoperto BOOLEAN DEFAULT TRUE,
+    IsAttivo BOOLEAN DEFAULT TRUE,    
     FOREIGN KEY (ID_Garage) REFERENCES Garage(ID_Garage) ON DELETE CASCADE,
     UNIQUE(ID_Garage, CodicePosto)
+);
+
+-- MANUTENZIONE POSTO
+CREATE TABLE ManutenzionePosto (
+    ID_Manutenzione SERIAL PRIMARY KEY,
+    ID_Posto INT NOT NULL,
+    Inizio TIMESTAMP NOT NULL,
+    Fine TIMESTAMP NOT NULL,
+    Motivazione TEXT,
+    DataCreazione TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'Europe/Rome'),
+    FOREIGN KEY (ID_Posto) REFERENCES PostoAuto(ID_Posto) ON DELETE CASCADE,
+    CONSTRAINT CHK_DateManutenzione CHECK (Fine > Inizio)
 );
 
 -- PRENOTAZIONE

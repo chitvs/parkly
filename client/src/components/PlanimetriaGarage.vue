@@ -6,10 +6,11 @@ const props = defineProps({
     mappaTestuale: { type: String, default: '' },
     selectedId: Number,
     isAnteprima: { type: Boolean, default: false },
-    mostraErrori: { type: Boolean, default: true }
+    mostraErrori: { type: Boolean, default: true },
+    isGestoreMode: { type: Boolean, default: false }
 });
 
-const emit = defineEmits(['select', 'error']);
+const emit = defineEmits(['select', 'error', 'manage']);
 
 const getDatiPosto = (codice) => {
     return props.posti.find(p => p.codiceposto === codice);
@@ -139,7 +140,13 @@ const getClassePosto = (codice) => {
     if (props.isAnteprima) return 'anteprima';
 
     const posto = getDatiPosto(codice);
-    if (!posto) return 'non-configurato'; // se sta nella stringa ma non nel DB lancio un errore
+    if (!posto) return 'non-configurato';
+    
+    if (props.isGestoreMode) {
+        if (posto.is_occupato) return 'occupato'; 
+        return 'gestione-attivo'; 
+    }
+
     if (props.selectedId === posto.id_posto) return 'selezionato';
     if (posto.is_occupato) return 'occupato';
     return 'libero';
@@ -150,7 +157,14 @@ const gestisciClick = (codice) => {
         emit('error', 'Seleziona prima le date di arrivo e partenza per selezionare un posto.');
         return;
     }
+    
     const posto = getDatiPosto(codice);
+
+    if (props.isGestoreMode) {
+        if (posto) emit('manage', posto); // Invia l'evento al padre invece di selezionarlo
+        return;
+    }
+
     if (posto && !posto.is_occupato) {
         emit('select', posto);
     }
@@ -397,5 +411,16 @@ img.box-legenda {
     background: red;
     opacity: 0.3;
     cursor: not-allowed;
+}
+
+.gestione-attivo {
+    background: #e8f5e9;
+    border: 2px dashed #28a745;
+    color: #28a745;
+    cursor: pointer;
+}
+
+.gestione-attivo:hover {
+    background: #c8e6c9;
 }
 </style>

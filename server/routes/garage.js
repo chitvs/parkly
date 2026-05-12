@@ -225,7 +225,7 @@ router.get("/:id/posti", async (req, res) => {
                 , 0) as tariffaoraria
                 FROM PostoAuto p
                 JOIN Garage g ON p.ID_Garage = g.ID_Garage
-                WHERE p.ID_Garage = $1
+                WHERE p.ID_Garage = $1 AND p.IsAttivo = TRUE
                 ORDER BY p.CodicePosto
             `;
       const posti = await db.any(querySemplice, [id]);
@@ -234,11 +234,17 @@ router.get("/:id/posti", async (req, res) => {
 
     const queryComplessa = `
             SELECT p.*, 
-            EXISTS (
-                SELECT 1 FROM Prenotazione pr 
-                WHERE pr.ID_Posto = p.ID_Posto 
-                AND pr.Stato = 'ATTIVA'
-                AND (pr.InizioSosta, pr.FineSosta) OVERLAPS ($2::timestamp, $3::timestamp)
+            (
+                EXISTS (
+                    SELECT 1 FROM Prenotazione pr 
+                    WHERE pr.ID_Posto = p.ID_Posto 
+                    AND pr.Stato = 'ATTIVA'
+                    AND (pr.InizioSosta, pr.FineSosta) OVERLAPS ($2::timestamp, $3::timestamp)
+                ) OR EXISTS (
+                    SELECT 1 FROM ManutenzionePosto mp
+                    WHERE mp.ID_Posto = p.ID_Posto
+                    AND (mp.Inizio, mp.Fine) OVERLAPS ($2::timestamp, $3::timestamp)
+                )
             ) AS is_occupato,
             GREATEST(
                 (CASE 
@@ -251,7 +257,7 @@ router.get("/:id/posti", async (req, res) => {
             , 0) as tariffaoraria
             FROM PostoAuto p
             JOIN Garage g ON p.ID_Garage = g.ID_Garage
-            WHERE p.ID_Garage = $1
+            WHERE p.ID_Garage = $1 AND p.IsAttivo = TRUE
             ORDER BY p.CodicePosto
         `;
     const posti = await db.any(queryComplessa, [id, inizio, fine]);
@@ -303,6 +309,143 @@ router.get("/:id/recensioni", async (req, res) => {
     console.error("Errore recupero recensioni:", err);
     res.status(500).json({ success: false, error: "Errore interno" });
   }
+});
+
+// ─── Modifica di un garage esistente ─────────────────────────────────────────
+router.put('/garages-gestore/:id', async (req, res) => {
+  try {
+    const utenteLoggato = req.session?.utente;
+    if (!utenteLoggato || utenteLoggato.ruolo !== 'GESTORE') {
+      return res.status(401).json({ error: 'Accesso negato' });
+    }
+
+    const idGarage = req.params.id;
+    const idGestore = utenteLoggato.id;
+
+    const {
+      nome, descrizione, indirizzo, latitudine, longitudine,
+      tariffabase, tariffamoto, tariffafurgone, sovrapprezzoelettrica, scontodisabili,
+      altezzamassima, orarioapertura, orariochiusura, is24h, mappatestuale, posti 
+    } = req.body;
+
+    if (!nome || !indirizzo || !tariffabase || !latitudine || !longitudine) {
+      return res.status(400).json({ error: 'Campi obbligatori mancanti.' });
+    }
+
+    const apertura = is24h ? '00:00' : (orarioapertura || '08:00');
+    const chiusura = is24h ? '23:59' : (orariochiusura || '20:00');
+    const mappa = mappatestuale || null;
+
+    const result = await db.tx(async t => {
+      // 1. Verifica che il garage sia di questo gestore
+      const garageEsistente = await t.oneOrNone('SELECT ID_Garage FROM Garage WHERE ID_Garage = $1 AND ID_Gestore = $2', [idGarage, idGestore]);
+      if (!garageEsistente) throw new Error('Garage non trovato o non autorizzato');
+
+      // 2. Aggiornamento dati generali
+      const garage = await t.one(`
+        UPDATE Garage SET
+          Nome = $1, Descrizione = $2, Indirizzo = $3, Latitudine = $4, Longitudine = $5,
+          AltezzaMassima = $6, TariffaAuto = $7, TariffaMoto = $8, TariffaFurgone = $9,
+          SovrapprezzoElettrica = $10, ScontoDisabili = $11, OrarioApertura = $12,
+          OrarioChiusura = $13, Is24h = $14, MappaTestuale = $15
+        WHERE ID_Garage = $16
+        RETURNING *
+      `, [
+        nome, descrizione || null, indirizzo, latitudine, longitudine,
+        altezzamassima || null, tariffabase, tariffamoto || null, tariffafurgone || null,
+        sovrapprezzoelettrica || null, scontodisabili || null, apertura, chiusura,
+        is24h || false, mappa, idGarage
+      ]);
+
+      // 3. Gestione Posti Auto (Upsert & Soft-Delete)
+      const postiAttuali = await t.any('SELECT ID_Posto, CodicePosto FROM PostoAuto WHERE ID_Garage = $1 AND IsAttivo = TRUE', [idGarage]);
+      const codiciRicevuti = posti.map(p => p.codice);
+
+      // Soft-delete dei posti rimossi dalla griglia
+      for (const pDB of postiAttuali) {
+        if (!codiciRicevuti.includes(pDB.codiceposto)) {
+          await t.none('UPDATE PostoAuto SET IsAttivo = FALSE WHERE ID_Posto = $1', [pDB.id_posto]);
+        }
+      }
+
+      // Inserisci i posti nuovi, o aggiorna quelli esistenti, o riattiva quelli in soft-delete
+      if (posti && Array.isArray(posti)) {
+        for (const posto of posti) {
+          await t.none(`
+            INSERT INTO PostoAuto (ID_Garage, CodicePosto, TipoVeicolo, IsDisabili, IsElettrica, IsCoperto, IsAttivo)
+            VALUES ($1, $2, $3, $4, $5, $6, TRUE)
+            ON CONFLICT (ID_Garage, CodicePosto) 
+            DO UPDATE SET 
+              TipoVeicolo = EXCLUDED.TipoVeicolo,
+              IsDisabili = EXCLUDED.IsDisabili,
+              IsElettrica = EXCLUDED.IsElettrica,
+              IsCoperto = EXCLUDED.IsCoperto,
+              IsAttivo = TRUE
+          `, [
+            idGarage, posto.codice, posto.tipo || 'AUTO', 
+            posto.isDisabili || false, posto.isElettrica || false, 
+            posto.isCoperto !== undefined ? posto.isCoperto : true
+          ]);
+        }
+      }
+
+      return garage;
+    });
+
+    res.json({ success: true, garage: result });
+
+  } catch (error) {
+    console.error("Errore modifica garage:", error);
+    res.status(500).json({ error: error.message || 'Errore interno del server durante il salvataggio.' });
+  }
+});
+
+// ─── Aggiunta blocco manutenzione a un singolo posto ─────────────────────────
+router.post('/garages-gestore/:id/posti/:id_posto/manutenzione', async (req, res) => {
+    try {
+        const utenteLoggato = req.session?.utente;
+        if (!utenteLoggato || utenteLoggato.ruolo !== 'GESTORE') {
+            return res.status(401).json({ error: 'Accesso negato' });
+        }
+
+        const { id, id_posto } = req.params;
+        const { inizio, fine, motivazione } = req.body;
+        const idGestore = utenteLoggato.id;
+
+        if (!inizio || !fine) return res.status(400).json({ error: 'Date obbligatorie' });
+
+        await db.tx(async t => {
+            // 1. Verifica che il garage sia suo
+            const checkProprieta = await t.oneOrNone(`
+                SELECT g.ID_Garage 
+                FROM Garage g JOIN PostoAuto p ON g.ID_Garage = p.ID_Garage 
+                WHERE g.ID_Garage = $1 AND p.ID_Posto = $2 AND g.ID_Gestore = $3
+            `, [id, id_posto, idGestore]);
+            
+            if (!checkProprieta) throw new Error('Posto non trovato o non autorizzato');
+
+            // 2. Controllo conflitti con prenotazioni attive
+            const occupato = await t.oneOrNone(`
+                SELECT ID_Prenotazione FROM Prenotazione 
+                WHERE ID_Posto = $1 AND Stato = 'ATTIVA'
+                AND (InizioSosta, FineSosta) OVERLAPS ($2::timestamp, $3::timestamp)
+            `, [id_posto, inizio, fine]);
+
+            if (occupato) throw new Error('Impossibile disabilitare: sono presenti prenotazioni attive in questo periodo.');
+
+            // 3. Inserimento
+            await t.none(`
+                INSERT INTO ManutenzionePosto (ID_Posto, Inizio, Fine, Motivazione)
+                VALUES ($1, $2, $3, $4)
+            `, [id_posto, inizio, fine, motivazione || null]);
+        });
+
+        res.json({ success: true, message: 'Posto disabilitato con successo per il periodo selezionato.' });
+
+    } catch (error) {
+        console.error('Errore manutenzione:', error);
+        res.status(400).json({ error: error.message || 'Errore interno' });
+    }
 });
 
 module.exports = router;

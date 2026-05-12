@@ -11,6 +11,7 @@ import ChatBox from '../components/ChatBox.vue'
 import { getSocket } from '../composables/useChat.js'
 import { Chart as ChartJS, CategoryScale, LinearScale, RadialLinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js'
 import { Line, Doughnut, Radar, Bar } from 'vue-chartjs'
+import { garageStore } from '../store/garage.js'
 
 ChartJS.register(CategoryScale, LinearScale, RadialLinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement)
 
@@ -342,7 +343,6 @@ const menuFiltrato = computed(() => {
   return navItems
 })
 
-const prenotazioniAttive = computed(() => storicoPrenotazioni.value.filter(p => p.stato === 'ATTIVA').length)
 const getOccupancy = (idGarage) => occupazioneGarage.value[idGarage] ?? 0
 
 // ─── Utility display ─────────────────────────────────────────────────────────
@@ -479,54 +479,39 @@ const validaForm = () => {
 
 const salvaNuovoGarage = async () => {
   messaggio.value = null
-  if (!validaForm()) {
-    messaggio.value = { tipo: 'error', testo: 'Controlla i campi in rosso e assicurati di aver posizionato tutti i posti sulla mappa.' }
-    return
-  }
+  if (!validaForm()) return
   staSalvando.value = true
 
-  const indirizzoCompleto = `${nuovoGarage.value.via.trim()} ${nuovoGarage.value.civico.trim()}, ${nuovoGarage.value.cap.trim()} ${nuovoGarage.value.citta.trim()} (${nuovoGarage.value.provincia.trim().toUpperCase()})`
   const payload = {
     ...nuovoGarage.value,
-    indirizzo:    indirizzoCompleto,
     mappatestuale: stringaMappaGenerata.value,
-    posti:        postiConfigurati.value
+    posti: postiConfigurati.value
   }
 
-  try {
-    const res = await fetch('/api/garage/garages-gestore', {
+  let res;
+  if (isEditing.value) {
+    res = await garageStore.updateGarage(idGarageInModifica.value, payload)
+  } else {
+    // Logica POST originale... (o usa garageStore.createGarage se vuoi snellire ancora)
+    const raw = await fetch('/api/garage/garages-gestore', {
       method: 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     })
-    if (res.ok) {
-      nuovoGarage.value = {
-        nome: '', descrizione: '',
-        via: '', civico: '', cap: '', citta: '', provincia: '',
-        latitudine: null, longitudine: null,
-        tariffabase: null, tariffamoto: null, tariffafurgone: null,
-        sovrapprezzoelettrica: null, scontodisabili: null,
-        altezzamassima: null, orarioapertura: '08:00', orariochiusura: '20:00', is24h: false
-      }
-      postiConfigurati.value  = []
-      dimensioniMappa.value   = { righe: 6, colonne: 12 }
-      ridimensionaGriglia()
-      erroriValidazione.value = {}
-      if (markerInstance) mapInstance.removeLayer(markerInstance)
-      await caricaGarage()
-      messaggio.value  = { tipo: 'success', testo: 'Garage pubblicato con successo!' }
-      vistaAttiva.value = 'statistiche'
-    } else {
-      const err = await res.json().catch(() => ({}))
-      messaggio.value = { tipo: 'error', testo: err.error || 'Errore durante il salvataggio.' }
-    }
-  } catch {
-    messaggio.value = { tipo: 'error', testo: 'Errore di rete.' }
-  } finally {
-    staSalvando.value = false
+    res = await raw.json()
   }
-}
 
+  if (res.success) {
+    // Reset form e stato
+    isEditing.value = false
+    idGarageInModifica.value = null
+    // ... reset campi come già facevi ...
+    await caricaGarage()
+    messaggio.value = { tipo: 'success', testo: isEditing.value ? 'Garage aggiornato!' : 'Garage pubblicato!' }
+    vistaAttiva.value = 'garage'
+  }
+  staSalvando.value = false
+}
 // ─── Bootstrap Modal Info ────────────────────────────────────────────────────
 const infoModalElement = ref(null)
 let infoModalInstance  = null
@@ -650,7 +635,7 @@ const kpiData = computed(() => {
     return [
       { id: 1, label: 'Garage Totali',       value: mieiGarage.value.length,  icon: 'bi-building',      color: 'blue'  },
       { id: 2, label: 'Incasso Totale',      value: `€ ${incasso}`,          icon: 'bi-cash-coin',     color: 'green' },
-      { id: 3, label: 'In Arrivo (Attive)',  value: `€ ${inArrivo}`,         icon: 'bi-clock-history', color: 'amber' },
+      { id: 3, label: 'In Arrivo',  value: `€ ${inArrivo}`,         icon: 'bi-clock-history', color: 'amber' },
       { id: 4, label: 'Prenot. Attive',      value: attive,                  icon: 'bi-car-front',     color: 'blue'  },
     ]
   }
@@ -659,7 +644,7 @@ const kpiData = computed(() => {
   return [
     { id: 1, label: 'Prenotazioni Tot.',  value: prenotazioniFiltrate.value.length, icon: 'bi-journal-check', color: 'blue'  },
     { id: 2, label: 'Incasso Generato',   value: `€ ${incasso}`,                   icon: 'bi-cash-coin',     color: 'green' },
-    { id: 3, label: 'In Arrivo (Attive)', value: `€ ${inArrivo}`,                  icon: 'bi-clock-history', color: 'amber' },
+    { id: 3, label: 'In Arrivo', value: `€ ${inArrivo}`,                  icon: 'bi-clock-history', color: 'amber' },
     { id: 4, label: 'Prenot. Attive',     value: attive,                            icon: 'bi-car-front',     color: 'blue'  },
   ]
 })
@@ -775,6 +760,123 @@ const chartDataRevenuePerGarage = computed(() => ({
     ),
   }],
 }))
+
+const isEditing = ref(false)
+const idGarageInModifica = ref(null)
+
+// Stato per il Modal di Manutenzione
+const showMaintenanceModal = ref(false)
+const postoDaGestire = ref(null)
+const manutenzioneData = ref({ inizio: '', fine: '', motivazione: '' })
+
+/**
+ * PARSER INVERSO: Prende la stringa "A01:2x1-X:1x1..." e ricostruisce la griglia interattiva
+ */
+const ricostruisciGriglia = (mappa, righe, colonne) => {
+  dimensioniMappa.value = { righe, colonne }
+  ridimensionaGriglia() // Resetta la matrice a null
+
+  if (!mappa) return
+
+  const righeMappa = mappa.split('\n')
+  righeMappa.forEach((rigaStr, rIndex) => {
+    const tokens = rigaStr.split('-')
+    let cIndex = 0
+    tokens.forEach(t => {
+      let [codice, span] = t.split(':')
+      let [w, h] = span.split('x').map(Number)
+      
+      if (codice !== 'X') {
+        const pConf = postiConfigurati.value.find(pc => pc.codice === codice)
+        if (pConf) {
+          // Riempiamo le celle della matrice con l'oggetto atteso dal configuratore
+          for (let i = 0; i < h; i++) {
+            for (let j = 0; j < w; j++) {
+              if (griglia.value[rIndex + i]) {
+                griglia.value[rIndex + i][cIndex + j] = {
+                  isRoot: i === 0 && j === 0,
+                  codice, tipo: pConf.tipo,
+                  w, h, rootR: rIndex, rootC: cIndex
+                }
+              }
+            }
+          }
+        }
+      }
+      cIndex += w
+    })
+  })
+}
+
+/**
+ * Attiva la modalità modifica per un garage
+ */
+const preparaModifica = async (garage) => {
+  isEditing.value = true
+  idGarageInModifica.value = garage.id_garage
+  messaggio.value = null
+
+  // 1. Carichiamo i posti attuali per questo garage dal DB
+  const res = await fetch(`/api/garage/${garage.id_garage}/posti`, { credentials: 'include' })
+  const data = await res.json()
+  
+  if (data.success) {
+    postiConfigurati.value = data.posti.map(p => ({
+      codice: p.codiceposto,
+      tipo: p.tipoveicolo,
+      isElettrica: p.iselettrica,
+      isDisabili: p.isdisabili,
+      isCoperto: p.iscoperto
+    }))
+  }
+
+  // 2. Popoliamo il form mappando i nomi del DB con i nomi del Frontend
+  nuovoGarage.value = {
+    ...garage,
+    // MAPPATURA CRUCIALE:
+    tariffabase: garage.tariffaauto,      // Trasforma 'tariffaauto' in 'tariffabase'
+    tariffamoto: garage.tariffamoto,
+    tariffafurgone: garage.tariffafurgone,
+    sovrapprezzoelettrica: garage.sovrapprezzoelettrica,
+    scontodisabili: garage.scontodisabili,
+    
+    // Gestione indirizzo e orari
+    via: garage.indirizzo, 
+    orarioapertura: garage.orarioapertura ? garage.orarioapertura.substring(0, 5) : '08:00',
+    orariochiusura: garage.orariochiusura ? garage.orariochiusura.substring(0, 5) : '20:00'
+  }
+
+  // 3. Ricostruiamo la griglia grafica
+  // Usiamo dimensioni standard o quelle salvate se le avessi nel DB
+  ricostruisciGriglia(garage.mappatestuale, 10, 15)
+
+  vistaAttiva.value = 'aggiungi'
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+/**
+ * Gestione Manutenzione (chiamata dalla Planimetria)
+ */
+const apriGestionePosto = (posto) => {
+  postoDaGestire.value = posto
+  manutenzioneData.value = { 
+    inizio: formattaPerInputDate(new Date()) + 'T08:00', 
+    fine: formattaPerInputDate(new Date()) + 'T20:00', 
+    motivazione: '' 
+  }
+  showMaintenanceModal.value = true
+}
+
+const salvaManutenzione = async () => {
+  const res = await garageStore.addMaintenance(postoDaGestire.value.id_garage, postoDaGestire.value.id_posto, manutenzioneData.value)
+  if (res.success) {
+    showMaintenanceModal.value = false
+    messaggio.value = { tipo: 'success', testo: res.message }
+    await caricaGarage() // Refresh della mappa per vedere il posto occupato/grigio
+  } else {
+    alert(res.error)
+  }
+}
 
 </script>
 
@@ -932,6 +1034,7 @@ const chartDataRevenuePerGarage = computed(() => ({
           <!-- ── I MIEI GARAGE ──────────────────────────────────────────── -->
           <section v-if="vistaAttiva === 'garage'" class="vista fade-in centered-container">
             <div class="page-header">
+              
               <div>
                 <h1>I tuoi garage</h1>
                 <p class="subtitle">Gestisci tutti i parcheggi registrati</p>
@@ -952,15 +1055,14 @@ const chartDataRevenuePerGarage = computed(() => ({
                   <tr v-for="garage in mieiGarage" :key="garage.id_garage">
                     <td class="td-muted">#{{ garage.id_garage }}</td>
                     <td class="td-bold">
-                      <RouterLink :to="`/garage/${garage.id_garage}`" class="garage-link">{{ garage.nome }}</RouterLink>
+                      <div class="d-flex align-items-center gap-2">
+                        <RouterLink :to="`/garage/${garage.id_garage}`" class="garage-link">{{ garage.nome }}</RouterLink>
+                        <button @click="preparaModifica(garage)" class="btn-edit-small" title="Modifica Garage">
+                          <i class="bi bi-pencil-square"></i>
+                        </button>
+                      </div>
                     </td>
                     <td class="td-muted">{{ garage.indirizzo }}</td>
-                    <td>€ {{ garage.tariffabase }}/h</td>
-                    <td>
-                      <span :class="['badge', garage.isattivo ? 'badge--green' : 'badge--red']">
-                        {{ garage.isattivo ? 'Attivo' : 'Inattivo' }}
-                      </span>
-                    </td>
                   </tr>
                   <tr v-if="mieiGarage.length === 0">
                     <td colspan="5" class="td-empty">Nessun garage trovato.</td>
@@ -1026,6 +1128,8 @@ const chartDataRevenuePerGarage = computed(() => ({
                     :key="'mappa-' + garage.id_garage + '-' + reRenderKey"
                     :posti="postiPerGarage[garage.id_garage] || []"
                     :mappaTestuale="garage.mappatestuale"
+                    :isGestoreMode="true" 
+                    @manage="apriGestionePosto"
                   />
                 </div>
               </div>
@@ -1425,6 +1529,39 @@ const chartDataRevenuePerGarage = computed(() => ({
       />
     </div>
 
+    <div v-if="showMaintenanceModal" class="custom-modal-overlay">
+  <div class="custom-modal shadow-lg">
+    <div class="modal-header border-0 pb-0">
+      <h3 class="modal-title h5">Gestione Posto {{ postoDaGestire?.codiceposto }}</h3>
+      <button @click="showMaintenanceModal = false" class="btn-close"></button>
+    </div>
+    <div class="modal-body pt-2">
+      <p class="text-muted small mb-4">Seleziona il periodo in cui il posto non sarà disponibile per la sosta.</p>
+      
+      <div class="form-group mb-3">
+        <label class="form-label">Inizio Blocco</label>
+        <input type="datetime-local" v-model="manutenzioneData.inizio" class="form-input">
+      </div>
+
+      <div class="form-group mb-3">
+        <label class="form-label">Fine Blocco</label>
+        <input type="datetime-local" v-model="manutenzioneData.fine" class="form-input">
+      </div>
+
+      <div class="form-group mb-4">
+        <label class="form-label">Motivazione (Opzionale)</label>
+        <textarea v-model="manutenzioneData.motivazione" class="form-input" 
+                  placeholder="Es. Manutenzione ordinaria, colonnina guasta..." rows="2"></textarea>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button @click="salvaManutenzione" class="btn-primary flex-grow-1">Conferma Blocco</button>
+        <button @click="showMaintenanceModal = false" class="btn-secondary">Annulla</button>
+      </div>
+    </div>
+  </div>
+</div>
+
     <Footer />
   </div>
 </template>
@@ -1504,7 +1641,6 @@ const chartDataRevenuePerGarage = computed(() => ({
 
 /* ── Chart card ──────────────────────────────────────────────────────────── */
 .chart-card          { background: #fff; border: 0.5px solid #E8E8E8; border-radius: 12px; padding: 20px; }
-.chart-card--wide    { /* inherits from .chart-card */ }
 .chart-card--centered { width: 100%; max-width: 600px; }
 .chart-header        { margin-bottom: 16px; }
 .chart-header--center { text-align: center; }
@@ -1676,5 +1812,27 @@ const chartDataRevenuePerGarage = computed(() => ({
   .form-row--3col  { grid-template-columns: 1fr; }
   .posto-creator   { grid-template-columns: 1fr; }
   .check-group     { flex-direction: column; align-items: flex-start; }
+}
+
+.btn-edit-small {
+  background: none;
+  border: none;
+  color: #0066CC;
+  cursor: pointer;
+  padding: 4px;
+  font-size: 1.1rem;
+  display: flex;
+  transition: color 0.2s;
+}
+.btn-edit-small:hover { color: #00204A; }
+
+.custom-modal-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center;
+  z-index: 10000; backdrop-filter: blur(2px);
+}
+.custom-modal {
+  background: #fff; padding: 24px; border-radius: 16px;
+  width: 90%; max-width: 400px; position: relative;
 }
 </style>
