@@ -377,7 +377,9 @@ const handleLogout = async () => {
   border-radius: 12px; 
   border: 1px solid #e0e0e0; 
   padding: 10px 18px; 
-  font-size: 15px; 
+  font-size: 15px;
+  font-family: inherit;
+  color: #2c3e50; 
 }
 .modal-input:focus {
   border-color: #00408a;
@@ -402,6 +404,10 @@ const handleLogout = async () => {
   height: 52px; 
   box-shadow: none !important;
   background: transparent !important; 
+  font-size: 15px;
+  padding: 10px 18px;
+  font-family: inherit;
+  color: #2c3e50;
 }
 .toggle-password-btn { 
   border: none !important; 
