@@ -119,7 +119,14 @@ const validaForm = () => {
 
 const inviaDati = () => {
     if (!validaForm()) return
-    emit('save', { ...localGarage.value, mappatestuale: stringaMappaGenerata.value, posti: postiConfigurati.value, nrighe: dimensioniMappa.value.righe, ncolonne: dimensioniMappa.value.colonne })
+    emit('save', {
+        ...localGarage.value,
+        indirizzo: `${localGarage.value.via}, ${localGarage.value.civico}, ${localGarage.value.cap} ${localGarage.value.citta} (${localGarage.value.provincia})`,
+        mappatestuale: stringaMappaGenerata.value,
+        posti: postiConfigurati.value,
+        nrighe: dimensioniMappa.value.righe,
+        ncolonne: dimensioniMappa.value.colonne
+    })
 }
 </script>
 
@@ -164,7 +171,7 @@ const inviaDati = () => {
                         <input type="text" :class="['form-input', { 'input-error': erroriValidazione.civico }]"
                             v-model="localGarage.civico" placeholder="Es. 10">
                         <span v-if="erroriValidazione.civico" class="form-error-text">{{ erroriValidazione.civico
-                        }}</span>
+                            }}</span>
                     </div>
                 </div>
 
@@ -180,14 +187,14 @@ const inviaDati = () => {
                         <input type="text" :class="['form-input', { 'input-error': erroriValidazione.citta }]"
                             v-model="localGarage.citta" placeholder="Es. Roma">
                         <span v-if="erroriValidazione.citta" class="form-error-text">{{ erroriValidazione.citta
-                        }}</span>
+                            }}</span>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Provincia (Sigla)*</label>
                         <input type="text" :class="['form-input', { 'input-error': erroriValidazione.provincia }]"
                             v-model="localGarage.provincia" maxlength="2" placeholder="Es. RM">
                         <span v-if="erroriValidazione.provincia" class="form-error-text">{{ erroriValidazione.provincia
-                        }}</span>
+                            }}</span>
                     </div>
                 </div>
 
