@@ -20,24 +20,24 @@ const isGestore = computed(() => authStore.utente?.ruolo === 'GESTORE')
 
 // ─── Navigazione ────────────────────────────────────────────────────────────
 const vistaAttiva = ref('statistiche')
-const isLoading   = ref(false)
+const isLoading = ref(false)
 const staSalvando = ref(false)
-const messaggio   = ref(null)
+const messaggio = ref(null)
 const erroriValidazione = ref({})
 
 // ─── Dati principali ────────────────────────────────────────────────────────
-const mieiGarage           = ref([])
-const storicoPrenotazioni  = ref([])
-const allerteStato         = ref([])
-const occupazioneGarage    = ref({})
-const postiPerGarage       = ref({})
-const reRenderKey          = ref(0)
+const mieiGarage = ref([])
+const storicoPrenotazioni = ref([])
+const allerteStato = ref([])
+const occupazioneGarage = ref({})
+const postiPerGarage = ref({})
+const reRenderKey = ref(0)
 
 // ─── Utility date ────────────────────────────────────────────────────────────
 // Formats a Date to YYYY-MM-DD (required by <input type="date">)
 const formattaPerInputDate = (d) => {
-  const y   = d.getFullYear()
-  const m   = String(d.getMonth() + 1).padStart(2, '0')
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
   return `${y}-${m}-${day}`
 }
@@ -47,12 +47,12 @@ const formattaChiaveData = (d) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
 // Current month range — used to pre-fill the date filter
-const dataCorrente    = new Date()
+const dataCorrente = new Date()
 const primoGiornoMese = new Date(dataCorrente.getFullYear(), dataCorrente.getMonth(), 1)
 const ultimoGiornoMese = new Date(dataCorrente.getFullYear(), dataCorrente.getMonth() + 1, 0)
 
 const filtroInizio = ref(formattaPerInputDate(primoGiornoMese))
-const filtroFine   = ref(formattaPerInputDate(ultimoGiornoMese))
+const filtroFine = ref(formattaPerInputDate(ultimoGiornoMese))
 
 // ─── Chat in tempo reale ─────────────────────────────────────────────────────
 const chatSelezionata = ref(null)
@@ -73,7 +73,7 @@ const handleNuovoMessaggio = (msg) => {
 }
 
 const apriChat = async (prenotazione) => {
-  const idGarage  = Number(prenotazione.id_garage)
+  const idGarage = Number(prenotazione.id_garage)
   const idCliente = Number(prenotazione.id_utente)
   if (!idGarage || !idCliente || isNaN(idGarage) || isNaN(idCliente)) {
     console.error('[Chat] Dati mancanti sulla prenotazione:', prenotazione)
@@ -83,9 +83,9 @@ const apriChat = async (prenotazione) => {
   chatSelezionata.value = null
   await nextTick()
   chatSelezionata.value = {
-    idPrenotazione:   Number(prenotazione.id_prenotazione),
+    idPrenotazione: Number(prenotazione.id_prenotazione),
     idGarage,
-    idDestinatario:   idCliente,
+    idDestinatario: idCliente,
     nomeDestinatario: prenotazione.nomecliente
       ? prenotazione.nomecliente + ' ' + (prenotazione.cognomecliente || '')
       : 'Cliente'
@@ -96,7 +96,7 @@ const chiudiChat = () => { chatSelezionata.value = null }
 
 // ─── Mappa Leaflet ───────────────────────────────────────────────────────────
 const calcolandoCoordinate = ref(false)
-let mapInstance    = null
+let mapInstance = null
 let markerInstance = null
 
 const nuovoGarage = ref({
@@ -117,12 +117,12 @@ const loadLeaflet = () => {
   return new Promise((resolve) => {
     if (window.L) return resolve()
     const css = document.createElement('link')
-    css.rel  = 'stylesheet'
+    css.rel = 'stylesheet'
     css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
     document.head.appendChild(css)
-    const script    = document.createElement('script')
-    script.src      = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
-    script.onload   = resolve
+    const script = document.createElement('script')
+    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+    script.onload = resolve
     document.head.appendChild(script)
   })
 }
@@ -136,7 +136,7 @@ const initMap = () => {
   mapInstance.on('click', (e) => {
     const lat = parseFloat(e.latlng.lat.toFixed(6))
     const lng = parseFloat(e.latlng.lng.toFixed(6))
-    nuovoGarage.value.latitudine  = lat
+    nuovoGarage.value.latitudine = lat
     nuovoGarage.value.longitudine = lng
     erroriValidazione.value.coordinate = null
     updateMarker(lat, lng)
@@ -161,12 +161,12 @@ const calcolaCoordinate = async () => {
   calcolandoCoordinate.value = true
   try {
     const query = encodeURIComponent(`${via} ${civico}, ${citta}, ${provincia}, Italy`)
-    const res   = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`)
-    const data  = await res.json()
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`)
+    const data = await res.json()
     if (data && data.length > 0) {
       const lat = parseFloat(data[0].lat)
       const lon = parseFloat(data[0].lon)
-      nuovoGarage.value.latitudine  = lat
+      nuovoGarage.value.latitudine = lat
       nuovoGarage.value.longitudine = lon
       erroriValidazione.value.coordinate = null
       updateMarker(lat, lon)
@@ -182,15 +182,15 @@ const calcolaCoordinate = async () => {
 }
 
 // ─── Canvas / Planimetria ────────────────────────────────────────────────────
-const nuovoPosto        = ref({ codice: '', tipo: 'AUTO', isDisabili: false, isElettrica: false, isCoperto: true })
-const postiConfigurati  = ref([])
-const dimensioniMappa   = ref({ righe: 6, colonne: 12 })
-const griglia           = ref([])
-const strumentoAttivo   = ref(null)
+const nuovoPosto = ref({ codice: '', tipo: 'AUTO', isDisabili: false, isElettrica: false, isCoperto: true })
+const postiConfigurati = ref([])
+const dimensioniMappa = ref({ righe: 6, colonne: 12 })
+const griglia = ref([])
+const strumentoAttivo = ref(null)
 
 const MAPPA_DIMENSIONI = {
-  'MOTO':    { w: 1, h: 1 },
-  'AUTO':    { w: 2, h: 1 },
+  'MOTO': { w: 1, h: 1 },
+  'AUTO': { w: 2, h: 1 },
   'FURGONE': { w: 2, h: 2 }
 }
 
@@ -213,8 +213,8 @@ const codiciPosizionati = computed(() => {
 })
 
 const generaCodiceAutomatico = (tipo) => {
-  const prefisso      = tipo.charAt(0).toUpperCase()
-  const postiDelTipo  = postiConfigurati.value.filter(p => p.tipo === tipo)
+  const prefisso = tipo.charAt(0).toUpperCase()
+  const postiDelTipo = postiConfigurati.value.filter(p => p.tipo === tipo)
   let maxNum = 0
   postiDelTipo.forEach(p => {
     const num = parseInt(p.codice.replace(/\D/g, ''), 10)
@@ -226,11 +226,11 @@ const generaCodiceAutomatico = (tipo) => {
 const autoCompilaPosto = () => {
   const cod = nuovoPosto.value.codice.toUpperCase()
   if (!cod) return
-  if (cod.startsWith('M'))      nuovoPosto.value.tipo = 'MOTO'
+  if (cod.startsWith('M')) nuovoPosto.value.tipo = 'MOTO'
   else if (cod.startsWith('F')) nuovoPosto.value.tipo = 'FURGONE'
-  else                          nuovoPosto.value.tipo = 'AUTO'
+  else nuovoPosto.value.tipo = 'AUTO'
   nuovoPosto.value.isElettrica = cod.startsWith('E')
-  nuovoPosto.value.isDisabili  = cod.startsWith('D')
+  nuovoPosto.value.isDisabili = cod.startsWith('D')
 }
 
 const aggiungiPostoConfigurato = () => {
@@ -240,11 +240,11 @@ const aggiungiPostoConfigurato = () => {
     return
   }
   postiConfigurati.value.push({
-    codice:      cod,
-    tipo:        nuovoPosto.value.tipo,
+    codice: cod,
+    tipo: nuovoPosto.value.tipo,
     isElettrica: nuovoPosto.value.isElettrica,
-    isDisabili:  nuovoPosto.value.isDisabili,
-    isCoperto:   nuovoPosto.value.isCoperto
+    isDisabili: nuovoPosto.value.isDisabili,
+    isCoperto: nuovoPosto.value.isCoperto
   })
   const tipoCorrente = nuovoPosto.value.tipo
   nuovoPosto.value = { codice: '', tipo: tipoCorrente, isDisabili: false, isElettrica: false, isCoperto: true }
@@ -318,7 +318,7 @@ const stringaMappaGenerata = computed(() => {
     const celleStr = []
     for (let c = 0; c < dimensioniMappa.value.colonne; c++) {
       const cella = griglia.value[r][c]
-      if (!cella)          celleStr.push('X:1x1')
+      if (!cella) celleStr.push('X:1x1')
       else if (cella.isRoot) celleStr.push(`${cella.codice}:${cella.w}x${cella.h}`)
     }
     if (celleStr.length > 0) righeStr.push(celleStr.join('-'))
@@ -350,7 +350,7 @@ const formatData = (iso) => {
   if (!iso) return '-'
   const d = new Date(iso)
   return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: '2-digit' })
-       + ' ' + d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+    + ' ' + d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
 }
 const statoBadge = (stato) =>
   stato === 'ATTIVA' ? 'badge--green' : stato === 'ANNULLATA' ? 'badge--red' : 'badge--gray'
@@ -381,7 +381,7 @@ const caricaGarage = async () => {
         fetch(`/api/garage/${g.id_garage}/posti`, { credentials: 'include' }),
         fetch(`/api/garage/${g.id_garage}/occupazione`, { credentials: 'include' })
       ]);
-      
+
       if (rPosti.ok) nuoviPosti[g.id_garage] = (await rPosti.json()).posti;
       if (rOcc.ok) nuovaOccupazione[g.id_garage] = Math.round((await rOcc.json()).percentuale);
     } catch (e) {
@@ -393,7 +393,7 @@ const caricaGarage = async () => {
   postiPerGarage.value = nuoviPosti;
   occupazioneGarage.value = nuovaOccupazione;
   mieiGarage.value = data;
-  reRenderKey.value++; 
+  reRenderKey.value++;
 };
 
 const aggiornaMappaOrari = async () => {
@@ -426,11 +426,11 @@ const caricaStato = async () => {
 const validaForm = () => {
   const errori = {}
 
-  if (!nuovoGarage.value.nome?.trim())      errori.nome      = 'Obbligatorio.'
-  if (!nuovoGarage.value.via?.trim())       errori.via       = 'Obbligatorio.'
-  if (!nuovoGarage.value.civico?.trim())    errori.civico    = 'Obbligatorio.'
-  if (!nuovoGarage.value.cap?.trim())       errori.cap       = 'Obbligatorio.'
-  if (!nuovoGarage.value.citta?.trim())     errori.citta     = 'Obbligatorio.'
+  if (!nuovoGarage.value.nome?.trim()) errori.nome = 'Obbligatorio.'
+  if (!nuovoGarage.value.via?.trim()) errori.via = 'Obbligatorio.'
+  if (!nuovoGarage.value.civico?.trim()) errori.civico = 'Obbligatorio.'
+  if (!nuovoGarage.value.cap?.trim()) errori.cap = 'Obbligatorio.'
+  if (!nuovoGarage.value.citta?.trim()) errori.citta = 'Obbligatorio.'
   if (!nuovoGarage.value.provincia?.trim()) errori.provincia = 'Obbligatorio.'
 
   if (!nuovoGarage.value.latitudine || !nuovoGarage.value.longitudine) {
@@ -441,13 +441,13 @@ const validaForm = () => {
     errori.tariffabase = 'La tariffa auto è obbligatoria e > 0.'
   }
 
-  const tipiPresenti    = new Set()
+  const tipiPresenti = new Set()
   let necessitaElettrica = false
-  let necessitaDisabili  = false
+  let necessitaDisabili = false
   for (const posto of postiConfigurati.value) {
     tipiPresenti.add(posto.tipo)
     if (posto.isElettrica) necessitaElettrica = true
-    if (posto.isDisabili)  necessitaDisabili  = true
+    if (posto.isDisabili) necessitaDisabili = true
   }
 
   if (tipiPresenti.has('MOTO') && (!nuovoGarage.value.tariffamoto || nuovoGarage.value.tariffamoto <= 0)) {
@@ -481,18 +481,15 @@ const salvaNuovoGarage = async () => {
   messaggio.value = null
   if (!validaForm()) return
   staSalvando.value = true
-
   const payload = {
     ...nuovoGarage.value,
     mappatestuale: stringaMappaGenerata.value,
     posti: postiConfigurati.value
   }
-
   let res;
   if (isEditing.value) {
     res = await garageStore.updateGarage(idGarageInModifica.value, payload)
   } else {
-    // Logica POST originale... (o usa garageStore.createGarage se vuoi snellire ancora)
     const raw = await fetch('/api/garage/garages-gestore', {
       method: 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -500,22 +497,20 @@ const salvaNuovoGarage = async () => {
     })
     res = await raw.json()
   }
-
   if (res.success) {
-    // Reset form e stato
     isEditing.value = false
     idGarageInModifica.value = null
-    // ... reset campi come già facevi ...
     await caricaGarage()
     messaggio.value = { tipo: 'success', testo: isEditing.value ? 'Garage aggiornato!' : 'Garage pubblicato!' }
+    svuotaForm()
     vistaAttiva.value = 'garage'
   }
   staSalvando.value = false
 }
 // ─── Bootstrap Modal Info ────────────────────────────────────────────────────
 const infoModalElement = ref(null)
-let infoModalInstance  = null
-const openInfoModal    = () => { if (infoModalInstance) infoModalInstance.show() }
+let infoModalInstance = null
+const openInfoModal = () => { if (infoModalInstance) infoModalInstance.show() }
 
 // ─── Lifecycle ───────────────────────────────────────────────────────────────
 
@@ -558,22 +553,48 @@ onUnmounted(() => {
   if (socket) socket.off('nuovo_messaggio', handleNuovoMessaggio)
 })
 
+const svuotaForm = () => {
+  isEditing.value = false
+  idGarageInModifica.value = null
+
+  // Reset dei dati del garage
+  nuovoGarage.value = {
+    nome: '', descrizione: '',
+    via: '', civico: '', cap: '', citta: '', provincia: '',
+    latitudine: null, longitudine: null,
+    tariffabase: null, tariffamoto: null, tariffafurgone: null,
+    sovrapprezzoelettrica: null, scontodisabili: null,
+    altezzamassima: null, orarioapertura: '08:00', orariochiusura: '20:00',
+    is24h: false
+  }
+
+  // Reset dei posti e della griglia
+  postiConfigurati.value = []
+  ridimensionaGriglia() // Questa funzione (già presente nel tuo codice) pulisce la matrice 'griglia'
+}
+
 watch(vistaAttiva, async (newVal) => {
   messaggio.value = null
   if (newVal === 'aggiungi') {
+    if (!idGarageInModifica.value) {
+      svuotaForm()
+    }
     await loadLeaflet()
     await nextTick()
     initMap()
+  } else {
+    idGarageInModifica.value = null
+    isEditing.value = false
   }
 })
 
 // ─── Nav ─────────────────────────────────────────────────────────────────────
 const navItems = [
-  { id: 'statistiche', label: 'Statistiche',    icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>' },
-  { id: 'garage',      label: 'I miei Garage',  icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>' },
-  { id: 'stato',       label: 'Stato Corrente', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>' },
-  { id: 'storico',     label: 'Storico',         icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>' },
-  { id: 'aggiungi',    label: 'Aggiungi Garage', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' },
+  { id: 'statistiche', label: 'Statistiche', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>' },
+  { id: 'garage', label: 'I miei Garage', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>' },
+  { id: 'stato', label: 'Stato Corrente', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>' },
+  { id: 'storico', label: 'Storico', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>' },
+  { id: 'aggiungi', label: 'Aggiungi Garage', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' },
 ]
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -599,9 +620,9 @@ const dateRange = computed(() => {
 const prenotazioniFiltrate = computed(() => {
   const { inizio, fine } = dateRange.value
   return storicoPrenotazioni.value.filter(p => {
-    const dataP        = new Date(p.iniziososta)
+    const dataP = new Date(p.iniziososta)
     const matchesGarage = garageSelezionato.value === 'TUTTI' || Number(p.id_garage) === Number(garageSelezionato.value)
-    const matchesData   = dataP >= inizio && dataP <= fine
+    const matchesData = dataP >= inizio && dataP <= fine
     return matchesGarage && matchesData
   })
 })
@@ -633,37 +654,37 @@ const kpiData = computed(() => {
   // Caso: Panoramica Generale (TUTTI)
   if (garageSelezionato.value === 'TUTTI') {
     return [
-      { id: 1, label: 'Garage Totali',       value: mieiGarage.value.length,  icon: 'bi-building',      color: 'blue'  },
-      { id: 2, label: 'Incasso Totale',      value: `€ ${incasso}`,          icon: 'bi-cash-coin',     color: 'green' },
-      { id: 3, label: 'In Arrivo',  value: `€ ${inArrivo}`,         icon: 'bi-clock-history', color: 'amber' },
-      { id: 4, label: 'Prenot. Attive',      value: attive,                  icon: 'bi-car-front',     color: 'blue'  },
+      { id: 1, label: 'Garage Totali', value: mieiGarage.value.length, icon: 'bi-building', color: 'blue' },
+      { id: 2, label: 'Incasso Totale', value: `€ ${incasso}`, icon: 'bi-cash-coin', color: 'green' },
+      { id: 3, label: 'In Arrivo', value: `€ ${inArrivo}`, icon: 'bi-clock-history', color: 'amber' },
+      { id: 4, label: 'Prenot. Attive', value: attive, icon: 'bi-car-front', color: 'blue' },
     ]
   }
 
   // Caso: Singolo Garage
   return [
-    { id: 1, label: 'Prenotazioni Tot.',  value: prenotazioniFiltrate.value.length, icon: 'bi-journal-check', color: 'blue'  },
-    { id: 2, label: 'Incasso Generato',   value: `€ ${incasso}`,                   icon: 'bi-cash-coin',     color: 'green' },
-    { id: 3, label: 'In Arrivo', value: `€ ${inArrivo}`,                  icon: 'bi-clock-history', color: 'amber' },
-    { id: 4, label: 'Prenot. Attive',     value: attive,                            icon: 'bi-car-front',     color: 'blue'  },
+    { id: 1, label: 'Prenotazioni Tot.', value: prenotazioniFiltrate.value.length, icon: 'bi-journal-check', color: 'blue' },
+    { id: 2, label: 'Incasso Generato', value: `€ ${incasso}`, icon: 'bi-cash-coin', color: 'green' },
+    { id: 3, label: 'In Arrivo', value: `€ ${inArrivo}`, icon: 'bi-clock-history', color: 'amber' },
+    { id: 4, label: 'Prenot. Attive', value: attive, icon: 'bi-car-front', color: 'blue' },
   ]
 })
 
 // ─── Colori grafici (unica fonte di verità) ───────────────────────────────────
 const CHART_COLORS = {
-  blue:        '#0066CC',
-  blueAlpha:   'rgba(0, 102, 204, 0.2)',
-  darkBlue:    '#00408A',
-  green:       '#27AE60',
-  greenAlpha:  'rgba(39, 174, 96, 0.2)',
-  red:         '#C0392B',
+  blue: '#0066CC',
+  blueAlpha: 'rgba(0, 102, 204, 0.2)',
+  darkBlue: '#00408A',
+  green: '#27AE60',
+  greenAlpha: 'rgba(39, 174, 96, 0.2)',
+  red: '#C0392B',
 }
 
 // ─── Opzioni Chart.js condivise ───────────────────────────────────────────────
 const chartOptions = { responsive: true, maintainAspectRatio: false }
 
 const chartOptionsRadar = {
-  responsive:          true,
+  responsive: true,
   maintainAspectRatio: false,
   scales: { r: { min: 0, max: 5, ticks: { stepSize: 1 } } },
 }
@@ -671,9 +692,9 @@ const chartOptionsRadar = {
 // ─── Chart: Trend Ricavi (Line) ───────────────────────────────────────────────
 const chartDataRevenue = computed(() => {
   const { inizio, fine } = dateRange.value
-  const mappaIncassi   = {}
+  const mappaIncassi = {}
   const chiaviOrdinate = []
-  const labels         = []
+  const labels = []
 
   // Build a continuous daily axis from inizio to fine
   const cursore = new Date(inizio)
@@ -696,12 +717,12 @@ const chartDataRevenue = computed(() => {
   return {
     labels,
     datasets: [{
-      label:           'Incasso Giornaliero (€)',
+      label: 'Incasso Giornaliero (€)',
       backgroundColor: CHART_COLORS.blueAlpha,
-      borderColor:     CHART_COLORS.blue,
-      data:            chiaviOrdinate.map(k => mappaIncassi[k]),
-      tension:         0.3,
-      fill:            true,
+      borderColor: CHART_COLORS.blue,
+      data: chiaviOrdinate.map(k => mappaIncassi[k]),
+      tension: 0.3,
+      fill: true,
     }],
   }
 })
@@ -737,11 +758,11 @@ const chartDataRadar = computed(() => {
   return {
     labels: ['Posizione', 'Prezzo', 'Pulizia', 'Spazio', 'Sicurezza'],
     datasets: [{
-      label:                'Voto Medio',
-      backgroundColor:      CHART_COLORS.greenAlpha,
-      borderColor:          CHART_COLORS.green,
+      label: 'Voto Medio',
+      backgroundColor: CHART_COLORS.greenAlpha,
+      borderColor: CHART_COLORS.green,
       pointBackgroundColor: CHART_COLORS.green,
-      data:                 medie,
+      data: medie,
     }],
   }
 })
@@ -750,9 +771,9 @@ const chartDataRadar = computed(() => {
 const chartDataRevenuePerGarage = computed(() => ({
   labels: mieiGarage.value.map(g => g.nome),
   datasets: [{
-    label:           'Incasso per Garage (€)',
+    label: 'Incasso per Garage (€)',
     backgroundColor: CHART_COLORS.blue,
-    borderRadius:    6,
+    borderRadius: 6,
     data: mieiGarage.value.map(g =>
       prenotazioniFiltrate.value
         .filter(p => Number(p.id_garage) === Number(g.id_garage) && p.stato !== 'ANNULLATA')
@@ -785,7 +806,7 @@ const ricostruisciGriglia = (mappa, righe, colonne) => {
     tokens.forEach(t => {
       let [codice, span] = t.split(':')
       let [w, h] = span.split('x').map(Number)
-      
+
       if (codice !== 'X') {
         const pConf = postiConfigurati.value.find(pc => pc.codice === codice)
         if (pConf) {
@@ -819,7 +840,7 @@ const preparaModifica = async (garage) => {
   // 1. Carichiamo i posti attuali per questo garage dal DB
   const res = await fetch(`/api/garage/${garage.id_garage}/posti`, { credentials: 'include' })
   const data = await res.json()
-  
+
   if (data.success) {
     postiConfigurati.value = data.posti.map(p => ({
       codice: p.codiceposto,
@@ -839,9 +860,9 @@ const preparaModifica = async (garage) => {
     tariffafurgone: garage.tariffafurgone,
     sovrapprezzoelettrica: garage.sovrapprezzoelettrica,
     scontodisabili: garage.scontodisabili,
-    
+
     // Gestione indirizzo e orari
-    via: garage.indirizzo, 
+    via: garage.indirizzo,
     orarioapertura: garage.orarioapertura ? garage.orarioapertura.substring(0, 5) : '08:00',
     orariochiusura: garage.orariochiusura ? garage.orariochiusura.substring(0, 5) : '20:00'
   }
@@ -859,10 +880,10 @@ const preparaModifica = async (garage) => {
  */
 const apriGestionePosto = (posto) => {
   postoDaGestire.value = posto
-  manutenzioneData.value = { 
-    inizio: formattaPerInputDate(new Date()) + 'T08:00', 
-    fine: formattaPerInputDate(new Date()) + 'T20:00', 
-    motivazione: '' 
+  manutenzioneData.value = {
+    inizio: formattaPerInputDate(new Date()) + 'T08:00',
+    fine: formattaPerInputDate(new Date()) + 'T20:00',
+    motivazione: ''
   }
   showMaintenanceModal.value = true
 }
@@ -886,7 +907,10 @@ const salvaManutenzione = async () => {
 
     <!-- Accesso negato -->
     <div v-if="!isGestore" class="access-denied">
-      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+      </svg>
       <h2>Accesso negato</h2>
       <p>Questa area è riservata ai gestori. Effettua il login con un account gestore.</p>
       <RouterLink to="/" class="btn-back">Torna alla Home</RouterLink>
@@ -896,13 +920,15 @@ const salvaManutenzione = async () => {
       <!-- Sidebar -->
       <aside class="sidebar">
         <div class="sidebar-brand">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="3" />
+            <path d="M9 3v18M15 3v18M3 9h18M3 15h18" />
+          </svg>
           <span>Area Gestore</span>
         </div>
         <nav class="sidebar-nav">
           <a v-for="item in menuFiltrato" :key="item.id" href="#"
-             :class="['nav-item', { active: vistaAttiva === item.id }]"
-             @click.prevent="vistaAttiva = item.id">
+            :class="['nav-item', { active: vistaAttiva === item.id }]" @click.prevent="vistaAttiva = item.id">
             <span class="nav-icon" v-html="item.icon"></span>
             <span class="nav-label">{{ item.label }}</span>
             <span v-if="vistaAttiva === item.id" class="nav-indicator"></span>
@@ -926,7 +952,8 @@ const salvaManutenzione = async () => {
 
         <template v-else>
           <!-- Alert globale -->
-          <div v-if="messaggio" :class="['alert', messaggio.tipo, 'mb-4']" style="max-width: 960px; margin-left: auto; margin-right: auto;">
+          <div v-if="messaggio" :class="['alert', messaggio.tipo, 'mb-4']"
+            style="max-width: 960px; margin-left: auto; margin-right: auto;">
             {{ messaggio.testo }}
             <button @click="messaggio = null" class="close-btn">×</button>
           </div>
@@ -1034,7 +1061,7 @@ const salvaManutenzione = async () => {
           <!-- ── I MIEI GARAGE ──────────────────────────────────────────── -->
           <section v-if="vistaAttiva === 'garage'" class="vista fade-in centered-container">
             <div class="page-header">
-              
+
               <div>
                 <h1>I tuoi garage</h1>
                 <p class="subtitle">Gestisci tutti i parcheggi registrati</p>
@@ -1056,7 +1083,8 @@ const salvaManutenzione = async () => {
                     <td class="td-muted">#{{ garage.id_garage }}</td>
                     <td class="td-bold">
                       <div class="d-flex align-items-center gap-2">
-                        <RouterLink :to="`/garage/${garage.id_garage}`" class="garage-link">{{ garage.nome }}</RouterLink>
+                        <RouterLink :to="`/garage/${garage.id_garage}`" class="garage-link">{{ garage.nome }}
+                        </RouterLink>
                         <button @click="preparaModifica(garage)" class="btn-edit-small" title="Modifica Garage">
                           <i class="bi bi-pencil-square"></i>
                         </button>
@@ -1109,28 +1137,27 @@ const salvaManutenzione = async () => {
                 <p class="stato-indirizzo">{{ garage.indirizzo }}</p>
                 <div class="occupancy-wrap">
                   <div class="occupancy-bar">
-                    <div class="occupancy-fill"
-                         :style="{ width: getOccupancy(garage.id_garage) + '%' }"
-                         :class="{ 'fill-warn': getOccupancy(garage.id_garage) > 80 }">
+                    <div class="occupancy-fill" :style="{ width: getOccupancy(garage.id_garage) + '%' }"
+                      :class="{ 'fill-warn': getOccupancy(garage.id_garage) > 80 }">
                     </div>
                   </div>
                   <span class="occupancy-pct">{{ getOccupancy(garage.id_garage) }}%</span>
                 </div>
                 <div class="stato-meta">
                   <span>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                    {{ garage.is24h ? 'Aperto 24h' : `${garage.orarioapertura?.substring(0,5)} - ${garage.orariochiusura?.substring(0,5)}` }}
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="10" />
+                      <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                    {{ garage.is24h ? 'Aperto 24h' : `${garage.orarioapertura?.substring(0, 5)} -
+                    ${garage.orariochiusura?.substring(0,5)}` }}
                   </span>
                   <span>€ {{ garage.tariffabase }}/h</span>
                 </div>
                 <div class="planimetria-wrapper">
-                  <PlanimetriaGarage
-                    :key="'mappa-' + garage.id_garage + '-' + reRenderKey"
-                    :posti="postiPerGarage[garage.id_garage] || []"
-                    :mappaTestuale="garage.mappatestuale"
-                    :isGestoreMode="true" 
-                    @manage="apriGestionePosto"
-                  />
+                  <PlanimetriaGarage :key="'mappa-' + garage.id_garage + '-' + reRenderKey"
+                    :posti="postiPerGarage[garage.id_garage] || []" :mappaTestuale="garage.mappatestuale"
+                    :isGestoreMode="true" @manage="apriGestionePosto" />
                 </div>
               </div>
             </div>
@@ -1140,19 +1167,26 @@ const salvaManutenzione = async () => {
               <h2>Allerte</h2>
             </div>
             <div v-for="allerta in allerteStato" :key="allerta.id"
-                 :class="['allerta-card', allerta.tipo === 'warning' ? 'allerta--warn' : 'allerta--danger']">
+              :class="['allerta-card', allerta.tipo === 'warning' ? 'allerta--warn' : 'allerta--danger']">
               <div class="allerta-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  <line x1="12" y1="9" x2="12" y2="13" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
               </div>
               <div>
                 <p class="allerta-title">{{ allerta.titolo }}</p>
                 <p class="allerta-msg">{{ allerta.messaggio }}</p>
               </div>
             </div>
-            <div v-if="allerteStato.length === 0 && mieiGarage.length > 0"
-                 class="allerta-card allerta--ok" style="margin-top: 24px;">
+            <div v-if="allerteStato.length === 0 && mieiGarage.length > 0" class="allerta-card allerta--ok"
+              style="margin-top: 24px;">
               <div class="allerta-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
               </div>
               <div>
                 <p class="allerta-title">Tutto regolare</p>
@@ -1193,11 +1227,12 @@ const salvaManutenzione = async () => {
                     <td class="td-bold td-blue">€ {{ p.prezzototale }}</td>
                     <td><span :class="['badge', statoBadge(p.stato)]">{{ p.stato }}</span></td>
                     <td>
-                      <button v-if="p.stato === 'ATTIVA'" @click="apriChat(p)"
-                              class="btn-chat" title="Scrivi al cliente">
+                      <button v-if="p.stato === 'ATTIVA'" @click="apriChat(p)" class="btn-chat"
+                        title="Scrivi al cliente">
                         <span v-if="p.nonletti > 0" class="chat-notification-dot"></span>
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                         </svg>
                         Scrivi
                       </button>
@@ -1216,10 +1251,9 @@ const salvaManutenzione = async () => {
             <div class="page-header d-flex justify-content-between align-items-center">
               <div>
                 <h1 class="d-flex align-items-center gap-3">
-                  Pubblica un Garage
-                  <button type="button"
-                          class="btn btn-outline-primary rounded-circle info-icon-btn"
-                          @click="openInfoModal" title="Guida alla pubblicazione">
+                  {{ isEditing ? 'Modifica Garage' : 'Pubblica un Garage' }}
+                  <button type="button" class="btn btn-outline-primary rounded-circle info-icon-btn"
+                    @click="openInfoModal" title="Guida alla pubblicazione">
                     <i class="bi bi-info-lg"></i>
                   </button>
                 </h1>
@@ -1230,13 +1264,15 @@ const salvaManutenzione = async () => {
               <form @submit.prevent="salvaNuovoGarage">
 
                 <!-- Informazioni generali e indirizzo -->
-                <div class="section-header"><h2>Informazioni Generali e Posizione</h2></div>
+                <div class="section-header">
+                  <h2>Informazioni Generali e Posizione</h2>
+                </div>
 
                 <div class="form-row">
                   <div class="form-group">
                     <label class="form-label">Nome del Garage*</label>
-                    <input type="text" :class="['form-input', {'input-error': erroriValidazione.nome}]"
-                           v-model="nuovoGarage.nome" placeholder="Es. Garage Roma Centro">
+                    <input type="text" :class="['form-input', { 'input-error': erroriValidazione.nome }]"
+                      v-model="nuovoGarage.nome" placeholder="Es. Garage Roma Centro">
                     <span v-if="erroriValidazione.nome" class="form-error-text">{{ erroriValidazione.nome }}</span>
                   </div>
                 </div>
@@ -1244,14 +1280,14 @@ const salvaManutenzione = async () => {
                 <div class="form-row form-row--3col">
                   <div class="form-group" style="grid-column: span 2;">
                     <label class="form-label">Via*</label>
-                    <input type="text" :class="['form-input', {'input-error': erroriValidazione.via}]"
-                           v-model="nuovoGarage.via" placeholder="Es. Via Roma">
+                    <input type="text" :class="['form-input', { 'input-error': erroriValidazione.via }]"
+                      v-model="nuovoGarage.via" placeholder="Es. Via Roma">
                     <span v-if="erroriValidazione.via" class="form-error-text">{{ erroriValidazione.via }}</span>
                   </div>
                   <div class="form-group">
                     <label class="form-label">Civico*</label>
-                    <input type="text" :class="['form-input', {'input-error': erroriValidazione.civico}]"
-                           v-model="nuovoGarage.civico" placeholder="Es. 10">
+                    <input type="text" :class="['form-input', { 'input-error': erroriValidazione.civico }]"
+                      v-model="nuovoGarage.civico" placeholder="Es. 10">
                     <span v-if="erroriValidazione.civico" class="form-error-text">{{ erroriValidazione.civico }}</span>
                   </div>
                 </div>
@@ -1259,37 +1295,42 @@ const salvaManutenzione = async () => {
                 <div class="form-row form-row--3col">
                   <div class="form-group">
                     <label class="form-label">CAP*</label>
-                    <input type="text" :class="['form-input', {'input-error': erroriValidazione.cap}]"
-                           v-model="nuovoGarage.cap" placeholder="Es. 00100">
+                    <input type="text" :class="['form-input', { 'input-error': erroriValidazione.cap }]"
+                      v-model="nuovoGarage.cap" placeholder="Es. 00100">
                     <span v-if="erroriValidazione.cap" class="form-error-text">{{ erroriValidazione.cap }}</span>
                   </div>
                   <div class="form-group">
                     <label class="form-label">Città*</label>
-                    <input type="text" :class="['form-input', {'input-error': erroriValidazione.citta}]"
-                           v-model="nuovoGarage.citta" placeholder="Es. Roma">
+                    <input type="text" :class="['form-input', { 'input-error': erroriValidazione.citta }]"
+                      v-model="nuovoGarage.citta" placeholder="Es. Roma">
                     <span v-if="erroriValidazione.citta" class="form-error-text">{{ erroriValidazione.citta }}</span>
                   </div>
                   <div class="form-group">
                     <label class="form-label">Provincia (Sigla)*</label>
-                    <input type="text" :class="['form-input', {'input-error': erroriValidazione.provincia}]"
-                           v-model="nuovoGarage.provincia" placeholder="Es. RM" maxlength="2">
-                    <span v-if="erroriValidazione.provincia" class="form-error-text">{{ erroriValidazione.provincia }}</span>
+                    <input type="text" :class="['form-input', { 'input-error': erroriValidazione.provincia }]"
+                      v-model="nuovoGarage.provincia" placeholder="Es. RM" maxlength="2">
+                    <span v-if="erroriValidazione.provincia" class="form-error-text">{{ erroriValidazione.provincia
+                      }}</span>
                   </div>
                 </div>
 
                 <div class="form-row">
                   <div class="form-group" style="flex-direction: row; gap: 10px; align-items: center;">
-                    <button type="button" class="btn-secondary" style="padding: 0 20px;"
-                            @click="calcolaCoordinate" :disabled="calcolandoCoordinate">
+                    <button type="button" class="btn-secondary" style="padding: 0 20px;" @click="calcolaCoordinate"
+                      :disabled="calcolandoCoordinate">
                       {{ calcolandoCoordinate ? 'Ricerca in corso...' : 'Trova zona sulla mappa' }}
                     </button>
-                    <span class="form-hint">Cerca per avvicinarti, poi <strong>clicca sulla mappa</strong> per la precisione massima.</span>
+                    <span class="form-hint">Cerca per avvicinarti, poi <strong>clicca sulla mappa</strong> per la
+                      precisione
+                      massima.</span>
                   </div>
                 </div>
 
                 <div class="form-row">
-                  <div id="mappa-garage" style="height: 350px; width: 100%; border-radius: 8px; border: 1px solid #ccc; z-index: 1;"></div>
-                  <span v-if="erroriValidazione.coordinate" class="form-error-text" style="display:block; margin-top:8px;">
+                  <div id="mappa-garage"
+                    style="height: 350px; width: 100%; border-radius: 8px; border: 1px solid #ccc; z-index: 1;"></div>
+                  <span v-if="erroriValidazione.coordinate" class="form-error-text"
+                    style="display:block; margin-top:8px;">
                     {{ erroriValidazione.coordinate }}
                   </span>
                 </div>
@@ -1297,72 +1338,92 @@ const salvaManutenzione = async () => {
                 <div class="form-row form-row--2col">
                   <div class="form-group">
                     <label class="form-label">Latitudine</label>
-                    <input type="text" class="form-input" :value="nuovoGarage.latitudine" disabled placeholder="Clicca sulla mappa">
+                    <input type="text" class="form-input" :value="nuovoGarage.latitudine" disabled
+                      placeholder="Clicca sulla mappa">
                   </div>
                   <div class="form-group">
                     <label class="form-label">Longitudine</label>
-                    <input type="text" class="form-input" :value="nuovoGarage.longitudine" disabled placeholder="Clicca sulla mappa">
+                    <input type="text" class="form-input" :value="nuovoGarage.longitudine" disabled
+                      placeholder="Clicca sulla mappa">
                   </div>
                 </div>
 
                 <div class="form-row">
                   <div class="form-group">
                     <label class="form-label">Descrizione</label>
-                    <input type="text" class="form-input" v-model="nuovoGarage.descrizione" placeholder="Breve descrizione del garage">
+                    <input type="text" class="form-input" v-model="nuovoGarage.descrizione"
+                      placeholder="Breve descrizione del garage">
                   </div>
                 </div>
 
                 <!-- Tariffario e orari -->
-                <div class="section-header" style="margin-top: 30px;"><h2>Tariffario e Orari</h2></div>
+                <div class="section-header" style="margin-top: 30px;">
+                  <h2>Tariffario e Orari</h2>
+                </div>
 
                 <div class="form-row form-row--3col">
                   <div class="form-group">
                     <label class="form-label">Tariffa Auto (€/h)*</label>
-                    <input type="number" step="0.50" :class="['form-input', {'input-error': erroriValidazione.tariffabase}]"
-                           v-model="nuovoGarage.tariffabase" min="0" placeholder="Es. 2.50">
-                    <span v-if="erroriValidazione.tariffabase" class="form-error-text">{{ erroriValidazione.tariffabase }}</span>
+                    <input type="number" step="0.50"
+                      :class="['form-input', { 'input-error': erroriValidazione.tariffabase }]"
+                      v-model="nuovoGarage.tariffabase" min="0" placeholder="Es. 2.50">
+                    <span v-if="erroriValidazione.tariffabase" class="form-error-text">{{ erroriValidazione.tariffabase
+                      }}</span>
                   </div>
                   <div class="form-group">
                     <label class="form-label">Tariffa Moto (€/h)</label>
-                    <input type="number" step="0.50" :class="['form-input', {'input-error': erroriValidazione.tariffamoto}]"
-                           v-model="nuovoGarage.tariffamoto" min="0" placeholder="Opzionale">
-                    <span v-if="erroriValidazione.tariffamoto" class="form-error-text">{{ erroriValidazione.tariffamoto }}</span>
+                    <input type="number" step="0.50"
+                      :class="['form-input', { 'input-error': erroriValidazione.tariffamoto }]"
+                      v-model="nuovoGarage.tariffamoto" min="0" placeholder="Opzionale">
+                    <span v-if="erroriValidazione.tariffamoto" class="form-error-text">{{ erroriValidazione.tariffamoto
+                      }}</span>
                   </div>
                   <div class="form-group">
                     <label class="form-label">Tariffa Furgone (€/h)</label>
-                    <input type="number" step="0.50" :class="['form-input', {'input-error': erroriValidazione.tariffafurgone}]"
-                           v-model="nuovoGarage.tariffafurgone" min="0" placeholder="Opzionale">
-                    <span v-if="erroriValidazione.tariffafurgone" class="form-error-text">{{ erroriValidazione.tariffafurgone }}</span>
+                    <input type="number" step="0.50"
+                      :class="['form-input', { 'input-error': erroriValidazione.tariffafurgone }]"
+                      v-model="nuovoGarage.tariffafurgone" min="0" placeholder="Opzionale">
+                    <span v-if="erroriValidazione.tariffafurgone" class="form-error-text">{{
+                      erroriValidazione.tariffafurgone
+                      }}</span>
                   </div>
                 </div>
 
                 <div class="form-row form-row--3col">
                   <div class="form-group">
                     <label class="form-label">Sovrapprezzo Elettrica (+€/h)</label>
-                    <input type="number" step="0.50" :class="['form-input', {'input-error': erroriValidazione.sovrapprezzoelettrica}]"
-                           v-model="nuovoGarage.sovrapprezzoelettrica" min="0" placeholder="Es. 2.00">
-                    <span v-if="erroriValidazione.sovrapprezzoelettrica" class="form-error-text">{{ erroriValidazione.sovrapprezzoelettrica }}</span>
+                    <input type="number" step="0.50"
+                      :class="['form-input', { 'input-error': erroriValidazione.sovrapprezzoelettrica }]"
+                      v-model="nuovoGarage.sovrapprezzoelettrica" min="0" placeholder="Es. 2.00">
+                    <span v-if="erroriValidazione.sovrapprezzoelettrica" class="form-error-text">{{
+                      erroriValidazione.sovrapprezzoelettrica }}</span>
                   </div>
                   <div class="form-group">
                     <label class="form-label">Sconto Disabili (-€/h)</label>
-                    <input type="number" step="0.50" :class="['form-input', {'input-error': erroriValidazione.scontodisabili}]"
-                           v-model="nuovoGarage.scontodisabili" min="0" placeholder="Es. 1.00">
-                    <span v-if="erroriValidazione.scontodisabili" class="form-error-text">{{ erroriValidazione.scontodisabili }}</span>
+                    <input type="number" step="0.50"
+                      :class="['form-input', { 'input-error': erroriValidazione.scontodisabili }]"
+                      v-model="nuovoGarage.scontodisabili" min="0" placeholder="Es. 1.00">
+                    <span v-if="erroriValidazione.scontodisabili" class="form-error-text">{{
+                      erroriValidazione.scontodisabili
+                      }}</span>
                   </div>
                   <div class="form-group">
                     <label class="form-label">Altezza Massima (m)</label>
-                    <input type="number" step="0.10" class="form-input" v-model="nuovoGarage.altezzamassima" min="0" placeholder="Opzionale">
+                    <input type="number" step="0.10" class="form-input" v-model="nuovoGarage.altezzamassima" min="0"
+                      placeholder="Opzionale">
                   </div>
                 </div>
 
                 <div class="form-row form-row--2col">
                   <div class="form-group">
                     <label class="form-label">Orario Apertura</label>
-                    <input type="time" class="form-input" v-model="nuovoGarage.orarioapertura" :disabled="nuovoGarage.is24h">
+                    <input type="time" class="form-input" v-model="nuovoGarage.orarioapertura"
+                      :disabled="nuovoGarage.is24h">
                   </div>
                   <div class="form-group">
                     <label class="form-label">Orario Chiusura</label>
-                    <input type="time" class="form-input" v-model="nuovoGarage.orariochiusura" :disabled="nuovoGarage.is24h">
+                    <input type="time" class="form-input" v-model="nuovoGarage.orariochiusura"
+                      :disabled="nuovoGarage.is24h">
                   </div>
                 </div>
                 <div class="form-row">
@@ -1375,13 +1436,15 @@ const salvaManutenzione = async () => {
                 <hr style="margin: 30px 0; border: none; border-top: 1px solid #E8E8E8;">
 
                 <!-- Configurazione posti -->
-                <div class="section-header"><h2>Crea i Posti Auto</h2></div>
+                <div class="section-header">
+                  <h2>Crea i Posti Auto</h2>
+                </div>
 
                 <div class="posto-creator">
                   <div class="form-group">
                     <label class="form-label">Codice</label>
-                    <input type="text" class="form-input" v-model="nuovoPosto.codice"
-                           placeholder="Es. A01" @input="autoCompilaPosto" @keyup.enter="aggiungiPostoConfigurato">
+                    <input type="text" class="form-input" v-model="nuovoPosto.codice" placeholder="Es. A01"
+                      @input="autoCompilaPosto" @keyup.enter="aggiungiPostoConfigurato">
                   </div>
                   <div class="form-group">
                     <label class="form-label">Veicolo</label>
@@ -1392,9 +1455,15 @@ const salvaManutenzione = async () => {
                     </select>
                   </div>
                   <div class="form-group check-group">
-                    <label class="checkbox-label"><input type="checkbox" v-model="nuovoPosto.isElettrica" class="checkbox-input"> Elettrica</label>
-                    <label class="checkbox-label"><input type="checkbox" v-model="nuovoPosto.isDisabili"  class="checkbox-input"> Disabili</label>
-                    <label class="checkbox-label"><input type="checkbox" v-model="nuovoPosto.isCoperto"   class="checkbox-input"> Coperto</label>
+                    <label class="checkbox-label"><input type="checkbox" v-model="nuovoPosto.isElettrica"
+                        class="checkbox-input">
+                      Elettrica</label>
+                    <label class="checkbox-label"><input type="checkbox" v-model="nuovoPosto.isDisabili"
+                        class="checkbox-input">
+                      Disabili</label>
+                    <label class="checkbox-label"><input type="checkbox" v-model="nuovoPosto.isCoperto"
+                        class="checkbox-input">
+                      Coperto</label>
                   </div>
                   <div class="form-group" style="justify-content: flex-end;">
                     <button type="button" class="btn-secondary" @click="aggiungiPostoConfigurato">+ Aggiungi</button>
@@ -1407,13 +1476,20 @@ const salvaManutenzione = async () => {
                       <span class="posto-codice">{{ posto.codice }}</span>
                       <span class="posto-tipo">{{ posto.tipo }}</span>
                       <div class="posto-icons">
-                        <span v-if="posto.isElettrica" title="Elettrica"><img src="../assets/electricity.svg" class="icon-card"></span>
-                        <span v-if="posto.isDisabili"  title="Disabili"><img src="../assets/handicap.svg"    class="icon-card"></span>
-                        <span v-if="posto.isCoperto"   title="Coperto"><img src="../assets/parcheggio_coperto.svg" class="icon-card"></span>
+                        <span v-if="posto.isElettrica" title="Elettrica"><img src="../assets/electricity.svg"
+                            class="icon-card"></span>
+                        <span v-if="posto.isDisabili" title="Disabili"><img src="../assets/handicap.svg"
+                            class="icon-card"></span>
+                        <span v-if="posto.isCoperto" title="Coperto"><img src="../assets/parcheggio_coperto.svg"
+                            class="icon-card"></span>
                       </div>
                     </div>
                     <button type="button" class="btn-rimuovi" @click="rimuoviPostoConfigurato(index)" title="Rimuovi">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
                     </button>
                   </div>
                 </div>
@@ -1421,36 +1497,32 @@ const salvaManutenzione = async () => {
                 <hr style="margin: 30px 0; border: none; border-top: 1px solid #E8E8E8;">
 
                 <!-- Canvas planimetria -->
-                <div class="section-header"><h2>Disegna la Planimetria</h2></div>
+                <div class="section-header">
+                  <h2>Disegna la Planimetria</h2>
+                </div>
 
                 <div class="form-row form-row--2col">
                   <div class="form-group">
                     <label class="form-label">Larghezza (Unità)</label>
                     <input type="number" class="form-input" v-model.number="dimensioniMappa.colonne"
-                           @change="ridimensionaGriglia" min="2" max="30">
+                      @change="ridimensionaGriglia" min="2" max="30">
                   </div>
                   <div class="form-group">
                     <label class="form-label">Altezza (Unità)</label>
                     <input type="number" class="form-input" v-model.number="dimensioniMappa.righe"
-                           @change="ridimensionaGriglia" min="2" max="30">
+                      @change="ridimensionaGriglia" min="2" max="30">
                   </div>
                 </div>
 
                 <div class="d-flex justify-content-center w-100" v-if="postiConfigurati.length > 0">
                   <div class="tavolozza">
                     <span class="tavolozza-label">Strumento attivo:</span>
-                    <button type="button" class="tool-btn btn-gomma"
-                            :class="{ active: strumentoAttivo === 'GOMMA' }"
-                            @click="strumentoAttivo = 'GOMMA'">Gomma</button>
-                    <button type="button"
-                            v-for="posto in postiConfigurati" :key="posto.codice"
-                            class="tool-btn"
-                            :class="[posto.tipo.toLowerCase(), {
-                              active:   strumentoAttivo?.codice === posto.codice,
-                              disabled: codiciPosizionati.has(posto.codice)
-                            }]"
-                            :disabled="codiciPosizionati.has(posto.codice)"
-                            @click="selezionaStrumento(posto)">
+                    <button type="button" class="tool-btn btn-gomma" :class="{ active: strumentoAttivo === 'GOMMA' }"
+                      @click="strumentoAttivo = 'GOMMA'">Gomma</button>
+                    <button type="button" v-for="posto in postiConfigurati" :key="posto.codice" class="tool-btn" :class="[posto.tipo.toLowerCase(), {
+                      active: strumentoAttivo?.codice === posto.codice,
+                      disabled: codiciPosizionati.has(posto.codice)
+                    }]" :disabled="codiciPosizionati.has(posto.codice)" @click="selezionaStrumento(posto)">
                       {{ posto.codice }} ({{ posto.tipo }})
                     </button>
                   </div>
@@ -1458,12 +1530,10 @@ const salvaManutenzione = async () => {
 
                 <div class="canvas-wrapper d-flex justify-content-center w-100">
                   <div class="canvas-griglia"
-                       :style="{ gridTemplateColumns: `repeat(${dimensioniMappa.colonne}, 35px)` }">
+                    :style="{ gridTemplateColumns: `repeat(${dimensioniMappa.colonne}, 35px)` }">
                     <template v-for="(riga, r) in griglia" :key="'r-'+r">
-                      <div v-for="(cella, c) in riga" :key="'c-'+r+'-'+c"
-                           class="cella-canvas"
-                           :class="{ occupata: cella, root: cella?.isRoot }"
-                           @click="clickCella(r, c)">
+                      <div v-for="(cella, c) in riga" :key="'c-' + r + '-' + c" class="cella-canvas"
+                        :class="{ occupata: cella, root: cella?.isRoot }" @click="clickCella(r, c)">
                         <span v-if="cella?.isRoot">{{ cella.codice }}</span>
                         <span v-else-if="!cella" class="cella-empty-dot">·</span>
                       </div>
@@ -1473,17 +1543,17 @@ const salvaManutenzione = async () => {
 
                 <div v-if="stringaMappaGenerata" class="anteprima-mappa">
                   <h4>Anteprima Planimetria</h4>
-                  <PlanimetriaGarage :posti="postiConvertitiPerAnteprima"
-                                     :mappaTestuale="stringaMappaGenerata"
-                                     :isAnteprima="true" :mostraErrori="false" />
+                  <PlanimetriaGarage :posti="postiConvertitiPerAnteprima" :mappaTestuale="stringaMappaGenerata"
+                    :isAnteprima="true" :mostraErrori="false" />
                 </div>
-                <span v-if="erroriValidazione.mappatestuale" class="form-error-text" style="display:block; margin-top:10px;">
+                <span v-if="erroriValidazione.mappatestuale" class="form-error-text"
+                  style="display:block; margin-top:10px;">
                   {{ erroriValidazione.mappatestuale }}
                 </span>
 
                 <div class="form-actions">
                   <button type="submit" class="btn-primary" :disabled="staSalvando">
-                    {{ staSalvando ? 'Salvataggio in corso...' : 'Pubblica Garage' }}
+                    {{ staSalvando ? 'Salvataggio in corso...' : (isEditing ? 'Salva modifiche' : 'Pubblica Garage') }}
                   </button>
                 </div>
 
@@ -1496,8 +1566,8 @@ const salvaManutenzione = async () => {
     </div>
 
     <!-- ── Modal Info ──────────────────────────────────────────────────────── -->
-    <div class="modal fade" id="infoModal" ref="infoModalElement"
-         tabindex="-1" aria-labelledby="infoModalLabel" aria-hidden="true">
+    <div class="modal fade" id="infoModal" ref="infoModalElement" tabindex="-1" aria-labelledby="infoModalLabel"
+      aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content parkly-modal">
           <div class="modal-header border-0">
@@ -1508,9 +1578,14 @@ const salvaManutenzione = async () => {
           </div>
           <div class="modal-body px-4 pb-4 pt-0">
             <ul class="info-list">
-              <li>Cerca il tuo indirizzo per avvicinarti, poi clicca sulla mappa interattiva per posizionare il pin esattamente sopra il tuo garage.</li>
-              <li>Configura la tipologia del posto (Auto, Moto, Furgone) e aggiungi servizi extra. Il codice verrà generato in automatico se lasciato vuoto.</li>
-              <li>Una volta creati i posti, selezionali dalla tavolozza e clicca sulla griglia a scacchiera per disegnare visivamente il layout reale del garage.</li>
+              <li>Cerca il tuo indirizzo per avvicinarti, poi clicca sulla mappa interattiva per posizionare il pin
+                esattamente sopra il tuo garage.</li>
+              <li>Configura la tipologia del posto (Auto, Moto, Furgone) e aggiungi servizi extra. Il codice verrà
+                generato
+                in automatico se lasciato vuoto.</li>
+              <li>Una volta creati i posti, selezionali dalla tavolozza e clicca sulla griglia a scacchiera per
+                disegnare
+                visivamente il layout reale del garage.</li>
             </ul>
           </div>
         </div>
@@ -1519,48 +1594,43 @@ const salvaManutenzione = async () => {
 
     <!-- ── Chat Popup ──────────────────────────────────────────────────────── -->
     <div v-if="chatSelezionata" class="chat-popup-container">
-      <ChatBox
-        @chiudi="chiudiChat"
-        :idPrenotazione="chatSelezionata.idPrenotazione"
-        :idGarage="chatSelezionata.idGarage"
-        :idDestinatario="chatSelezionata.idDestinatario"
-        :nomeDestinatario="chatSelezionata.nomeDestinatario"
-        ruoloDestinatario="Cliente"
-      />
+      <ChatBox @chiudi="chiudiChat" :idPrenotazione="chatSelezionata.idPrenotazione"
+        :idGarage="chatSelezionata.idGarage" :idDestinatario="chatSelezionata.idDestinatario"
+        :nomeDestinatario="chatSelezionata.nomeDestinatario" ruoloDestinatario="Cliente" />
     </div>
 
     <div v-if="showMaintenanceModal" class="custom-modal-overlay">
-  <div class="custom-modal shadow-lg">
-    <div class="modal-header border-0 pb-0">
-      <h3 class="modal-title h5">Gestione Posto {{ postoDaGestire?.codiceposto }}</h3>
-      <button @click="showMaintenanceModal = false" class="btn-close"></button>
+      <div class="custom-modal shadow-lg">
+        <div class="modal-header border-0 pb-0">
+          <h3 class="modal-title h5">Gestione Posto {{ postoDaGestire?.codiceposto }}</h3>
+          <button @click="showMaintenanceModal = false" class="btn-close"></button>
+        </div>
+        <div class="modal-body pt-2">
+          <p class="text-muted small mb-4">Seleziona il periodo in cui il posto non sarà disponibile per la sosta.</p>
+
+          <div class="form-group mb-3">
+            <label class="form-label">Inizio Blocco</label>
+            <input type="datetime-local" v-model="manutenzioneData.inizio" class="form-input">
+          </div>
+
+          <div class="form-group mb-3">
+            <label class="form-label">Fine Blocco</label>
+            <input type="datetime-local" v-model="manutenzioneData.fine" class="form-input">
+          </div>
+
+          <div class="form-group mb-4">
+            <label class="form-label">Motivazione (Opzionale)</label>
+            <textarea v-model="manutenzioneData.motivazione" class="form-input"
+              placeholder="Es. Manutenzione ordinaria, colonnina guasta..." rows="2"></textarea>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button @click="salvaManutenzione" class="btn-primary flex-grow-1">Conferma Blocco</button>
+            <button @click="showMaintenanceModal = false" class="btn-secondary">Annulla</button>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="modal-body pt-2">
-      <p class="text-muted small mb-4">Seleziona il periodo in cui il posto non sarà disponibile per la sosta.</p>
-      
-      <div class="form-group mb-3">
-        <label class="form-label">Inizio Blocco</label>
-        <input type="datetime-local" v-model="manutenzioneData.inizio" class="form-input">
-      </div>
-
-      <div class="form-group mb-3">
-        <label class="form-label">Fine Blocco</label>
-        <input type="datetime-local" v-model="manutenzioneData.fine" class="form-input">
-      </div>
-
-      <div class="form-group mb-4">
-        <label class="form-label">Motivazione (Opzionale)</label>
-        <textarea v-model="manutenzioneData.motivazione" class="form-input" 
-                  placeholder="Es. Manutenzione ordinaria, colonnina guasta..." rows="2"></textarea>
-      </div>
-
-      <div class="d-flex gap-2">
-        <button @click="salvaManutenzione" class="btn-primary flex-grow-1">Conferma Blocco</button>
-        <button @click="showMaintenanceModal = false" class="btn-secondary">Annulla</button>
-      </div>
-    </div>
-  </div>
-</div>
 
     <Footer />
   </div>
@@ -1568,250 +1638,1242 @@ const salvaManutenzione = async () => {
 
 <style scoped>
 /* ── Layout ─────────────────────────────────────────────────────────────── */
-.page-wrapper    { display: flex; flex-direction: column; min-height: 100vh; background-color: var(--bg-light, #F5F5F3); font-family: 'Inter', -apple-system, sans-serif; }
-.dashboard-layout { display: flex; flex: 1; }
+.page-wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--bg-light, #F5F5F3);
+  font-family: 'Inter', -apple-system, sans-serif;
+}
 
-.access-denied   { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 80px 20px; color: #aaa; text-align: center; }
-.access-denied svg { color: #ddd; }
-.access-denied h2  { font-size: 1.4rem; color: #444; margin: 0; }
-.access-denied p   { font-size: 0.9rem; color: #888; max-width: 380px; margin: 0; }
-.btn-back { margin-top: 8px; display: inline-block; padding: 10px 24px; background: #0066CC; color: #fff; border-radius: 8px; text-decoration: none; font-size: 0.875rem; font-weight: 600; transition: background 0.15s; }
-.btn-back:hover { background: #00204A; }
+.dashboard-layout {
+  display: flex;
+  flex: 1;
+}
+
+.access-denied {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 80px 20px;
+  color: #aaa;
+  text-align: center;
+}
+
+.access-denied svg {
+  color: #ddd;
+}
+
+.access-denied h2 {
+  font-size: 1.4rem;
+  color: #444;
+  margin: 0;
+}
+
+.access-denied p {
+  font-size: 0.9rem;
+  color: #888;
+  max-width: 380px;
+  margin: 0;
+}
+
+.btn-back {
+  margin-top: 8px;
+  display: inline-block;
+  padding: 10px 24px;
+  background: #0066CC;
+  color: #fff;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: background 0.15s;
+}
+
+.btn-back:hover {
+  background: #00204A;
+}
 
 /* ── Sidebar ─────────────────────────────────────────────────────────────── */
-.sidebar         { width: 240px; min-width: 240px; background-color: var(--deep-blue, #00204A); display: flex; flex-direction: column; padding: 28px 16px 20px; }
-.sidebar-brand   { display: flex; align-items: center; gap: 10px; color: rgba(255,255,255,0.9); font-size: 0.95rem; font-weight: 600; padding: 0 8px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 12px; }
-.sidebar-nav     { display: flex; flex-direction: column; gap: 2px; flex: 1; }
-.nav-item        { position: relative; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; color: rgba(255,255,255,0.5); text-decoration: none; font-size: 0.875rem; font-weight: 500; transition: background 0.15s, color 0.15s; }
-.nav-item:hover  { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.85); }
-.nav-item.active { background: rgba(255,255,255,0.1); color: #fff; }
-.nav-indicator   { position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 3px; height: 18px; background: #0066CC; border-radius: 0 2px 2px 0; }
-.nav-icon        { display: flex; align-items: center; flex-shrink: 0; }
-.sidebar-user    { display: flex; align-items: center; gap: 10px; padding: 14px 8px 0; border-top: 1px solid rgba(255,255,255,0.08); margin-top: 16px; }
-.sidebar-avatar  { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 1.5px solid rgba(255,255,255,0.15); flex-shrink: 0; }
-.sidebar-user-info { display: flex; flex-direction: column; gap: 1px; overflow: hidden; }
-.sidebar-user-name { font-size: 0.82rem; font-weight: 600; color: rgba(255,255,255,0.9); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sidebar-user-role { font-size: 0.7rem; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.06em; }
+.sidebar {
+  width: 240px;
+  min-width: 240px;
+  background-color: var(--deep-blue, #00204A);
+  display: flex;
+  flex-direction: column;
+  padding: 28px 16px 20px;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 0 8px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 12px;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.5);
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: background 0.15s, color 0.15s;
+}
+
+.nav-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.nav-item.active {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.nav-indicator {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 18px;
+  background: #0066CC;
+  border-radius: 0 2px 2px 0;
+}
+
+.nav-icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 8px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: 16px;
+}
+
+.sidebar-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  flex-shrink: 0;
+}
+
+.sidebar-user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow: hidden;
+}
+
+.sidebar-user-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-user-role {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
 
 /* ── Main ────────────────────────────────────────────────────────────────── */
-.main-content { flex: 1; padding: 40px 48px; overflow-y: auto; }
-.centered-container { max-width: 960px; margin: 0 auto; }
-.loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; min-height: 300px; color: #aaa; font-size: 0.875rem; }
-.spinner { width: 32px; height: 32px; border: 3px solid #E8E8E8; border-top-color: #0066CC; border-radius: 50%; animation: spin 0.7s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-.vista { animation: fadeIn 0.25s ease; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.main-content {
+  flex: 1;
+  padding: 40px 48px;
+  overflow-y: auto;
+}
+
+.centered-container {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  min-height: 300px;
+  color: #aaa;
+  font-size: 0.875rem;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #E8E8E8;
+  border-top-color: #0066CC;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.vista {
+  animation: fadeIn 0.25s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
 /* ── Alert ───────────────────────────────────────────────────────────────── */
-.alert         { padding: 12px 16px; border-radius: 8px; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; }
-.alert.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-.alert.error   { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-.close-btn     { background: none; border: none; cursor: pointer; color: inherit; opacity: 0.4; font-size: 1.1rem; line-height: 1; }
-.close-btn:hover { opacity: 0.8; }
+.alert {
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.alert.success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.alert.error {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.4;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.close-btn:hover {
+  opacity: 0.8;
+}
 
 /* ── Page header ─────────────────────────────────────────────────────────── */
-.page-header    { margin-bottom: 32px; }
-.page-header h1 { font-size: 1.6rem; font-weight: 700; color: var(--deep-blue, #00204A); letter-spacing: -0.5px; margin: 0 0 4px; }
-.subtitle       { font-size: 0.875rem; color: #888; margin: 0; }
-.section-header { margin-bottom: 12px; }
-.section-header h2 { font-size: 1rem; font-weight: 600; color: var(--deep-blue, #00204A); }
+.page-header {
+  margin-bottom: 32px;
+}
+
+.page-header h1 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--deep-blue, #00204A);
+  letter-spacing: -0.5px;
+  margin: 0 0 4px;
+}
+
+.subtitle {
+  font-size: 0.875rem;
+  color: #888;
+  margin: 0;
+}
+
+.section-header {
+  margin-bottom: 12px;
+}
+
+.section-header h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--deep-blue, #00204A);
+}
 
 /* ── Statistiche: header + filtri ────────────────────────────────────────── */
-.stats-page-header  { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 16px; }
-.stats-filters      { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
-.stats-filters__group { margin-bottom: 0; }
-.stats-filters__label { font-size: 0.65rem; }
-.stats-filters__select { height: 38px; min-width: 200px; background-color: #fff; cursor: pointer; }
-.stats-filters__date   { height: 38px; width: 140px; background-color: #fff; }
+.stats-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.stats-filters {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.stats-filters__group {
+  margin-bottom: 0;
+}
+
+.stats-filters__label {
+  font-size: 0.65rem;
+}
+
+.stats-filters__select {
+  height: 38px;
+  min-width: 200px;
+  background-color: #fff;
+  cursor: pointer;
+}
+
+.stats-filters__date {
+  height: 38px;
+  width: 140px;
+  background-color: #fff;
+}
 
 /* ── Stat cards ──────────────────────────────────────────────────────────── */
-.stats-grid       { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 40px; }
-.stat-card        { background: #fff; border: 0.5px solid #E8E8E8; border-radius: 12px; padding: 20px; display: flex; align-items: center; gap: 16px; }
-.stat-icon        { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.stat-icon--blue  { background: #EBF3FF; color: #0066CC; }
-.stat-icon--green { background: #EAFAF1; color: #27AE60; }
-.stat-icon--amber { background: #FEF9EE; color: #E67E22; }
-.stat-body  { display: flex; flex-direction: column; gap: 2px; }
-.stat-label { font-size: 0.72rem; color: #999; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
-.stat-value { font-size: 1.5rem; font-weight: 700; color: var(--deep-blue, #00204A); letter-spacing: -0.5px; line-height: 1; }
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 40px;
+}
+
+.stat-card {
+  background: #fff;
+  border: 0.5px solid #E8E8E8;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.stat-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stat-icon--blue {
+  background: #EBF3FF;
+  color: #0066CC;
+}
+
+.stat-icon--green {
+  background: #EAFAF1;
+  color: #27AE60;
+}
+
+.stat-icon--amber {
+  background: #FEF9EE;
+  color: #E67E22;
+}
+
+.stat-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stat-label {
+  font-size: 0.72rem;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--deep-blue, #00204A);
+  letter-spacing: -0.5px;
+  line-height: 1;
+}
 
 /* ── Charts layout ───────────────────────────────────────────────────────── */
-.charts-row         { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 24px; }
-.charts-row--single { grid-template-columns: 1fr; justify-items: center; margin-bottom: 40px; }
+.charts-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.charts-row--single {
+  grid-template-columns: 1fr;
+  justify-items: center;
+  margin-bottom: 40px;
+}
 
 /* ── Chart card ──────────────────────────────────────────────────────────── */
-.chart-card          { background: #fff; border: 0.5px solid #E8E8E8; border-radius: 12px; padding: 20px; }
-.chart-card--centered { width: 100%; max-width: 600px; }
-.chart-header        { margin-bottom: 16px; }
-.chart-header--center { text-align: center; }
-.chart-title         { font-size: 1rem; color: #00204A; margin: 0; font-weight: 600; }
-.chart-subtitle      { font-size: 0.75rem; color: #888; margin: 4px 0 0; }
-.chart-body          { height: 250px; position: relative; }
-.chart-body--centered { display: flex; justify-content: center; }
-.chart-empty         { display: flex; height: 100%; align-items: center; justify-content: center; color: #aaa; font-size: 0.85rem; text-align: center; }
+.chart-card {
+  background: #fff;
+  border: 0.5px solid #E8E8E8;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.chart-card--centered {
+  width: 100%;
+  max-width: 600px;
+}
+
+.chart-header {
+  margin-bottom: 16px;
+}
+
+.chart-header--center {
+  text-align: center;
+}
+
+.chart-title {
+  font-size: 1rem;
+  color: #00204A;
+  margin: 0;
+  font-weight: 600;
+}
+
+.chart-subtitle {
+  font-size: 0.75rem;
+  color: #888;
+  margin: 4px 0 0;
+}
+
+.chart-body {
+  height: 250px;
+  position: relative;
+}
+
+.chart-body--centered {
+  display: flex;
+  justify-content: center;
+}
+
+.chart-empty {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  color: #aaa;
+  font-size: 0.85rem;
+  text-align: center;
+}
 
 /* ── Table ───────────────────────────────────────────────────────────────── */
-.table-card { background: #fff; border: 0.5px solid #E8E8E8; border-radius: 12px; overflow: hidden; }
-.parkly-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
-.parkly-table thead tr { background: #FAFAFA; border-bottom: 0.5px solid #EFEFEF; }
-.parkly-table th { padding: 12px 20px; text-align: left; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: #aaa; }
-.parkly-table tbody tr { border-bottom: 0.5px solid #F5F5F5; transition: background 0.1s; }
-.parkly-table tbody tr:last-child { border-bottom: none; }
-.parkly-table tbody tr:hover { background: #FAFBFF; }
-.parkly-table td { padding: 14px 20px; color: #444; }
-.td-muted { color: #bbb; font-size: 0.8rem; }
-.td-bold  { font-weight: 600; color: #222; }
-.td-blue  { color: #0066CC; }
-.td-empty { text-align: center; padding: 40px; color: #ccc; font-size: 0.85rem; }
-.garage-link { color: #0066CC; text-decoration: none; font-weight: 600; transition: color 0.15s; }
-.garage-link:hover { color: #00204A; text-decoration: underline; }
+.table-card {
+  background: #fff;
+  border: 0.5px solid #E8E8E8;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.parkly-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.parkly-table thead tr {
+  background: #FAFAFA;
+  border-bottom: 0.5px solid #EFEFEF;
+}
+
+.parkly-table th {
+  padding: 12px 20px;
+  text-align: left;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #aaa;
+}
+
+.parkly-table tbody tr {
+  border-bottom: 0.5px solid #F5F5F5;
+  transition: background 0.1s;
+}
+
+.parkly-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.parkly-table tbody tr:hover {
+  background: #FAFBFF;
+}
+
+.parkly-table td {
+  padding: 14px 20px;
+  color: #444;
+}
+
+.td-muted {
+  color: #bbb;
+  font-size: 0.8rem;
+}
+
+.td-bold {
+  font-weight: 600;
+  color: #222;
+}
+
+.td-blue {
+  color: #0066CC;
+}
+
+.td-empty {
+  text-align: center;
+  padding: 40px;
+  color: #ccc;
+  font-size: 0.85rem;
+}
+
+.garage-link {
+  color: #0066CC;
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.15s;
+}
+
+.garage-link:hover {
+  color: #00204A;
+  text-decoration: underline;
+}
 
 /* ── Badge & Targa ───────────────────────────────────────────────────────── */
-.badge       { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
-.badge--green { background: #EAFAF1; color: #1E8449; }
-.badge--red   { background: #FDEDEC; color: #C0392B; }
-.badge--gray  { background: #F0F0F0; color: #888; }
-.targa-badge  { display: inline-block; background: #F5F5F5; border: 0.5px solid #E0E0E0; border-radius: 4px; padding: 2px 8px; font-size: 0.78rem; font-weight: 600; font-family: 'Courier New', monospace; color: #444; letter-spacing: 0.06em; }
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.badge--green {
+  background: #EAFAF1;
+  color: #1E8449;
+}
+
+.badge--red {
+  background: #FDEDEC;
+  color: #C0392B;
+}
+
+.badge--gray {
+  background: #F0F0F0;
+  color: #888;
+}
+
+.targa-badge {
+  display: inline-block;
+  background: #F5F5F5;
+  border: 0.5px solid #E0E0E0;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
+  color: #444;
+  letter-spacing: 0.06em;
+}
 
 /* ── Stato garage ────────────────────────────────────────────────────────── */
-.stato-grid     { display: flex; flex-direction: column; gap: 24px; }
-.stato-card     { background: #fff; border: 0.5px solid #E8E8E8; border-radius: 12px; padding: 24px; width: 100%; box-sizing: border-box; }
-.stato-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
-.stato-nome     { font-size: 0.9rem; font-weight: 600; color: #222; }
-.stato-indirizzo { font-size: 0.78rem; color: #aaa; margin: 0 0 16px; }
-.occupancy-wrap { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-.occupancy-bar  { flex: 1; height: 6px; background: #F0F0F0; border-radius: 999px; overflow: hidden; }
-.occupancy-fill { height: 100%; background: #0066CC; border-radius: 999px; transition: width 0.4s ease; }
-.occupancy-fill.fill-warn { background: #E67E22; }
-.occupancy-pct  { font-size: 0.78rem; color: #888; font-weight: 600; min-width: 34px; text-align: right; }
-.stato-meta     { display: flex; justify-content: space-between; font-size: 0.75rem; color: #aaa; }
-.stato-meta span { display: flex; align-items: center; gap: 4px; }
-.planimetria-wrapper { margin-top: 16px; border-top: 1px solid #f0f0f0; padding-top: 12px; overflow-x: auto; }
-.filter-card    { background: #fff; border: 0.5px solid #E8E8E8; border-radius: 12px; padding: 20px; margin-bottom: 24px; }
+.stato-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.stato-card {
+  background: #fff;
+  border: 0.5px solid #E8E8E8;
+  border-radius: 12px;
+  padding: 24px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.stato-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.stato-nome {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #222;
+}
+
+.stato-indirizzo {
+  font-size: 0.78rem;
+  color: #aaa;
+  margin: 0 0 16px;
+}
+
+.occupancy-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.occupancy-bar {
+  flex: 1;
+  height: 6px;
+  background: #F0F0F0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.occupancy-fill {
+  height: 100%;
+  background: #0066CC;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+.occupancy-fill.fill-warn {
+  background: #E67E22;
+}
+
+.occupancy-pct {
+  font-size: 0.78rem;
+  color: #888;
+  font-weight: 600;
+  min-width: 34px;
+  text-align: right;
+}
+
+.stato-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: #aaa;
+}
+
+.stato-meta span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.planimetria-wrapper {
+  margin-top: 16px;
+  border-top: 1px solid #f0f0f0;
+  padding-top: 12px;
+  overflow-x: auto;
+}
+
+.filter-card {
+  background: #fff;
+  border: 0.5px solid #E8E8E8;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
 
 /* ── Allerte ─────────────────────────────────────────────────────────────── */
-.allerta-card    { display: flex; align-items: flex-start; gap: 16px; padding: 20px 24px; border-radius: 12px; margin-bottom: 12px; border: 0.5px solid transparent; }
-.allerta--ok     { background: #EAFAF1; border-color: #A9DFBF; }
-.allerta--ok .allerta-icon { color: #27AE60; }
-.allerta--warn   { background: #FEF9EE; border-color: #FAD7A0; }
-.allerta--warn .allerta-icon { color: #E67E22; }
-.allerta--danger { background: #FDEDEC; border-color: #F1948A; }
-.allerta--danger .allerta-icon { color: #C0392B; }
-.allerta-icon    { display: flex; align-items: center; margin-top: 1px; flex-shrink: 0; }
-.allerta-title   { font-size: 0.9rem; font-weight: 600; color: #222; margin: 0 0 4px; }
-.allerta-msg     { font-size: 0.85rem; color: #666; margin: 0; line-height: 1.5; }
+.allerta-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px 24px;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  border: 0.5px solid transparent;
+}
+
+.allerta--ok {
+  background: #EAFAF1;
+  border-color: #A9DFBF;
+}
+
+.allerta--ok .allerta-icon {
+  color: #27AE60;
+}
+
+.allerta--warn {
+  background: #FEF9EE;
+  border-color: #FAD7A0;
+}
+
+.allerta--warn .allerta-icon {
+  color: #E67E22;
+}
+
+.allerta--danger {
+  background: #FDEDEC;
+  border-color: #F1948A;
+}
+
+.allerta--danger .allerta-icon {
+  color: #C0392B;
+}
+
+.allerta-icon {
+  display: flex;
+  align-items: center;
+  margin-top: 1px;
+  flex-shrink: 0;
+}
+
+.allerta-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #222;
+  margin: 0 0 4px;
+}
+
+.allerta-msg {
+  font-size: 0.85rem;
+  color: #666;
+  margin: 0;
+  line-height: 1.5;
+}
 
 /* ── Form ────────────────────────────────────────────────────────────────── */
-.form-card      { background: #fff; border: 0.5px solid #E8E8E8; border-radius: 12px; padding: 32px; }
-.form-row       { margin-bottom: 20px; }
-.form-row--2col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
-.form-row--3col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 20px; }
-.form-group     { display: flex; flex-direction: column; gap: 6px; }
-.form-label     { font-size: 0.75rem; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 0.06em; }
-.form-input     { height: 48px; border: 0.5px solid #E0E0E0; border-radius: 8px; padding: 0 14px; font-size: 0.9rem; color: #222; background: #FAFAFA; outline: none; font-family: inherit; transition: border-color 0.15s, background 0.15s; width: 100%; box-sizing: border-box; }
-.form-input:focus    { border-color: #0066CC; background: #fff; box-shadow: 0 0 0 3px rgba(0,102,204,0.08); }
-.form-input:disabled { opacity: 0.4; cursor: not-allowed; }
-.form-hint      { font-size: 0.78rem; color: #aaa; }
-.checkbox-label { display: flex; align-items: center; gap: 10px; font-size: 0.875rem; color: #444; cursor: pointer; }
-.checkbox-input { width: 16px; height: 16px; accent-color: #0066CC; cursor: pointer; }
-.input-error    { border-color: #C0392B !important; background-color: #FDEDEC !important; }
-.form-error-text { color: #C0392B; font-size: 0.8rem; font-weight: 600; margin-top: 4px; }
-.form-actions   { margin-top: 28px; padding-top: 24px; border-top: 0.5px solid #F0F0F0; }
-.btn-primary    { background: #0066CC; color: #fff; border: none; border-radius: 8px; height: 48px; padding: 0 32px; font-size: 0.9rem; font-weight: 600; cursor: pointer; font-family: inherit; transition: background 0.15s, transform 0.1s; }
-.btn-primary:hover:not(:disabled) { background: #00204A; transform: translateY(-1px); }
-.btn-primary:disabled { background: #ccc; cursor: not-allowed; }
-.btn-secondary  { background: #fff; border: 1px solid #0066CC; color: #0066CC; height: 48px; padding: 0 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
-.btn-secondary:hover:not(:disabled) { background: #0066CC; color: #fff; }
-.btn-secondary:disabled { border-color: #ccc; color: #ccc; cursor: not-allowed; }
+.form-card {
+  background: #fff;
+  border: 0.5px solid #E8E8E8;
+  border-radius: 12px;
+  padding: 32px;
+}
+
+.form-row {
+  margin-bottom: 20px;
+}
+
+.form-row--2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.form-row--3col {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.form-input {
+  height: 48px;
+  border: 0.5px solid #E0E0E0;
+  border-radius: 8px;
+  padding: 0 14px;
+  font-size: 0.9rem;
+  color: #222;
+  background: #FAFAFA;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.15s, background 0.15s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.form-input:focus {
+  border-color: #0066CC;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.08);
+}
+
+.form-input:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.form-hint {
+  font-size: 0.78rem;
+  color: #aaa;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.875rem;
+  color: #444;
+  cursor: pointer;
+}
+
+.checkbox-input {
+  width: 16px;
+  height: 16px;
+  accent-color: #0066CC;
+  cursor: pointer;
+}
+
+.input-error {
+  border-color: #C0392B !important;
+  background-color: #FDEDEC !important;
+}
+
+.form-error-text {
+  color: #C0392B;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.form-actions {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 0.5px solid #F0F0F0;
+}
+
+.btn-primary {
+  background: #0066CC;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  height: 48px;
+  padding: 0 32px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #00204A;
+  transform: translateY(-1px);
+}
+
+.btn-primary:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: #fff;
+  border: 1px solid #0066CC;
+  color: #0066CC;
+  height: 48px;
+  padding: 0 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #0066CC;
+  color: #fff;
+}
+
+.btn-secondary:disabled {
+  border-color: #ccc;
+  color: #ccc;
+  cursor: not-allowed;
+}
 
 /* ── Info btn ────────────────────────────────────────────────────────────── */
-.info-icon-btn { width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-width: 2px; }
+.info-icon-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-width: 2px;
+}
 
 /* ── Configuratore posti ─────────────────────────────────────────────────── */
-.posto-creator { display: grid; grid-template-columns: 2fr 2fr 3fr auto; gap: 12px; align-items: flex-end; background: #FAFBFF; border: 1px solid #D6E4F0; padding: 16px; border-radius: 8px; margin-bottom: 16px; }
-.check-group   { display: flex; flex-direction: row; gap: 12px; align-items: center; padding-bottom: 12px; }
-.posti-list.vertical-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-bottom: 24px; }
-.posto-card    { display: flex; justify-content: space-between; align-items: center; background: #FAFBFF; border: 1px solid #D6E4F0; border-radius: 8px; padding: 12px 16px; transition: border-color 0.2s, box-shadow 0.2s; }
-.posto-card:hover { border-color: #BADCFF; background: #F0F6FF; }
-.posto-info    { display: flex; align-items: center; gap: 12px; }
-.posto-codice  { font-size: 1.05rem; font-weight: 700; color: #00408A; min-width: 40px; }
-.posto-tipo    { font-size: 0.75rem; color: #555; font-weight: 600; background: #E8E8E8; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
-.posto-icons   { display: flex; gap: 6px; font-size: 1rem; }
-.btn-rimuovi   { background: transparent; border: none; color: #aaa; cursor: pointer; padding: 6px; display: flex; align-items: center; justify-content: center; border-radius: 6px; transition: all 0.15s ease; }
-.btn-rimuovi:hover { background: #FDEDEC; color: #C0392B; }
-.icon-card     { width: 14px; height: 14px; margin-right: 5px; }
+.posto-creator {
+  display: grid;
+  grid-template-columns: 2fr 2fr 3fr auto;
+  gap: 12px;
+  align-items: flex-end;
+  background: #FAFBFF;
+  border: 1px solid #D6E4F0;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.check-group {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  align-items: center;
+  padding-bottom: 12px;
+}
+
+.posti-list.vertical-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.posto-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #FAFBFF;
+  border: 1px solid #D6E4F0;
+  border-radius: 8px;
+  padding: 12px 16px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.posto-card:hover {
+  border-color: #BADCFF;
+  background: #F0F6FF;
+}
+
+.posto-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.posto-codice {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #00408A;
+  min-width: 40px;
+}
+
+.posto-tipo {
+  font-size: 0.75rem;
+  color: #555;
+  font-weight: 600;
+  background: #E8E8E8;
+  padding: 3px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.posto-icons {
+  display: flex;
+  gap: 6px;
+  font-size: 1rem;
+}
+
+.btn-rimuovi {
+  background: transparent;
+  border: none;
+  color: #aaa;
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.btn-rimuovi:hover {
+  background: #FDEDEC;
+  color: #C0392B;
+}
+
+.icon-card {
+  width: 14px;
+  height: 14px;
+  margin-right: 5px;
+}
 
 /* ── Canvas planimetria ──────────────────────────────────────────────────── */
-.tavolozza       { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: center; margin-bottom: 16px; padding: 12px; background: #fdfdfd; border: 1px solid #eee; border-radius: 8px; }
-.tavolozza-label { font-size: 0.8rem; font-weight: 600; color: #666; margin-right: 8px; }
-.tool-btn        { padding: 6px 12px; border: 2px solid transparent; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.8rem; transition: all 0.2s; background: #EBF3FF; color: #00408A; }
-.tool-btn:hover  { filter: brightness(0.95); }
-.tool-btn.active { border-color: #00408A; box-shadow: 0 0 0 3px rgba(0,64,138,0.2); }
-.tool-btn.disabled { opacity: 0.4; cursor: not-allowed; text-decoration: line-through; }
-.btn-gomma       { background: #FDEDEC; color: #C0392B; }
-.btn-gomma.active { border-color: #C0392B; box-shadow: 0 0 0 3px rgba(192,57,43,0.2); }
-.canvas-wrapper  { overflow-x: auto; padding-bottom: 10px; }
-.canvas-griglia  { display: grid; gap: 2px; width: fit-content; background: #e0e0e0; border: 2px solid #ccc; padding: 2px; }
-.cella-canvas    { height: 35px; background: #FAFAFA; display: flex; align-items: center; justify-content: center; cursor: pointer; user-select: none; transition: filter 0.1s; }
-.cella-canvas:hover { filter: brightness(0.9); }
-.cella-canvas.occupata { background: #0066CC; color: #fff; }
-.cella-canvas.root { font-weight: bold; font-size: 0.75rem; }
-.cella-empty-dot { color: #ccc; font-weight: bold; }
-.anteprima-mappa { background: #fff; border: 1px solid #E8E8E8; padding: 20px; border-radius: 8px; margin-top: 30px; overflow-x: auto; }
-.anteprima-mappa h4 { margin: 0 0 16px; font-size: 1rem; color: #222; }
+.tavolozza {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #fdfdfd;
+  border: 1px solid #eee;
+  border-radius: 8px;
+}
+
+.tavolozza-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #666;
+  margin-right: 8px;
+}
+
+.tool-btn {
+  padding: 6px 12px;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.8rem;
+  transition: all 0.2s;
+  background: #EBF3FF;
+  color: #00408A;
+}
+
+.tool-btn:hover {
+  filter: brightness(0.95);
+}
+
+.tool-btn.active {
+  border-color: #00408A;
+  box-shadow: 0 0 0 3px rgba(0, 64, 138, 0.2);
+}
+
+.tool-btn.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+
+.btn-gomma {
+  background: #FDEDEC;
+  color: #C0392B;
+}
+
+.btn-gomma.active {
+  border-color: #C0392B;
+  box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.2);
+}
+
+.canvas-wrapper {
+  overflow-x: auto;
+  padding-bottom: 10px;
+}
+
+.canvas-griglia {
+  display: grid;
+  gap: 2px;
+  width: fit-content;
+  background: #e0e0e0;
+  border: 2px solid #ccc;
+  padding: 2px;
+}
+
+.cella-canvas {
+  height: 35px;
+  background: #FAFAFA;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  transition: filter 0.1s;
+}
+
+.cella-canvas:hover {
+  filter: brightness(0.9);
+}
+
+.cella-canvas.occupata {
+  background: #0066CC;
+  color: #fff;
+}
+
+.cella-canvas.root {
+  font-weight: bold;
+  font-size: 0.75rem;
+}
+
+.cella-empty-dot {
+  color: #ccc;
+  font-weight: bold;
+}
+
+.anteprima-mappa {
+  background: #fff;
+  border: 1px solid #E8E8E8;
+  padding: 20px;
+  border-radius: 8px;
+  margin-top: 30px;
+  overflow-x: auto;
+}
+
+.anteprima-mappa h4 {
+  margin: 0 0 16px;
+  font-size: 1rem;
+  color: #222;
+}
 
 /* ── Modal ───────────────────────────────────────────────────────────────── */
-.parkly-modal     { border-radius: 24px; border: none; box-shadow: 0 15px 50px rgba(0,0,0,0.2); }
-.modal-title-text { font-weight: 700; color: #00408a; font-size: 1.3rem; }
-.info-list        { padding-left: 20px; color: #444; font-size: 0.95rem; line-height: 1.6; }
-.info-list li     { margin-bottom: 12px; }
+.parkly-modal {
+  border-radius: 24px;
+  border: none;
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.2);
+}
+
+.modal-title-text {
+  font-weight: 700;
+  color: #00408a;
+  font-size: 1.3rem;
+}
+
+.info-list {
+  padding-left: 20px;
+  color: #444;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.info-list li {
+  margin-bottom: 12px;
+}
 
 /* ── Chat ────────────────────────────────────────────────────────────────── */
 .btn-chat {
   position: relative;
-  display: inline-flex; align-items: center; gap: 5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   padding: 5px 12px;
-  border: 0.5px solid #0066CC; border-radius: 6px;
-  background: #EBF3FF; color: #0066CC;
-  font-size: 0.75rem; font-weight: 600;
-  cursor: pointer; font-family: inherit;
+  border: 0.5px solid #0066CC;
+  border-radius: 6px;
+  background: #EBF3FF;
+  color: #0066CC;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
   transition: background 0.15s, color 0.15s;
   white-space: nowrap;
 }
-.btn-chat:hover { background: #0066CC; color: #fff; }
+
+.btn-chat:hover {
+  background: #0066CC;
+  color: #fff;
+}
 
 .chat-notification-dot {
-  position: absolute; top: -4px; right: -4px;
-  width: 10px; height: 10px;
-  background: #E74C3C; border-radius: 50%;
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 10px;
+  height: 10px;
+  background: #E74C3C;
+  border-radius: 50%;
   border: 2px solid #fff;
 }
 
 .chat-popup-container {
-  position: fixed; bottom: 24px; right: 24px;
-  width: 350px; max-width: calc(100vw - 48px);
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 350px;
+  max-width: calc(100vw - 48px);
   z-index: 9999;
-  display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
   animation: slideUp 0.3s ease-out;
 }
+
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ── Fix Leaflet z-index ──────────────────────────────────────────────────── */
-.leaflet-container { z-index: 1 !important; }
+.leaflet-container {
+  z-index: 1 !important;
+}
 
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
-  .sidebar         { display: none; }
-  .main-content    { padding: 24px 20px; }
-  .stats-grid      { grid-template-columns: 1fr 1fr; }
-  .charts-row      { grid-template-columns: 1fr; }
-  .form-row--2col  { grid-template-columns: 1fr; }
-  .form-row--3col  { grid-template-columns: 1fr; }
-  .posto-creator   { grid-template-columns: 1fr; }
-  .check-group     { flex-direction: column; align-items: flex-start; }
+  .sidebar {
+    display: none;
+  }
+
+  .main-content {
+    padding: 24px 20px;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .charts-row {
+    grid-template-columns: 1fr;
+  }
+
+  .form-row--2col {
+    grid-template-columns: 1fr;
+  }
+
+  .form-row--3col {
+    grid-template-columns: 1fr;
+  }
+
+  .posto-creator {
+    grid-template-columns: 1fr;
+  }
+
+  .check-group {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
 .btn-edit-small {
@@ -1824,15 +2886,31 @@ const salvaManutenzione = async () => {
   display: flex;
   transition: color 0.2s;
 }
-.btn-edit-small:hover { color: #00204A; }
+
+.btn-edit-small:hover {
+  color: #00204A;
+}
 
 .custom-modal-overlay {
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center;
-  z-index: 10000; backdrop-filter: blur(2px);
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  backdrop-filter: blur(2px);
 }
+
 .custom-modal {
-  background: #fff; padding: 24px; border-radius: 16px;
-  width: 90%; max-width: 400px; position: relative;
+  background: #fff;
+  padding: 24px;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 400px;
+  position: relative;
 }
 </style>
