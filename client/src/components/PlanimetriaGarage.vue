@@ -6,10 +6,11 @@ const props = defineProps({
     mappaTestuale: { type: String, default: '' },
     selectedId: Number,
     isAnteprima: { type: Boolean, default: false },
-    mostraErrori: { type: Boolean, default: true }
+    mostraErrori: { type: Boolean, default: true },
+    isGestoreMode: { type: Boolean, default: false }
 });
 
-const emit = defineEmits(['select', 'error']);
+const emit = defineEmits(['select', 'error', 'manage']);
 
 const getDatiPosto = (codice) => {
     return props.posti.find(p => p.codiceposto === codice);
@@ -139,7 +140,14 @@ const getClassePosto = (codice) => {
     if (props.isAnteprima) return 'anteprima';
 
     const posto = getDatiPosto(codice);
-    if (!posto) return 'non-configurato'; // se sta nella stringa ma non nel DB lancio un errore
+    if (!posto) return 'non-configurato';
+    
+    if (props.isGestoreMode) {
+        if (posto.is_in_manutenzione) return 'manutenzione'; 
+        if (posto.is_occupato) return 'occupato'; 
+        return 'gestione-attivo'; 
+    }
+
     if (props.selectedId === posto.id_posto) return 'selezionato';
     if (posto.is_occupato) return 'occupato';
     return 'libero';
@@ -150,7 +158,14 @@ const gestisciClick = (codice) => {
         emit('error', 'Seleziona prima le date di arrivo e partenza per selezionare un posto.');
         return;
     }
+    
     const posto = getDatiPosto(codice);
+
+    if (props.isGestoreMode) {
+        if (posto) emit('manage', posto); // Invia l'evento al padre invece di selezionarlo
+        return;
+    }
+
     if (posto && !posto.is_occupato) {
         emit('select', posto);
     }
@@ -165,6 +180,9 @@ const gestisciClick = (codice) => {
             <div class="legenda">
                 <span class="box-legenda bianco"></span>Libero
                 <span class="box-legenda grigio-scuro"></span>Occupato
+                <template v-if="isGestoreMode">
+                    <span class="box-legenda arancione-tratteggio"></span>Manutenzione
+                </template>
                 <span class="box-legenda blu"></span> Selezionato
                 <span><img src="../assets/handicap.svg" class="box-legenda"></span>Disabili
                 <span><img src="../assets/electricity.svg" class="box-legenda"></span>Ricarica elettrica
@@ -267,6 +285,11 @@ img.box-legenda {
 .box-legenda.blu {
     background: #00408A;
     border-color: #042571;
+}
+
+.box-legenda.arancione-tratteggio {
+    background: #fff4e6;
+    border: 2px dashed #ff922b;
 }
 
 .mappa-container {
@@ -397,5 +420,31 @@ img.box-legenda {
     background: red;
     opacity: 0.3;
     cursor: not-allowed;
+}
+
+.gestione-attivo {
+    background: #e8f5e9;
+    border: 2px dashed #28a745;
+    color: #28a745;
+    cursor: pointer;
+}
+
+.gestione-attivo:hover {
+    background: #c8e6c9;
+}
+
+.manutenzione {
+    background: #fff4e6; 
+    border: 2px dashed #ff922b !important;
+    color: #ff922b !important;
+    cursor: pointer;
+}
+
+.manutenzione:hover {
+    background: #ffe8cc;
+}
+
+.manutenzione strong::after {
+    font-size: 0.7rem;
 }
 </style>

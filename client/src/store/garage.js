@@ -70,4 +70,96 @@ export const garageStore = reactive({
       }
     }
   },
+
+  async updateGarage(id, garageData) {
+    this.isLoading = true
+    try {
+      const response = await fetch(`/api/garage/garages-gestore/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(garageData),
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'Errore durante l\'aggiornamento')
+      return { success: true, garage: data.garage }
+    } catch (err) {
+      return { success: false, error: err.message || 'Errore di rete' }
+    } finally {
+      this.isLoading = false
+    }
+  },
+
+  async addMaintenance(idGarage, idPosto, maintenanceData) {
+    this.isLoading = true
+    try {
+      const response = await fetch(`/api/garage/garages-gestore/${idGarage}/posti/${idPosto}/manutenzione`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(maintenanceData),
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'Errore durante l\'inserimento della manutenzione')
+      return { success: true, message: data.message }
+    } catch (err) {
+      return { success: false, error: err.message || 'Errore di rete' }
+    } finally {
+      this.isLoading = false
+    }
+  },
+
+  async removeMaintenance(idGarage, idPosto, idManutenzione) {
+    this.isLoading = true;
+    try {
+      const response = await fetch(`/api/garage/garages-gestore/${idGarage}/posti/${idPosto}/manutenzione/${idManutenzione}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Errore durante la rimozione');
+
+      return { success: true, message: data.message || 'Posto riaperto con successo' };
+    } catch (err) {
+      return { success: false, error: err.message || 'Errore di rete' };
+    } finally {
+      this.isLoading = false;
+    }
+  },
+
+  async fetchGaragesGestore() {
+    this.isLoading = true;
+    try {
+      const response = await fetch('/api/garage/garages-gestore', { credentials: 'include' });
+      const data = await response.json();
+      return { success: response.ok, data };
+    } catch (err) {
+      console.error("Errore fetch garages gestore:", err);
+      return { success: false, error: 'Errore di rete' };
+    } finally {
+      this.isLoading = false;
+    }
+  },
+
+  async fetchStatoGaragesGestore() {
+    try {
+      const response = await fetch('/api/garage/stato-garages-gestore', { credentials: 'include' });
+      const data = await response.json();
+      return { success: response.ok, data };
+    } catch (err) {
+      console.error("Errore fetch stato garages gestore:", err);
+      return { success: false, error: 'Errore di rete' };
+    }
+  },
+
+  async fetchOccupazione(id) {
+    try {
+      const response = await fetch(`/api/garage/${id}/occupazione`, { credentials: 'include' });
+      const data = await response.json();
+      return { success: response.ok, percentuale: data.percentuale };
+    } catch (err) {
+      console.error(`Errore fetch occupazione garage ${id}:`, err);
+      return { success: false, percentuale: 0 };
+    }
+  },
 })
