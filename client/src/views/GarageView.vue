@@ -49,7 +49,6 @@ const getDisplayPrice = (garage) => {
     // altrimenti mostra la tariffa base generica
     return Number(garage.tariffabase).toFixed(2);
 }
-//
 
 const {
     showExtendedResults,
@@ -331,9 +330,12 @@ const handleSuggestionSelected = (place) => {
                                                         :key="'fs-' + garage.id_garage" class="fs-mini-card"
                                                         @mouseenter="setHover(garage, true)"
                                                         @click="selectGarage(garage)">
+                                                        
                                                         <div class="mini-thumb">
-                                                            <div class="gcard-letter-box">{{ garage.nome.charAt(0) }}</div>
+                                                            <img v-if="garage.foto_urls && garage.foto_urls.length > 0" :src="garage.foto_urls[0]" class="mini-image" alt="Foto Garage" />
+                                                            <div v-else class="gcard-letter-box">{{ garage.nome.charAt(0) }}</div>
                                                         </div>
+
                                                         <div class="mini-details">
                                                             <h4>{{ garage.nome }}</h4>
                                                             <p>{{ garage.indirizzo.slice(0, 30) }}...</p>
@@ -428,7 +430,8 @@ const handleSuggestionSelected = (place) => {
                             @click="goToDetail(garage)">
 
                             <div class="gcard-thumb">
-                                <div class="gcard-letter-box">{{ garage.nome.charAt(0) }}</div>
+                                <img v-if="garage.foto_urls && garage.foto_urls.length > 0" :src="garage.foto_urls[0]" class="gcard-image" alt="Foto Garage" />
+                                <div v-else class="gcard-letter-box">{{ garage.nome.charAt(0) }}</div>
                                 <span v-if="garage.is24h" class="gcard-badge-top">24/7</span>
                             </div>
 
@@ -680,6 +683,21 @@ const handleSuggestionSelected = (place) => {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    overflow: hidden; /* IMPORTANTE PER MANTENERE IL BORDO DELLA CARD */
+}
+
+/* --- NUOVI STILI PER LE IMMAGINI --- */
+.gcard-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.mini-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 8px; /* Per farla combaciare con i bordi arrotondati del quadratino */
 }
 
 .gcard-letter-box {
@@ -942,6 +960,7 @@ const handleSuggestionSelected = (place) => {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    overflow: hidden;
 }
 
 .mini-thumb .gcard-letter-box {
@@ -1136,7 +1155,6 @@ const handleSuggestionSelected = (place) => {
     width: 20px;
     height: 20px;
     background-color: #dc3545;
-    /* Rosso acceso */
     border: 2px solid #ffffff;
     border-radius: 50%;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
