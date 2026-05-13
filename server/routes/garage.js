@@ -214,56 +214,98 @@ router.get("/:id/posti", async (req, res) => {
     const { id } = req.params;
     const { inizio, fine } = req.query;
 
+    const formattaPosti = (rows) => {
+      return rows.map(r => ({
+        ...r,
+        is_occupato: r.is_prenotato || r.is_in_manutenzione,
+        manutenzione: r.is_in_manutenzione ? {
+          id_manutenzione: r.id_manutenzione,
+          inizio: r.manutenzione_inizio,
+          fine: r.manutenzione_fine,
+          motivazione: r.manutenzione_motivo
+        } : null
+      }));
+    };
+
     if (!inizio || !fine || inizio === "") {
       const querySemplice = `
-                SELECT p.*, FALSE AS is_occupato,
-                GREATEST(
-                    (CASE 
-                        WHEN p.TipoVeicolo = 'AUTO' THEN g.TariffaAuto 
-                        WHEN p.TipoVeicolo = 'MOTO' THEN g.TariffaMoto 
-                        WHEN p.TipoVeicolo = 'FURGONE' THEN g.TariffaFurgone 
-                    END)
-                    + CASE WHEN p.IsElettrica THEN COALESCE(g.SovrapprezzoElettrica, 0) ELSE 0 END
-                    - CASE WHEN p.IsDisabili THEN COALESCE(g.ScontoDisabili, 0) ELSE 0 END
-                , 0) as tariffaoraria
-                FROM PostoAuto p
-                JOIN Garage g ON p.ID_Garage = g.ID_Garage
-                WHERE p.ID_Garage = $1 AND p.IsAttivo = TRUE
-                ORDER BY p.CodicePosto
-            `;
-      const posti = await db.any(querySemplice, [id]);
+        SELECT p.*, 
+        EXISTS (
+            SELECT 1 FROM Prenotazione pr 
+            WHERE pr.ID_Posto = p.ID_Posto 
+            AND pr.Stato = 'ATTIVA'
+            AND (NOW() AT TIME ZONE 'Europe/Rome') BETWEEN pr.InizioSosta AND pr.FineSosta
+        ) AS is_prenotato,
+        m.ID_Manutenzione,
+        m.Inizio AS manutenzione_inizio,
+        m.Fine AS manutenzione_fine,
+        m.Motivazione AS manutenzione_motivo,
+        CASE WHEN m.ID_Manutenzione IS NOT NULL THEN true ELSE false END AS is_in_manutenzione,
+        GREATEST(
+            (CASE 
+                WHEN p.TipoVeicolo = 'AUTO' THEN g.TariffaAuto 
+                WHEN p.TipoVeicolo = 'MOTO' THEN g.TariffaMoto 
+                WHEN p.TipoVeicolo = 'FURGONE' THEN g.TariffaFurgone 
+            END)
+            + CASE WHEN p.IsElettrica THEN COALESCE(g.SovrapprezzoElettrica, 0) ELSE 0 END
+            - CASE WHEN p.IsDisabili THEN COALESCE(g.ScontoDisabili, 0) ELSE 0 END
+        , 0) as tariffaoraria
+        FROM PostoAuto p
+        JOIN Garage g ON p.ID_Garage = g.ID_Garage
+        LEFT JOIN LATERAL (
+            SELECT ID_Manutenzione, Inizio, Fine, Motivazione
+            FROM ManutenzionePosto
+            WHERE ID_Posto = p.ID_Posto
+            AND (NOW() AT TIME ZONE 'Europe/Rome') BETWEEN Inizio AND Fine
+            ORDER BY Inizio ASC
+            LIMIT 1
+        ) m ON true
+        WHERE p.ID_Garage = $1 AND p.IsAttivo = TRUE
+        ORDER BY p.CodicePosto
+      `;
+      const rows = await db.any(querySemplice, [id]);
+      const posti = formattaPosti(rows);
       return res.json({ success: true, posti });
     }
 
     const queryComplessa = `
-            SELECT p.*, 
-            (
-                EXISTS (
-                    SELECT 1 FROM Prenotazione pr 
-                    WHERE pr.ID_Posto = p.ID_Posto 
-                    AND pr.Stato = 'ATTIVA'
-                    AND (pr.InizioSosta, pr.FineSosta) OVERLAPS ($2::timestamp, $3::timestamp)
-                ) OR EXISTS (
-                    SELECT 1 FROM ManutenzionePosto mp
-                    WHERE mp.ID_Posto = p.ID_Posto
-                    AND (mp.Inizio, mp.Fine) OVERLAPS ($2::timestamp, $3::timestamp)
-                )
-            ) AS is_occupato,
-            GREATEST(
-                (CASE 
-                    WHEN p.TipoVeicolo = 'AUTO' THEN g.TariffaAuto 
-                    WHEN p.TipoVeicolo = 'MOTO' THEN g.TariffaMoto 
-                    WHEN p.TipoVeicolo = 'FURGONE' THEN g.TariffaFurgone 
-                END)
-                + CASE WHEN p.IsElettrica THEN COALESCE(g.SovrapprezzoElettrica, 0) ELSE 0 END
-                - CASE WHEN p.IsDisabili THEN COALESCE(g.ScontoDisabili, 0) ELSE 0 END
-            , 0) as tariffaoraria
-            FROM PostoAuto p
-            JOIN Garage g ON p.ID_Garage = g.ID_Garage
-            WHERE p.ID_Garage = $1 AND p.IsAttivo = TRUE
-            ORDER BY p.CodicePosto
-        `;
-    const posti = await db.any(queryComplessa, [id, inizio, fine]);
+        SELECT p.*, 
+        EXISTS (
+            SELECT 1 FROM Prenotazione pr 
+            WHERE pr.ID_Posto = p.ID_Posto 
+            AND pr.Stato = 'ATTIVA'
+            AND (pr.InizioSosta, pr.FineSosta) OVERLAPS ($2::timestamp, $3::timestamp)
+        ) AS is_prenotato,
+        m.ID_Manutenzione,
+        m.Inizio AS manutenzione_inizio,
+        m.Fine AS manutenzione_fine,
+        m.Motivazione AS manutenzione_motivo,
+        CASE WHEN m.ID_Manutenzione IS NOT NULL THEN true ELSE false END AS is_in_manutenzione,
+        GREATEST(
+            (CASE 
+                WHEN p.TipoVeicolo = 'AUTO' THEN g.TariffaAuto 
+                WHEN p.TipoVeicolo = 'MOTO' THEN g.TariffaMoto 
+                WHEN p.TipoVeicolo = 'FURGONE' THEN g.TariffaFurgone 
+            END)
+            + CASE WHEN p.IsElettrica THEN COALESCE(g.SovrapprezzoElettrica, 0) ELSE 0 END
+            - CASE WHEN p.IsDisabili THEN COALESCE(g.ScontoDisabili, 0) ELSE 0 END
+        , 0) as tariffaoraria
+        FROM PostoAuto p
+        JOIN Garage g ON p.ID_Garage = g.ID_Garage
+        LEFT JOIN LATERAL (
+            SELECT ID_Manutenzione, Inizio, Fine, Motivazione
+            FROM ManutenzionePosto
+            WHERE ID_Posto = p.ID_Posto
+            AND (Inizio, Fine) OVERLAPS ($2::timestamp, $3::timestamp)
+            ORDER BY Inizio ASC
+            LIMIT 1
+        ) m ON true
+        WHERE p.ID_Garage = $1 AND p.IsAttivo = TRUE
+        ORDER BY p.CodicePosto
+    `;
+    const rows = await db.any(queryComplessa, [id, inizio, fine]);
+    const posti = formattaPosti(rows);
+    
     res.json({ success: true, posti });
   } catch (err) {
     console.error("Errore SQL:", err);
@@ -448,6 +490,51 @@ router.post('/garages-gestore/:id/posti/:id_posto/manutenzione', async (req, res
     } catch (error) {
         console.error('Errore manutenzione:', error);
         res.status(400).json({ error: error.message || 'Errore interno' });
+    }
+});
+
+// DELETE /api/garage/garages-gestore/:idGarage/posti/:idPosto/manutenzione/:idManutenzione
+router.delete('/garages-gestore/:idGarage/posti/:idPosto/manutenzione/:idManutenzione', async (req, res) => {
+    try {
+        const utenteLoggato = req.session?.utente;
+
+        if (!utenteLoggato || utenteLoggato.ruolo !== 'GESTORE') {
+            return res.status(401).json({ error: 'Accesso negato' });
+        }
+
+        // Salvagente: cattura l'ID indipendentemente da come lo hai salvato nella sessione
+        const idGestore = utenteLoggato.id || utenteLoggato.id_utente;
+        const { idGarage, idPosto, idManutenzione } = req.params;
+
+
+        if (!idGestore) {
+            throw new Error("ID Gestore risultante è undefined!");
+        }
+
+        const checkGarage = await db.oneOrNone(
+            'SELECT 1 FROM Garage WHERE ID_Garage = $1 AND ID_Gestore = $2',
+            [idGarage, idGestore]
+        );
+        
+        if (!checkGarage) {
+            console.log("Errore: Il garage non appartiene a questo gestore");
+            return res.status(403).json({ success: false, error: "Non hai i permessi per gestire questo garage" });
+        }
+
+        const result = await db.result(
+            'DELETE FROM ManutenzionePosto WHERE ID_Manutenzione = $1 AND ID_Posto = $2',
+            [idManutenzione, idPosto]
+        );
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ success: false, error: "Manutenzione non trovata (forse già eliminata)" });
+        }
+
+        res.json({ success: true, message: "Manutenzione rimossa. Il posto è di nuovo disponibile." });
+    } catch (err) {
+        console.error("!!! ERRORE CRASH IN DELETE MANUTENZIONE !!!");
+        console.error(err.message);
+        res.status(500).json({ success: false, error: "Errore interno del server: " + err.message });
     }
 });
 

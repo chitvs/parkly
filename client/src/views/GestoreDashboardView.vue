@@ -171,15 +171,18 @@ const showMaintenanceModal = ref(false)
 const postoDaGestire = ref(null)
 const manutenzioneData = ref({ inizio: '', fine: '', motivazione: '' })
 
+const currentMaintenanceStep = ref(1);
+
 const apriGestionePosto = (posto) => {
-  postoDaGestire.value = posto
+  postoDaGestire.value = posto;
+  currentMaintenanceStep.value = 1;
   manutenzioneData.value = {
     inizio: formattaPerInputDate(new Date()) + 'T08:00',
     fine: formattaPerInputDate(new Date()) + 'T20:00',
     motivazione: ''
-  }
-  showMaintenanceModal.value = true
-}
+  };
+  showMaintenanceModal.value = true;
+};
 
 const salvaManutenzione = async () => {
   const res = await garageStore.addMaintenance(postoDaGestire.value.id_garage, postoDaGestire.value.id_posto, manutenzioneData.value)
@@ -191,6 +194,21 @@ const salvaManutenzione = async () => {
     alert(res.error)
   }
 }
+
+const rimuoviManutenzione = async () => {
+  const idManutenzione = postoDaGestire.value?.manutenzione?.id_manutenzione;
+  if (!idManutenzione) return;
+
+  const res = await garageStore.removeMaintenance(postoDaGestire.value.id_garage, postoDaGestire.value.id_posto, idManutenzione);
+
+  if (res.success) {
+    showMaintenanceModal.value = false;
+    messaggio.value = { tipo: 'success', testo: res.message };
+    await caricaGarage();
+  } else {
+    alert(res.error);
+  }
+};
 
 onMounted(async () => {
   isLoading.value = true
@@ -236,6 +254,35 @@ const navItems = [
 ]
 
 const menuFiltrato = computed(() => mieiGarage.value.length === 0 ? navItems.filter(i => i.id === 'aggiungi') : navItems)
+
+
+const prenotazioniPostoSelezionato = computed(() => {
+  if (!postoDaGestire.value || !storicoPrenotazioni.value) return [];
+
+  const oraAttuale = new Date();
+
+  return storicoPrenotazioni.value
+    .filter(p =>
+      p.id_posto === postoDaGestire.value.id_posto &&
+      p.stato === 'ATTIVA' &&
+      new Date(p.finesosta) > oraAttuale
+    )
+    .sort((a, b) => new Date(a.iniziososta) - new Date(b.iniziososta));
+});
+
+const isManutenzioneValida = computed(() => {
+  if (!manutenzioneData.value.inizio || !manutenzioneData.value.fine) return false;
+  const inizio = new Date(manutenzioneData.value.inizio);
+  const fine = new Date(manutenzioneData.value.fine);
+  return fine > inizio;
+});
+
+const formattaDataLeggibile = (dataIso) => {
+  return new Intl.DateTimeFormat('it-IT', {
+    day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
+  }).format(new Date(dataIso));
+};
+
 </script>
 
 <template>
@@ -341,41 +388,140 @@ const menuFiltrato = computed(() => mieiGarage.value.length === 0 ? navItems.fil
         :nomeDestinatario="chatSelezionata.nomeDestinatario" ruoloDestinatario="Cliente" />
     </div>
 
-    <div v-if="showMaintenanceModal" class="custom-modal-overlay">
-      <div class="custom-modal shadow-lg">
-        <div class="modal-header border-0 pb-0">
-          <h3 class="modal-title h5">Gestione Posto {{ postoDaGestire?.codiceposto }}</h3>
-          <button @click="showMaintenanceModal = false" class="btn-close"></button>
-        </div>
-        <div class="modal-body pt-2">
-          <p class="text-muted small mb-4">Seleziona il periodo in cui il posto non sarà disponibile per la sosta.</p>
-          <div class="form-group mb-3">
-            <label class="form-label">Inizio Blocco</label>
-            <input type="datetime-local" v-model="manutenzioneData.inizio" class="form-input">
+    <Transition name="overlay-fade">
+      <div v-if="showMaintenanceModal" class="review-overlay" @click.self="showMaintenanceModal = false">
+        <Transition name="modal-slide" appear>
+          <div class="review-modal">
+
+            <div class="review-topbar">
+              <div class="step-track" v-if="!postoDaGestire?.is_in_manutenzione">
+                <span :class="['step-pip', currentMaintenanceStep >= 1 ? 'step-pip--on' : '']"></span>
+                <span :class="['step-pip', currentMaintenanceStep >= 2 ? 'step-pip--on' : '']"></span>
+              </div>
+              <div v-else></div> <button class="close-btn" @click="showMaintenanceModal = false">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+
+            <div v-if="postoDaGestire?.is_in_manutenzione" class="step-wrapper fade-in">
+              <div class="review-body pt-2">
+                <span class="garage-chip">Posto {{ postoDaGestire?.codiceposto }}</span>
+                <h3 class="modal-title">Manutenzione in corso</h3>
+                <p class="modal-sub">Questo posto è bloccato e non è visibile ai clienti.</p>
+
+                <div class="p-3 bg-light border rounded-3 mb-4">
+                  <strong class="d-block mb-2 text-dark" style="font-size: 0.85rem; text-transform: uppercase;">Dettagli
+                    del
+                    blocco:</strong>
+                  <div class="d-flex justify-content-between mb-1 small">
+                    <span class="text-muted">Inizio:</span>
+                    <span class="fw-bold">{{ formattaDataLeggibile(postoDaGestire.manutenzione?.inizio) }}</span>
+                  </div>
+                  <div class="d-flex justify-content-between mb-2 small">
+                    <span class="text-muted">Fine:</span>
+                    <span class="fw-bold text-danger">{{ formattaDataLeggibile(postoDaGestire.manutenzione?.fine)
+                      }}</span>
+                  </div>
+                  <div class="pt-2 mt-2 border-top small">
+                    <span class="text-muted d-block mb-1">Motivazione:</span>
+                    <span>{{ postoDaGestire.manutenzione?.motivazione || 'Nessuna motivazione specificata' }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="review-footer">
+                <button class="cta-btn cta-btn--danger w-100" @click="rimuoviManutenzione">
+                  <i class="bi bi-unlock-fill me-2"></i> Termina Manutenzione
+                </button>
+              </div>
+            </div>
+
+
+            <template v-else>
+              <div v-if="currentMaintenanceStep === 1" class="step-wrapper fade-in">
+                <div class="review-body pt-2">
+                  <span class="garage-chip">Posto {{ postoDaGestire?.codiceposto }}</span>
+                  <h3 class="modal-title">Verifica Disponibilità</h3>
+                  <p class="modal-sub">Controlla le prenotazioni attive prima di programmare la manutenzione.</p>
+
+                  <div class="mb-2">
+                    <label class="field-label mb-2">Calendario Occupazione</label>
+                    <div v-if="prenotazioniPostoSelezionato.length === 0"
+                      class="p-4 bg-light rounded-4 text-center border">
+                      <i class="bi bi-calendar-check text-success fs-2 d-block mb-2"></i>
+                      <span class="text-muted small">Nessun impegno futuro per questo posto.<br>Puoi procedere
+                        liberamente.</span>
+                    </div>
+                    <div v-else class="d-flex flex-column gap-2 pe-1">
+                      <div v-for="pren in prenotazioniPostoSelezionato" :key="pren.id_prenotazione"
+                        class="p-3 bg-white border rounded-3 d-flex justify-content-between align-items-center">
+                        <div>
+                          <span class="fw-bold d-block text-dark small">{{ pren.targa || 'Targa N/D' }}</span>
+                          <span class="text-muted extra-small">{{ formattaDataLeggibile(pren.iniziososta) }} - {{
+                            formattaDataLeggibile(pren.finesosta) }}</span>
+                        </div>
+                        <span
+                          class="badge bg-primary-subtle text-primary rounded-pill px-2 py-1 extra-small">Prenotato</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="review-footer">
+                  <button class="cta-btn cta-btn--primary w-100" @click="currentMaintenanceStep = 2">
+                    Continua al blocco
+                    <i class="bi bi-arrow-right ms-2"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div v-if="currentMaintenanceStep === 2" class="step-wrapper fade-in">
+                <div class="review-body pt-2">
+                  <span class="garage-chip">Posto {{ postoDaGestire?.codiceposto }}</span>
+                  <button class="back-btn mb-2 d-block" @click="currentMaintenanceStep = 1">
+                    <i class="bi bi-arrow-left me-1"></i> Torna alla disponibilità
+                  </button>
+                  <h3 class="modal-title">Dettagli Manutenzione</h3>
+                  <p class="modal-sub">Seleziona il periodo e la motivazione del blocco.</p>
+
+                  <div class="row g-3 mb-4 mt-1">
+                    <div class="col-6 field-wrap mb-0">
+                      <label class="field-label">Inizio Blocco</label>
+                      <input type="datetime-local" v-model="manutenzioneData.inizio" class="form-input w-100">
+                    </div>
+                    <div class="col-6 field-wrap mb-0">
+                      <label class="field-label">Fine Blocco</label>
+                      <input type="datetime-local" v-model="manutenzioneData.fine" class="form-input w-100"
+                        :class="{ 'border-danger': manutenzioneData.fine && !isManutenzioneValida }">
+                    </div>
+                  </div>
+
+                  <div class="field-wrap mb-2">
+                    <label class="field-label">
+                      Motivazione
+                      <span class="optional-pill">opzionale</span>
+                    </label>
+                    <textarea v-model="manutenzioneData.motivazione" class="review-textarea" rows="3"
+                      placeholder="Es. Sostituzione lampade, pulizia straordinaria..."></textarea>
+                  </div>
+                </div>
+                <div class="review-footer">
+                  <button class="cta-btn cta-btn--danger w-100" @click="salvaManutenzione"
+                    :disabled="!isManutenzioneValida">
+                    Conferma Blocco Posto
+                  </button>
+                </div>
+              </div>
+            </template>
           </div>
-          <div class="form-group mb-3">
-            <label class="form-label">Fine Blocco</label>
-            <input type="datetime-local" v-model="manutenzioneData.fine" class="form-input">
-          </div>
-          <div class="form-group mb-4">
-            <label class="form-label">Motivazione (Opzionale)</label>
-            <textarea v-model="manutenzioneData.motivazione" class="form-input"
-              placeholder="Es. Manutenzione ordinaria, colonnina guasta..." rows="2"></textarea>
-          </div>
-          <div class="d-flex gap-2">
-            <button @click="salvaManutenzione" class="btn-primary flex-grow-1">Conferma Blocco</button>
-            <button @click="showMaintenanceModal = false" class="btn-secondary">Annulla</button>
-          </div>
-        </div>
+        </Transition>
       </div>
-    </div>
+    </Transition>
 
     <Footer />
   </div>
 </template>
 
 <style scoped>
-/* ── Mantenuto SOLO il CSS globale di layout. Il resto è nei componenti figli ── */
 .page-wrapper {
   display: flex;
   flex-direction: column;
@@ -657,29 +803,6 @@ const menuFiltrato = computed(() => mieiGarage.value.length === 0 ? navItems.fil
   margin-bottom: 12px;
 }
 
-.custom-modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10000;
-  backdrop-filter: blur(2px);
-}
-
-.custom-modal {
-  background: #fff;
-  padding: 24px;
-  border-radius: 16px;
-  width: 90%;
-  max-width: 400px;
-  position: relative;
-}
-
 .form-group {
   display: flex;
   flex-direction: column;
@@ -733,5 +856,264 @@ const menuFiltrato = computed(() => mieiGarage.value.length === 0 ? navItems.fil
   .main-content {
     padding: 24px 20px;
   }
+}
+
+.overlay-fade-enter-active,
+.overlay-fade-leave-active {
+  transition: opacity 0.35s ease;
+}
+
+.overlay-fade-enter-from,
+.overlay-fade-leave-to {
+  opacity: 0;
+}
+
+.modal-slide-enter-active {
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s ease;
+}
+
+.modal-slide-leave-active {
+  transition: transform 0.25s ease, opacity 0.2s ease;
+}
+
+.modal-slide-enter-from {
+  transform: translateY(40px) scale(0.96);
+  opacity: 0;
+}
+
+.modal-slide-leave-to {
+  transform: translateY(20px) scale(0.97);
+  opacity: 0;
+}
+
+.review-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 8, 23, 0.55);
+  backdrop-filter: blur(5px) saturate(130%);
+  -webkit-backdrop-filter: blur(5px) saturate(130%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10500;
+  padding: 1.25rem;
+}
+
+.review-modal {
+  background: #ffffff;
+  width: 100%;
+  max-width: 480px;
+  border-radius: 28px;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.2), 0 8px 24px rgba(0, 0, 0, 0.06);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.review-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.9rem 1.5rem 0;
+  flex-shrink: 0;
+}
+
+.review-body {
+  padding: 1rem 1.75rem 1rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.review-footer {
+  padding: 1rem 1.75rem 1.5rem;
+  background: #ffffff;
+  border-top: 1px solid #f1f5f9;
+  flex-shrink: 0;
+}
+
+.cta-btn--primary {
+  background: var(--primary-blue, #00408A);
+}
+
+.cta-btn--primary:hover:not(:disabled) {
+  background: #00336E;
+  box-shadow: 0 8px 24px rgba(0, 64, 138, 0.25);
+}
+
+.review-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.review-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.review-body::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 20px;
+}
+
+.garage-chip {
+  display: inline-block;
+  background: rgba(0, 64, 138, 0.08);
+  color: var(--primary-blue, #00408A);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 5px 13px;
+  border-radius: 99px;
+  margin-bottom: 1rem;
+}
+
+.modal-title {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 0.35rem;
+}
+
+.modal-sub {
+  font-size: 0.88rem;
+  color: #64748b;
+  margin-bottom: 1.1rem;
+  line-height: 1.4;
+}
+
+.field-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.optional-pill {
+  background: #f1f5f9;
+  color: #94a3b8;
+  font-size: 0.68rem;
+  padding: 2px 9px;
+  border-radius: 99px;
+  text-transform: lowercase;
+  font-weight: 600;
+}
+
+.review-textarea {
+  width: 100%;
+  background: #f8fafc;
+  border: 1.5px solid #e8edf3;
+  border-radius: 14px;
+  padding: 13px 15px;
+  font-size: 0.88rem;
+  color: #334155;
+  resize: none;
+  outline: none;
+}
+
+.cta-btn {
+  padding: 14px 24px;
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.cta-btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.cta-btn--ghost {
+  background: transparent;
+  color: #00408A;
+  border: 1.5px solid rgba(0, 64, 138, 0.18);
+}
+
+.cta-btn--danger {
+  background: #dc3545;
+}
+
+.cta-btn--danger:hover:not(:disabled) {
+  background: #c82333;
+  box-shadow: 0 8px 24px rgba(220, 53, 69, 0.3);
+}
+
+.max-h-150 {
+  max-height: 150px;
+}
+
+.back-btn {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s;
+}
+
+.back-btn:hover {
+  color: #0f172a;
+}
+
+.step-track {
+  display: flex;
+  gap: 6px;
+}
+
+.step-pip {
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 99px;
+  background: #e2e8f0;
+  transition: width 0.35s ease, background 0.35s ease;
+}
+
+.step-pip--on {
+  width: 20px;
+  background: #00408A;
+}
+
+.extra-small {
+  font-size: 0.75rem;
+}
+
+.max-h-300 {
+  max-height: 300px;
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.step-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 </style>

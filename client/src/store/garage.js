@@ -107,6 +107,26 @@ export const garageStore = reactive({
     }
   },
 
+  async removeMaintenance(idGarage, idPosto, idManutenzione) {
+    this.isLoading = true;
+    try {
+      const response = await fetch(`/api/garage/garages-gestore/${idGarage}/posti/${idPosto}/manutenzione/${idManutenzione}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Errore durante la rimozione');
+
+      return { success: true, message: data.message || 'Posto riaperto con successo' };
+    } catch (err) {
+      return { success: false, error: err.message || 'Errore di rete' };
+    } finally {
+      this.isLoading = false;
+    }
+  },
+
   async fetchGaragesGestore() {
     this.isLoading = true;
     try {

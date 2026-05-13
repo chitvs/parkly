@@ -143,6 +143,7 @@ const getClassePosto = (codice) => {
     if (!posto) return 'non-configurato';
     
     if (props.isGestoreMode) {
+        if (posto.is_in_manutenzione) return 'manutenzione'; 
         if (posto.is_occupato) return 'occupato'; 
         return 'gestione-attivo'; 
     }
@@ -179,6 +180,9 @@ const gestisciClick = (codice) => {
             <div class="legenda">
                 <span class="box-legenda bianco"></span>Libero
                 <span class="box-legenda grigio-scuro"></span>Occupato
+                <template v-if="isGestoreMode">
+                    <span class="box-legenda arancione-tratteggio"></span>Manutenzione
+                </template>
                 <span class="box-legenda blu"></span> Selezionato
                 <span><img src="../assets/handicap.svg" class="box-legenda"></span>Disabili
                 <span><img src="../assets/electricity.svg" class="box-legenda"></span>Ricarica elettrica
@@ -281,6 +285,11 @@ img.box-legenda {
 .box-legenda.blu {
     background: #00408A;
     border-color: #042571;
+}
+
+.box-legenda.arancione-tratteggio {
+    background: #fff4e6;
+    border: 2px dashed #ff922b;
 }
 
 .mappa-container {
@@ -422,5 +431,20 @@ img.box-legenda {
 
 .gestione-attivo:hover {
     background: #c8e6c9;
+}
+
+.manutenzione {
+    background: #fff4e6; 
+    border: 2px dashed #ff922b !important;
+    color: #ff922b !important;
+    cursor: pointer;
+}
+
+.manutenzione:hover {
+    background: #ffe8cc;
+}
+
+.manutenzione strong::after {
+    font-size: 0.7rem;
 }
 </style>
