@@ -30,6 +30,8 @@ const allerteStato         = ref([])
 const occupazioneGarage    = ref({})
 const postiPerGarage       = ref({})
 const reRenderKey          = ref(0)
+const fotoSelezionate = ref([]) 
+
 
 const filtroInizio = ref('')
 const filtroFine   = ref('')
@@ -50,6 +52,10 @@ const handleNuovoMessaggio = (msg) => {
       prenotazione.nonletti = (prenotazione.nonletti || 0) + 1
     }
   }
+}
+
+const handleFotoSelezionate = (event) => {
+  fotoSelezionate.value = Array.from(event.target.files)
 }
 
 const apriChat = async (prenotazione) => {
@@ -466,18 +472,41 @@ const salvaNuovoGarage = async () => {
   const indirizzoCompleto = `${nuovoGarage.value.via.trim()} ${nuovoGarage.value.civico.trim()}, ${nuovoGarage.value.cap.trim()} ${nuovoGarage.value.citta.trim()} (${nuovoGarage.value.provincia.trim().toUpperCase()})`
   const payload = {
     ...nuovoGarage.value,
-    indirizzo:    indirizzoCompleto,
+    indirizzo: indirizzoCompleto,
     mappatestuale: stringaMappaGenerata.value,
-    posti:        postiConfigurati.value
+    posti: postiConfigurati.value
   }
 
   try {
+    // Creazione del garage (JSON)
     const res = await fetch('/api/garage/garages-gestore', {
       method: 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     })
+    
     if (res.ok) {
+      const dataGarage = await res.json()
+      const nuovoIdGarage = dataGarage.garage.id_garage
+
+      // Upload delle immagini (se presenti)
+      if (fotoSelezionate.value.length > 0) {
+        const formData = new FormData()
+        fotoSelezionate.value.forEach(file => formData.append('foto_garage', file))
+
+        const resFoto = await fetch(`/api/garage/${nuovoIdGarage}/upload-photos`, {
+          method: 'POST',
+          credentials: 'include',
+          body: formData
+        })
+
+        if (!resFoto.ok) {
+          const errFoto = await resFoto.json().catch(() => ({}))
+          alert(`Garage creato, ma errore nel caricamento foto: ${errFoto.error}`)
+        }
+      }
+
+      // Reset dei campi del form
       nuovoGarage.value = {
         nome: '', descrizione: '',
         via: '', civico: '', cap: '', citta: '', provincia: '',
@@ -486,19 +515,22 @@ const salvaNuovoGarage = async () => {
         sovrapprezzoelettrica: null, scontodisabili: null,
         altezzamassima: null, orarioapertura: '08:00', orariochiusura: '20:00', is24h: false
       }
-      postiConfigurati.value  = []
-      dimensioniMappa.value   = { righe: 6, colonne: 12 }
+      postiConfigurati.value = []
+      dimensioniMappa.value = { righe: 6, colonne: 12 }
       ridimensionaGriglia()
       erroriValidazione.value = {}
+      fotoSelezionate.value = [] // Reset foto
       if (markerInstance) mapInstance.removeLayer(markerInstance)
+      
       await caricaGarage()
-      messaggio.value  = { tipo: 'success', testo: 'Garage pubblicato con successo!' }
+      messaggio.value = { tipo: 'success', testo: 'Garage pubblicato con successo!' }
       vistaAttiva.value = 'statistiche'
     } else {
       const err = await res.json().catch(() => ({}))
       messaggio.value = { tipo: 'error', testo: err.error || 'Errore durante il salvataggio.' }
     }
-  } catch {
+  } catch (e) {
+    console.error(e)
     messaggio.value = { tipo: 'error', testo: 'Errore di rete.' }
   } finally {
     staSalvando.value = false
@@ -930,6 +962,21 @@ const navItems = [
                     <input type="text" class="form-input" v-model="nuovoGarage.descrizione" placeholder="Breve descrizione del garage">
                   </div>
                 </div>
+                <div class="form-row">
+
+                <div class="form-group">
+                  <label class="form-label">Foto del Garage (Max 10)</label>
+                  <input 
+                    type="file" 
+                    multiple 
+                    accept="image/*" 
+                    class="form-input" 
+                    style="padding: 10px;" 
+                    @change="handleFotoSelezionate"
+                  >
+                  <span class="form-hint">Puoi selezionare più immagini contemporaneamente (es. tenendo premuto CTRL o CMD).</span>
+                </div>
+              </div>
 
                 <!-- Tariffario e orari -->
                 <div class="section-header" style="margin-top: 30px;"><h2>Tariffario e Orari</h2></div>
