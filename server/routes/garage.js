@@ -196,8 +196,6 @@ router.post('/garages-gestore', async (req, res) => {
   }
 });
 
-router.get('/stato-garages-gestore', async (req, res) => { res.json([]); });
-
 router.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;

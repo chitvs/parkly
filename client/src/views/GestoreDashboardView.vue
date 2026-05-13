@@ -23,12 +23,6 @@ const vistaAttiva = ref('statistiche')
 const isLoading = ref(false)
 const staSalvando = ref(false)
 const messaggio = ref(null)
-
-const mieiGarage = ref([])
-const storicoPrenotazioni = ref([])
-const allerteStato = ref([])
-const occupazioneGarage = ref({})
-const postiPerGarage = ref({})
 const reRenderKey = ref(0)
 
 const formattaPerInputDate = (d) => {
@@ -42,7 +36,7 @@ const chatSelezionata = ref(null)
 let socket = null
 
 const handleNuovoMessaggio = (msg) => {
-  const prenotazione = storicoPrenotazioni.value.find(p => Number(p.id_prenotazione) === Number(msg.id_prenotazione))
+  const prenotazione = garageStore.storicoPrenotazioni.find(p => Number(p.id_prenotazione) === Number(msg.id_prenotazione))
   if (prenotazione) {
     const chatAperta = chatSelezionata.value && chatSelezionata.value.idPrenotazione === Number(msg.id_prenotazione)
     if (!chatAperta) prenotazione.nonletti = (prenotazione.nonletti || 0) + 1
@@ -73,12 +67,11 @@ const garageInModifica = ref(null)
 
 const preparaModifica = async (garage) => {
   messaggio.value = null
-  const res = await fetch(`/api/garage/${garage.id_garage}/posti`, { credentials: 'include' })
-  const data = await res.json()
+  const res = await garageStore.fetchPosti(garage.id_garage)
 
   garageInModifica.value = {
     ...garage,
-    posti_raw: data.success ? data.posti : []
+    posti_raw: res.success ? res.posti : []
   }
 
   isEditing.value = true
@@ -91,23 +84,15 @@ const salvaNuovoGarage = async (payload) => {
   messaggio.value = null
   staSalvando.value = true
 
-  let res;
-  if (isEditing.value) {
-    res = await garageStore.updateGarage(idGarageInModifica.value, payload)
-  } else {
-    const raw = await fetch('/api/garage/garages-gestore', {
-      method: 'POST', credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    })
-    res = await raw.json()
-  }
+  const res = isEditing.value
+    ? await garageStore.updateGarage(idGarageInModifica.value, payload)
+    : await garageStore.createGarage(payload)
 
   if (res.success) {
     isEditing.value = false
     idGarageInModifica.value = null
     garageInModifica.value = null
-    await caricaGarage()
+    await garageStore.caricaDashboardGestore()
     messaggio.value = { tipo: 'success', testo: isEditing.value ? 'Garage aggiornato!' : 'Garage pubblicato!' }
     vistaAttiva.value = 'garage'
   } else {
@@ -116,51 +101,10 @@ const salvaNuovoGarage = async (payload) => {
   staSalvando.value = false
 }
 
-const caricaGarage = async () => {
-  const res = await fetch('/api/garage/garages-gestore', { credentials: 'include' })
-  if (!res.ok) return
-  const data = await res.json()
-
-  const nuoviPosti = {}
-  const nuovaOccupazione = {}
-
-  await Promise.all(data.map(async (g) => {
-    try {
-      const [rPosti, rOcc] = await Promise.all([
-        fetch(`/api/garage/${g.id_garage}/posti`, { credentials: 'include' }),
-        fetch(`/api/garage/${g.id_garage}/occupazione`, { credentials: 'include' })
-      ])
-      if (rPosti.ok) nuoviPosti[g.id_garage] = (await rPosti.json()).posti
-      if (rOcc.ok) nuovaOccupazione[g.id_garage] = Math.round((await rOcc.json()).percentuale)
-    } catch (e) { console.error(e) }
-  }))
-
-  postiPerGarage.value = nuoviPosti
-  occupazioneGarage.value = nuovaOccupazione
-  mieiGarage.value = data
-  reRenderKey.value++
-}
-
 const aggiornaMappaOrari = async ({ inizio, fine }) => {
   const iIso = new Date(inizio).toISOString()
   const fIso = new Date(fine).toISOString()
-  await Promise.all(mieiGarage.value.map(async (g) => {
-    try {
-      const r = await fetch(`/api/garage/${g.id_garage}/posti?inizio=${iIso}&fine=${fIso}`, { credentials: 'include' })
-      if (r.ok) postiPerGarage.value[g.id_garage] = (await r.json()).posti
-    } catch (e) { console.error(e) }
-  }))
-  reRenderKey.value++
-}
-
-const caricaStorico = async () => {
-  const res = await fetch('/api/prenotazioni/prenotazioni-gestore', { credentials: 'include' })
-  if (res.ok) storicoPrenotazioni.value = await res.json()
-}
-
-const caricaStato = async () => {
-  const res = await fetch('/api/garage/stato-garages-gestore', { credentials: 'include' })
-  if (res.ok) allerteStato.value = await res.json()
+  await garageStore.aggiornaMappaOrariGestore(iIso, fIso)
 }
 
 const infoModalElement = ref(null)
@@ -189,7 +133,7 @@ const salvaManutenzione = async () => {
   if (res.success) {
     showMaintenanceModal.value = false
     messaggio.value = { tipo: 'success', testo: res.message }
-    await caricaGarage()
+    await garageStore.caricaDashboardGestore()
   } else {
     alert(res.error)
   }
@@ -204,7 +148,7 @@ const rimuoviManutenzione = async () => {
   if (res.success) {
     showMaintenanceModal.value = false;
     messaggio.value = { tipo: 'success', testo: res.message };
-    await caricaGarage();
+    await garageStore.caricaDashboardGestore()
   } else {
     alert(res.error);
   }
@@ -216,11 +160,10 @@ onMounted(async () => {
     await Promise.all([
       walletStore.contabilizzaRicavi(),
       walletStore.caricaSaldoSospeso(),
-      caricaGarage(),
-      caricaStorico(),
-      caricaStato()
+      garageStore.caricaDashboardGestore(),
+      garageStore.caricaStoricoGestore(),
     ])
-    if (mieiGarage.value.length === 0) vistaAttiva.value = 'aggiungi'
+    if (garageStore.mieiGarage.length === 0) vistaAttiva.value = 'aggiungi'
     else vistaAttiva.value = 'statistiche'
   } finally {
     isLoading.value = false
@@ -253,15 +196,14 @@ const navItems = [
   { id: 'aggiungi', label: 'Aggiungi Garage', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' },
 ]
 
-const menuFiltrato = computed(() => mieiGarage.value.length === 0 ? navItems.filter(i => i.id === 'aggiungi') : navItems)
-
+const menuFiltrato = computed(() => garageStore.mieiGarage.length === 0 ? navItems.filter(i => i.id === 'aggiungi') : navItems)
 
 const prenotazioniPostoSelezionato = computed(() => {
-  if (!postoDaGestire.value || !storicoPrenotazioni.value) return [];
+  if (!postoDaGestire.value || !garageStore.storicoPrenotazioni) return [];
 
   const oraAttuale = new Date();
 
-  return storicoPrenotazioni.value
+  return garageStore.storicoPrenotazioni
     .filter(p =>
       p.id_posto === postoDaGestire.value.id_posto &&
       p.stato === 'ATTIVA' &&
@@ -282,7 +224,6 @@ const formattaDataLeggibile = (dataIso) => {
     day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
   }).format(new Date(dataIso));
 };
-
 </script>
 
 <template>
@@ -338,16 +279,18 @@ const formattaDataLeggibile = (dataIso) => {
             <button @click="messaggio = null" class="close-btn">×</button>
           </div>
 
-          <DashboardStats v-if="vistaAttiva === 'statistiche'" :miei-garage="mieiGarage"
-            :storico-prenotazioni="storicoPrenotazioni" />
+          <DashboardStats v-if="vistaAttiva === 'statistiche'" :miei-garage="garageStore.mieiGarage"
+            :storico-prenotazioni="garageStore.storicoPrenotazioni" />
 
-          <DashboardGarageList v-if="vistaAttiva === 'garage'" :miei-garage="mieiGarage" @modifica="preparaModifica" />
+          <DashboardGarageList v-if="vistaAttiva === 'garage'" :miei-garage="garageStore.mieiGarage"
+            @modifica="preparaModifica" />
 
-          <DashboardStato v-if="vistaAttiva === 'stato'" :key="'stato-' + reRenderKey" :miei-garage="mieiGarage"
-            :posti-per-garage="postiPerGarage" :occupazione-garage="occupazioneGarage" :allerte-stato="allerteStato"
+          <DashboardStato v-if="vistaAttiva === 'stato'" :key="'stato-' + reRenderKey"
+            :miei-garage="garageStore.mieiGarage" :posti-per-garage="garageStore.postiPerGarage"
+            :occupazione-garage="garageStore.occupazioneGarage" :prenotazioni="garageStore.storicoPrenotazioni"
             @verifica-disponibilita="aggiornaMappaOrari" @manage-posto="apriGestionePosto" />
 
-          <DashboardStorico v-if="vistaAttiva === 'storico'" :prenotazioni="storicoPrenotazioni"
+          <DashboardStorico v-if="vistaAttiva === 'storico'" :prenotazioni="garageStore.storicoPrenotazioni"
             @apri-chat="apriChat" />
 
           <DashboardGarageForm v-if="vistaAttiva === 'aggiungi'" :is-editing="isEditing" :garage-data="garageInModifica"
@@ -371,11 +314,9 @@ const formattaDataLeggibile = (dataIso) => {
               <li>Cerca il tuo indirizzo per avvicinarti, poi clicca sulla mappa interattiva per posizionare il pin
                 esattamente sopra il tuo garage.</li>
               <li>Configura la tipologia del posto (Auto, Moto, Furgone) e aggiungi servizi extra. Il codice verrà
-                generato
-                in automatico se lasciato vuoto.</li>
+                generato in automatico se lasciato vuoto.</li>
               <li>Una volta creati i posti, selezionali dalla tavolozza e clicca sulla griglia a scacchiera per
-                disegnare
-                visivamente il layout reale del garage.</li>
+                disegnare visivamente il layout reale del garage.</li>
             </ul>
           </div>
         </div>
@@ -411,8 +352,7 @@ const formattaDataLeggibile = (dataIso) => {
 
                 <div class="p-3 bg-light border rounded-3 mb-4">
                   <strong class="d-block mb-2 text-dark" style="font-size: 0.85rem; text-transform: uppercase;">Dettagli
-                    del
-                    blocco:</strong>
+                    del blocco:</strong>
                   <div class="d-flex justify-content-between mb-1 small">
                     <span class="text-muted">Inizio:</span>
                     <span class="fw-bold">{{ formattaDataLeggibile(postoDaGestire.manutenzione?.inizio) }}</span>
@@ -420,7 +360,7 @@ const formattaDataLeggibile = (dataIso) => {
                   <div class="d-flex justify-content-between mb-2 small">
                     <span class="text-muted">Fine:</span>
                     <span class="fw-bold text-danger">{{ formattaDataLeggibile(postoDaGestire.manutenzione?.fine)
-                      }}</span>
+                    }}</span>
                   </div>
                   <div class="pt-2 mt-2 border-top small">
                     <span class="text-muted d-block mb-1">Motivazione:</span>
@@ -435,7 +375,6 @@ const formattaDataLeggibile = (dataIso) => {
                 </button>
               </div>
             </div>
-
 
             <template v-else>
               <div v-if="currentMaintenanceStep === 1" class="step-wrapper fade-in">
@@ -694,7 +633,7 @@ const formattaDataLeggibile = (dataIso) => {
 .main-content {
   flex: 1;
   padding: 40px 48px;
-  overflow-y: auto;
+  /* overflow-y: auto; */
 }
 
 .loading-state {

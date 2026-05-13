@@ -173,7 +173,7 @@ const gestisciClick = (codice) => {
 </script>
 
 <template>
-    <div class="planimetria">
+    <div class="planimetria" :data-gestore="isGestoreMode">
 
         <!-- Legenda -->
         <div class="legenda-container">
@@ -402,6 +402,12 @@ img.box-legenda {
     cursor: not-allowed;
 }
 
+.planimetria[data-gestore="true"] .occupato {
+    cursor: pointer;
+}
+.planimetria[data-gestore="true"] .occupato:hover {
+    filter: brightness(0.95);
+}
 .selezionato {
     background: #00408A !important;
     color: white !important;
