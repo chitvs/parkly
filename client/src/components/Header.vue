@@ -22,6 +22,8 @@ import IconGarage from '../icons/IconGarage.vue'
 import eyeUrl from '../icons/eye-open.svg'
 import eyeClosedUrl from '../icons/eye-closed.svg'
 
+import 'bootstrap-icons/font/bootstrap-icons.css'
+
 
 
 
@@ -170,7 +172,8 @@ const handleLogout = async () => {
             </li>
             <li>   
               <RouterLink class="dropdown-item d-flex align-items-center" to="/portafoglio" @click="isMenuOpen = false">
-                <IconWallet class="me-2" width="18" height="18"/>
+                <!-- <IconWallet class="me-2" width="18" height="18"/> -->
+                 <i class="bi bi-wallet2 me-2"></i>
                 Il Tuo Portafoglio
               </RouterLink>
             </li>
@@ -387,6 +390,12 @@ const handleLogout = async () => {
   border-radius: 12px; 
   font-weight: 600; 
   color: white; 
+}
+
+.modal-submit-btn:hover {
+  background-color: #00336e;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
 }
 .password-group { 
   border: 1px solid #dee2e6; 
