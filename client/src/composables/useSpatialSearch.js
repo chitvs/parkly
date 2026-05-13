@@ -2,10 +2,14 @@ import { ref, computed, watch } from 'vue'
 import { calculateDistance } from '../utils/distance.js'
 import { strategic_places } from '../constants/places.js'
 
-export function useSpatialSearch(searchLocation, garages, passaFiltriTecnici) {
+export function useSpatialSearch(searchLocation, garages, passaFiltriTecnici, raggioKm) {
     const showExtendedResults = ref(false)
 
     watch(searchLocation, () => {
+        showExtendedResults.value = false
+    })
+
+    watch(raggioKm, () => {
         showExtendedResults.value = false
     })
 
@@ -22,6 +26,8 @@ export function useSpatialSearch(searchLocation, garages, passaFiltriTecnici) {
     const garagesFiltrati = computed(() => {
         const query = searchLocation.value.toLowerCase().trim()
         const poi = matchedPOI.value
+        const raggio = raggioKm?.value ?? 2
+        const raggioEsteso = Math.max(raggio + 3, 5)
 
         const allProcessed = garages.value.map(g => {
             let referencePOI = null
@@ -43,16 +49,20 @@ export function useSpatialSearch(searchLocation, garages, passaFiltriTecnici) {
                 ...g,
                 displayPOIName: referencePOI ? referencePOI.name : '',
                 displayDistanceKM: distance,
-                displayDistanceLabel: distance < 1 ? `${Math.round(distance * 1000)}m` : `${distance.toFixed(1)}km`
+                displayDistanceLabel: distance < 1
+                    ? `${Math.round(distance * 1000)}m`
+                    : `${distance.toFixed(1)}km`
             }
         })
 
         if (poi) {
-            const near = allProcessed.filter(g => passaFiltriTecnici(g) && g.displayDistanceKM <= 1.5)
-            const far = allProcessed.filter(g => passaFiltriTecnici(g) && g.displayDistanceKM > 1.5 && g.displayDistanceKM <= 5)
+            const near = allProcessed.filter(g => passaFiltriTecnici(g) && g.displayDistanceKM <= raggio)
+            const far = allProcessed.filter(g => passaFiltriTecnici(g) && g.displayDistanceKM > raggio && g.displayDistanceKM <= raggioEsteso)
+
             const results = near.length > 0
                 ? (showExtendedResults.value ? [...near, ...far] : near)
                 : far
+
             return results.sort((a, b) => a.displayDistanceKM - b.displayDistanceKM)
         }
 
@@ -66,14 +76,18 @@ export function useSpatialSearch(searchLocation, garages, passaFiltriTecnici) {
         const poi = matchedPOI.value
         if (!poi || showExtendedResults.value) return false
 
+        const raggio = raggioKm?.value ?? 2
+        const raggioEsteso = Math.max(raggio + 3, 5)
+
         const near = garages.value.filter(g => {
             const d = calculateDistance(poi.coords.lat, poi.coords.lng, g.latitudine, g.longitudine)
-            return d <= 1.5 && passaFiltriTecnici(g)
+            return d <= raggio && passaFiltriTecnici(g)
         })
         const far = garages.value.filter(g => {
             const d = calculateDistance(poi.coords.lat, poi.coords.lng, g.latitudine, g.longitudine)
-            return d > 1.5 && d <= 5 && passaFiltriTecnici(g)
+            return d > raggio && d <= raggioEsteso && passaFiltriTecnici(g)
         })
+
         return near.length > 0 && far.length > 0
     })
 

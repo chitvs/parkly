@@ -1,6 +1,6 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import * as bootstrap from 'bootstrap'
 import logoUrl from '../assets/LogoParklyBlu.svg'
 import logoInteroUrl from '../assets/LogoParklyIntero.svg'
@@ -17,18 +17,13 @@ import IconWallet from '../icons/IconWallet.vue'
 import IconLogout from '../icons/IconLogout.vue'
 import IconGarage from '../icons/IconGarage.vue'
 
-
-
 import eyeUrl from '../icons/eye-open.svg'
 import eyeClosedUrl from '../icons/eye-closed.svg'
 
-import 'bootstrap-icons/font/bootstrap-icons.css'
-
-
-
-
-
 const router = useRouter()
+const route = useRoute()
+
+const isRegisterPage = computed(() => route.path === '/register')
 
 const loginIdentificatore = ref('')
 const loginPassword = ref('')
@@ -106,7 +101,7 @@ const handleLogout = async () => {
       </div>
     </RouterLink>
 
-    <div class="right-section">
+    <div class="right-section" v-if="!isRegisterPage">
       
       <RouterLink 
         to="/garage" 
@@ -131,7 +126,7 @@ const handleLogout = async () => {
 
           <button class="btn user-name-btn d-flex align-items-center gap-2">
             <img :src="authStore.utente?.fotoProfilo_URL || defaultAvatarUrl" alt="Avatar"
-              class="rounded-circle border" style="width: 30px; height: 30px; object-fit: cover; border-color: #dee2e6;">
+              class="rounded-circle border" style="width: 30px; height: 30px; object-fit: cover; border-color: #dee2e6;" />
             <span>Ciao, <strong>{{ authStore.utente.nome }}</strong></span>
           </button>
 
@@ -145,7 +140,7 @@ const handleLogout = async () => {
                   Area Gestore
                 </RouterLink>
               </li>
-              <li><hr class="dropdown-divider"></li>
+              <li><hr class="dropdown-divider" /></li>
             </template>
 
             <template v-else-if="authStore.utente?.ruolo === 'CLIENTE'">
@@ -155,7 +150,7 @@ const handleLogout = async () => {
                   Diventa Gestore
                 </RouterLink>
               </li>
-              <li><hr class="dropdown-divider"></li>
+              <li><hr class="dropdown-divider" /></li>
             </template>
 
             <li>
@@ -178,7 +173,7 @@ const handleLogout = async () => {
               </RouterLink>
             </li>
             <li>
-              <hr class="dropdown-divider">
+              <hr class="dropdown-divider" />
             </li>
             <li>
               <a class="dropdown-item text-danger fw-bold d-flex align-items-center" href="#" @click.prevent="handleLogout">
@@ -280,7 +275,7 @@ const handleLogout = async () => {
   color: #00408a;
 }
 
-/* GRUPPO BOTTONI E PILLOLA: Più grandi e coordinati */
+/* GRUPPO BOTTONI E PILLOLA UTENTE */
 .auth-buttons-group {
   display: flex;
   gap: 0.8rem;
@@ -288,13 +283,23 @@ const handleLogout = async () => {
 }
 
 .login-btn,
-.register-btn {
-  padding: 0.65rem 1.5rem;
+.register-btn,
+.user-name-btn {
+  height: 48px; 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  font-size: 1rem;
   border-radius: 25px;
   text-decoration: none;
-  font-weight: 700;
-  font-size: 1rem;
   transition: all 0.2s ease;
+}
+
+.login-btn,
+.register-btn {
+  padding: 0 1.5rem;
+  font-weight: 700;
 }
 
 .login-btn {
@@ -312,10 +317,7 @@ const handleLogout = async () => {
   background-color: #f8f9fa;
   border: 1px solid #dee2e6;
   color: #2c3e50;
-  border-radius: 30px;
-  padding: 0.65rem 1.6rem; /* Identico ai pulsanti auth */
-  font-size: 1rem; /* Identico ai pulsanti auth */
-  transition: all 0.3s;
+  padding: 0 1.6rem;
 }
 
 .login-btn:hover, 
@@ -376,7 +378,9 @@ const handleLogout = async () => {
   border-radius: 12px; 
   border: 1px solid #e0e0e0; 
   padding: 10px 18px; 
-  font-size: 15px; 
+  font-size: 15px;
+  font-family: inherit;
+  color: #2c3e50; 
 }
 .modal-input:focus {
   border-color: #00408a;
@@ -407,6 +411,10 @@ const handleLogout = async () => {
   height: 52px; 
   box-shadow: none !important;
   background: transparent !important; 
+  font-size: 15px;
+  padding: 10px 18px;
+  font-family: inherit;
+  color: #2c3e50;
 }
 .toggle-password-btn { 
   border: none !important; 

@@ -1,13 +1,14 @@
 <script setup>
-import { ref, onMounted, onUnmounted, watch, nextTick,computed } from 'vue'
+import { ref, onMounted, onUnmounted, watch, nextTick, computed, reactive } from 'vue'
 import { prenotazioniStore } from '../store/prenotazioni.js'
 import { useRecensione } from '../composables/useRecensione.js'
-import { getSocket } from '../composables/useChat.js' 
+import { getSocket } from '../composables/useChat.js'
 
 import 'bootstrap-icons/font/bootstrap-icons.css'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 import ChatBox from '../components/ChatBox.vue'
+import Pagination from '../components/Pagination.vue'
 
 // Icone dei bottoni annulla e contatta
 import IconCancel from '../icons/IconCancel.vue'
@@ -20,7 +21,7 @@ const ordinamento = ref('creazione_desc') // default: data creazione più recent
 
 // variabili per la paginazione
 const paginaCorrente = ref(1)
-const elementiPerPagina = 5
+const elementiPerPagina = ref(5)
 
 
 // Stati reattivi per i dati del componente
@@ -53,7 +54,7 @@ let socket = null;
 const handleNuovoMessaggio = (msg) => {
   // Cerca la prenotazione di riferimento nell'elenco
   const bookingToUpdate = bookings.value.find(b => Number(b.id_prenotazione) === Number(msg.id_prenotazione));
-  
+
   if (bookingToUpdate) {
     // Controlla se l'utente ha già la chat aperta per quella specifica prenotazione
     const chatAperta = chatSelezionata.value && chatSelezionata.value.idPrenotazione === Number(msg.id_prenotazione);
@@ -68,7 +69,7 @@ const handleNuovoMessaggio = (msg) => {
 onMounted(async () => {
   // Carica i dati appena il componente viene montato
   await caricaPrenotazioni()
-  
+
   // Inizializza il WebSocket e metti in ascolto gli eventi globali di notifica
   socket = getSocket();
   socket.on('nuovo_messaggio', handleNuovoMessaggio);
@@ -138,18 +139,12 @@ const prenotazioniFiltrate = computed(() => {
 })
 
 // logica di Paginazione calcolata sull'array filtrato
-const totalePagine = computed(() => Math.ceil(prenotazioniFiltrate.value.length / elementiPerPagina))
-
 const prenotazioniPaginate = computed(() => {
-  const inizio = (paginaCorrente.value - 1) * elementiPerPagina
-  return prenotazioniFiltrate.value.slice(inizio, inizio + elementiPerPagina)
+  const inizio = (paginaCorrente.value - 1) * elementiPerPagina.value
+  return prenotazioniFiltrate.value.slice(inizio, inizio + elementiPerPagina.value)
 })
 
-const cambiaPagina = (pag) => {
-  if (pag >= 1 && pag <= totalePagine.value) {
-    paginaCorrente.value = pag
-  }
-}
+const scrollInAlto = () => window.scrollTo({ top: 0, behavior: 'smooth' })
 
 // resetta la pagina a 1 ogni volta che cambia un filtro o l'ordinamento
 watch([filtroStato, filtroGarage, ordinamento], () => {
@@ -164,7 +159,8 @@ const formatDate = (dateString) => {
     month: 'long',
     year: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
+    timeZone: 'Europe/Rome'
   }).format(date)
 }
 
@@ -177,21 +173,66 @@ const getStatusBadgeClass = (stato) => {
   }
 }
 
-// Gestione della cancellazione di una prenotazione
-const handleCancelBooking = async (codice) => {
-  const confermato = confirm("Sei sicuro di voler annullare questa prenotazione? L'operazione non può essere annullata.");
-  
-  if (!confermato) return; // Se clicca "Annulla" nel popup, fermiamo tutto
+// Variabili per il modale di annullamento
+const showCancelModal = ref(false)
+const bookingToCancel = ref(null)
+const infoAnnullamento = reactive({
+  rimborso: 0,
+  messaggio: '',
+  motivazione: '',
+  classe: ''
+})
 
-  const response = await prenotazioniStore.cancelBooking(codice);
+// Funzione per calcolare il rimborso "al volo" per la UI
+const calcolaAnteprimaAnnullamento = (booking) => {
+  const oraAttuale = new Date()
+  const inizioSosta = new Date(booking.iniziososta)
+  const dataCreazione = new Date(booking.datacreazione)
 
-  // Aggiornamento dell'interfaccia utente (UI) senza ricaricare tutto
-  if (response.success) {
-    const bookingToUpdate = bookings.value.find(b => b.codiceprenotazione === codice)
-    if (bookingToUpdate) bookingToUpdate.stato = 'ANNULLATA'
-    alert("Prenotazione annullata con successo.")
+  const oreAllInizio = (inizioSosta - oraAttuale) / (1000 * 60 * 60)
+  const minutiDallaCreazione = (oraAttuale - dataCreazione) / (1000 * 60)
+  const prezzo = parseFloat(booking.prezzototale)
+
+  if (oreAllInizio > 12 || minutiDallaCreazione <= 15) {
+    infoAnnullamento.percentuale = 100
+    infoAnnullamento.rimborso = prezzo
+    infoAnnullamento.messaggio = 'Cancellazione Gratuita! Riceverai un rimborso completo.'
+    infoAnnullamento.classe = 'text-success'
+  } else if (oreAllInizio > 0) {
+    infoAnnullamento.percentuale = 50
+    infoAnnullamento.rimborso = prezzo * 0.5
+    infoAnnullamento.messaggio = 'Annullamento tardivo: riceverai un rimborso del 50%.'
+    infoAnnullamento.classe = 'text-warning'
   } else {
-    alert(response.error || "Impossibile annullare la prenotazione.")
+    infoAnnullamento.percentuale = 0
+    infoAnnullamento.rimborso = 0
+    infoAnnullamento.messaggio = 'Sosta già iniziata: non è previsto alcun rimborso.'
+    infoAnnullamento.classe = 'text-danger'
+  }
+}
+
+const apriModaleAnnullamento = async (booking) => {
+  bookingToCancel.value = booking
+  // Chiamata all'API di anteprima che abbiamo appena aggiornato
+  const res = await prenotazioniStore.getAnteprimaAnnullamento(booking.codiceprenotazione)
+  if (res.success) {
+    Object.assign(infoAnnullamento, res.dati)
+    showCancelModal.value = true
+  }
+}
+
+// Gestione della cancellazione di una prenotazione
+const handleConfirmCancel = async () => {
+  if (!bookingToCancel.value) return
+
+  const response = await prenotazioniStore.cancelBooking(bookingToCancel.value.codiceprenotazione)
+
+  if (response.success) {
+    bookingToCancel.value.stato = 'ANNULLATA'
+    showCancelModal.value = false
+    alert(`Prenotazione annullata. Rimborsati: €${infoAnnullamento.rimborso.toFixed(2)}`)
+  } else {
+    alert(response.error || "Errore durante l'annullamento")
   }
 }
 
@@ -223,17 +264,17 @@ const categories = [
 const apriChat = async (booking) => {
   // Rimuove il pallino rosso (notifica letta)
   booking.nonletti = 0;
-  
+
   // Tecnica per forzare il re-mount del componente figlio (ChatBox):
   // Impostandolo a null lo rimuoviamo dal DOM
-  chatSelezionata.value = null; 
-  
+  chatSelezionata.value = null;
+
   // Aspetta un "tick" del ciclo di rendering di Vue per assicurarsi che il DOM sia aggiornato
   await nextTick();
-  
+
   // Reimposta l'oggetto ricreando il componente ChatBox fresco
   chatSelezionata.value = {
-    idPrenotazione: Number(booking.id_prenotazione), 
+    idPrenotazione: Number(booking.id_prenotazione),
     idDestinatario: Number(booking.id_gestore),
     nomeDestinatario: booking.nomegestore || booking.nomegarage || 'Gestore'
   }
@@ -293,7 +334,7 @@ const chiudiChat = () => {
       </div>
 
       <div v-else-if="bookings.length === 0" class="text-center py-5 empty-state">
-        <img src="../assets/broken_car.png" alt="Nessuna prenotazione" width="120" class="mb-3 opacity-50">
+        <img src="../assets/broken_car.png" alt="Nessuna prenotazione" width="120" class="mb-3 opacity-50" />
         <h4 class="fw-bold text-muted">Nessuna prenotazione trovata</h4>
         <p class="text-muted">Non hai ancora effettuato nessuna prenotazione con noi.</p>
         <router-link to="/ricerca" class="btn btn-primary mt-3 px-4 py-2">Trova Parcheggio</router-link>
@@ -302,7 +343,8 @@ const chiudiChat = () => {
       <div v-else-if="prenotazioniFiltrate.length === 0" class="text-center py-5 empty-state">
         <h5 class="fw-bold text-muted">Nessun risultato</h5>
         <p class="text-muted">Nessuna prenotazione corrisponde ai filtri selezionati.</p>
-        <button class="btn btn-outline-primary mt-2" @click="filtroStato=''; filtroGarage=''; ordinamento='creazione_desc'">Resetta Filtri</button>
+        <button class="btn btn-outline-primary mt-2"
+          @click="filtroStato = ''; filtroGarage = ''; ordinamento = 'creazione_desc'">Resetta Filtri</button>
       </div>
 
       <div v-else class="row g-4">
@@ -318,7 +360,7 @@ const chiudiChat = () => {
                   <small class="text-muted"><i class="bi bi-geo-alt-fill me-1"></i>{{ booking.indirizzo }}</small>
                 </div>
                 <div class="action-group d-flex align-items-center gap-2">
-  
+
                   <!-- Badge Stato  -->
                   <span class="custom-badge" :class="'badge-' + booking.stato.toLowerCase()">
                     {{ booking.stato }}
@@ -342,13 +384,13 @@ const chiudiChat = () => {
                     class="custom-btn btn-chat"
                     title="Contatta il gestore"
                   >
-                    <!--pallino notifica-->
+                    <!-- Pallino notifica-->
                     <span v-if="booking.nonletti > 0" class="chat-notification-dot"></span>
                       <IconMessage width="18" height="18" />
                         Contatta
                   </button>
 
-                  <!--Pulsante Recensioni-->
+                  <!-- Pulsante Recensioni-->
                   <div v-if="booking.stato === 'CONCLUSA' && !booking.ha_recensito"
                     class="d-flex align-items-center ms-3 border-start ps-3">
                     <span class="text-muted small fw-semibold me-2 d-none d-sm-inline">Com'è andata?</span>
@@ -410,19 +452,9 @@ const chiudiChat = () => {
           </div>
         </div>
 
-        <div class="col-12 mt-4" v-if="totalePagine > 1">
-          <div class="pagination-horizontal">
-            <button class="page-btn" :disabled="paginaCorrente === 1"
-              @click="cambiaPagina(paginaCorrente - 1)">«</button>
-
-            <div class="page-numbers">
-              <span v-for="p in totalePagine" :key="p" class="page-dot"
-                :class="{ active: paginaCorrente === p }" @click="cambiaPagina(p)">{{ p }}</span>
-            </div>
-
-            <button class="page-btn" :disabled="paginaCorrente === totalePagine"
-              @click="cambiaPagina(paginaCorrente + 1)">»</button>
-          </div>
+        <div class="col-12 mt-4" v-if="prenotazioniFiltrate.length > 0">
+          <Pagination v-model:paginaCorrente="paginaCorrente" v-model:elementiPerPagina="elementiPerPagina"
+            :totaleElementi="prenotazioniFiltrate.length" @cambio-pagina="scrollInAlto" />
         </div>
 
       </div>
@@ -430,13 +462,8 @@ const chiudiChat = () => {
 
     <!-- Componente ChatBox montato come Popup fluttuante -->
     <div v-if="chatSelezionata" class="chat-popup-container">
-      <ChatBox 
-        :idPrenotazione="chatSelezionata.idPrenotazione" 
-        :idDestinatario="chatSelezionata.idDestinatario"
-        :nomeDestinatario="chatSelezionata.nomeDestinatario"
-        ruoloDestinatario="Gestore"
-        @chiudi="chiudiChat"
-      />
+      <ChatBox :idPrenotazione="chatSelezionata.idPrenotazione" :idDestinatario="chatSelezionata.idDestinatario"
+        :nomeDestinatario="chatSelezionata.nomeDestinatario" ruoloDestinatario="Gestore" @chiudi="chiudiChat" />
     </div>
 
     <Footer />
@@ -532,6 +559,32 @@ const chiudiChat = () => {
         </Transition>
       </div>
     </Transition>
+    <Transition name="overlay-fade">
+      <div v-if="showCancelModal" class="review-overlay" @click.self="showCancelModal = false">
+        <Transition name="modal-slide" appear>
+          <div class="review-modal p-4 text-center">
+            <h3 class="fw-bold mb-3" style="color: #00408A">ANNULLA PRENOTAZIONE</h3>
+            <p class="text-muted">Stai per annullare la sosta per: <br />
+              <strong>{{ bookingToCancel?.nomegarage }}</strong> ({{ bookingToCancel?.codiceprenotazione }})
+            </p>
+
+            <div class="my-4 p-3 rounded-3 bg-light border">
+              <div :class="['fs-5 fw-bold', infoAnnullamento.classe]">
+                {{ infoAnnullamento.messaggio }}: € {{ infoAnnullamento.rimborso.toFixed(2) }}
+              </div>
+              <p class="small text-dark mt-2 mb-0" style="line-height: 1.3;">
+                {{ infoAnnullamento.motivazione }}
+              </p>
+            </div>
+
+            <div class="d-flex gap-2">
+              <button class="cta-btn cta-btn--ghost w-50" @click="showCancelModal = false">Indietro</button>
+              <button class="cta-btn cta-btn--danger-ghost w-50" @click="handleConfirmCancel">Conferma</button>
+            </div>
+          </div>
+        </Transition>
+      </div>
+    </Transition>
 
   </div>
 </template>
@@ -576,13 +629,14 @@ const chiudiChat = () => {
 .btn-primary:hover {
   background-color: #00336E;
 }
+
 /* Stile per replicare l'estetica delle targhe */
 .font-monospace {
   letter-spacing: 2px;
   font-family: 'Courier New', Courier, monospace;
 }
 
-/*  CSS per il popup della chat */
+/* CSS per il popup della chat */
 .chat-popup-container {
   position: fixed;
   bottom: 24px;
@@ -599,18 +653,20 @@ const chiudiChat = () => {
 
 /* --- UNITÀ STILISTICA: BADGE E PULSANTI --- */
 .action-group {
-  flex-wrap: wrap; /* Evita che si schiaccino su schermi molto piccoli */
+  flex-wrap: wrap;
+  /* Evita che si schiaccino su schermi molto piccoli */
 }
 
 /* Base comune per altezza, font e bordi */
-.custom-badge, .custom-btn {
+.custom-badge,
+.custom-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-size: 0.85rem;
   font-weight: 600;
   padding: 0.4rem 0.85rem;
-  border-radius: 8px; 
+  border-radius: 8px;
   border: 1px solid transparent;
   transition: all 0.2s ease;
   height: 36px;
@@ -622,18 +678,22 @@ const chiudiChat = () => {
   font-size: 0.75rem;
   letter-spacing: 0.5px;
   cursor: default;
-  border-radius: 99px; /* Raggio diverso perchè lo stato NON è un bottone*/
+  border-radius: 99px;
+  /* Raggio diverso perchè lo stato NON è un bottone*/
 }
+
 .badge-attiva {
   background-color: #137333;
   color: #ffffff;
   border-color: #137333;
 }
+
 .badge-conclusa {
   background-color: #4a4d51;
   color: #ffffff;
   border-color: #4a4d51;
 }
+
 .badge-annullata {
   background-color: #c5221f;
   color: #ffffff;
@@ -648,20 +708,22 @@ const chiudiChat = () => {
   gap: 0.4rem;
   position: relative;
 }
+
 .btn-chat:hover {
   background-color: var(--primary-blue, #00408A);
   color: white;
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 64, 138, 0.15);
 }
+
 .chat-notification-dot {
   position: absolute;
   top: -4px;
   right: -4px;
   width: 12px;
   height: 12px;
-  background-color: #ef4444; 
-  border: 2px solid #ffffff; 
+  background-color: #ef4444;
+  border: 2px solid #ffffff;
   border-radius: 50%;
   box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
   z-index: 2;
@@ -675,6 +737,7 @@ const chiudiChat = () => {
   cursor: pointer;
   gap: 0.3rem;
 }
+
 .btn-cancel:hover {
   background-color: #c5221f;
   color: white;
@@ -683,8 +746,15 @@ const chiudiChat = () => {
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .trigger-stars i {
@@ -1169,72 +1239,5 @@ const chiudiChat = () => {
 .garage-title-link:hover {
   color: var(--primary-blue, #00408A) !important;
   text-decoration: underline;
-}
-
-/* Stili Paginazione Orizzontale */
-.pagination-horizontal {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-}
-
-.page-btn {
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    width: 36px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    color: #64748b;
-    font-weight: bold;
-    transition: all 0.2s ease;
-}
-
-.page-btn:hover:not(:disabled) {
-    background: #f8fafc;
-    border-color: var(--primary-blue, #00408A);
-    color: var(--primary-blue, #00408A);
-}
-
-.page-btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-    background: #f1f5f9;
-}
-
-.page-numbers {
-    display: flex;
-    gap: 6px;
-}
-
-.page-dot {
-    width: 36px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #64748b;
-    cursor: pointer;
-    background: white;
-    border: 1px solid #e2e8f0;
-    transition: all 0.2s ease;
-}
-
-.page-dot:hover {
-    background: #f8fafc;
-    border-color: #cbd5e1;
-}
-
-.page-dot.active {
-    background: var(--primary-blue, #00408A);
-    color: white;
-    border-color: var(--primary-blue, #00408A);
 }
 </style>

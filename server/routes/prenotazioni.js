@@ -4,42 +4,25 @@ const db = require('../database/db');
 const { isLoggato } = require('../middleware/authMiddleware');
 
 router.post('/', isLoggato, async (req, res) => {
-    const { 
-        id_posto, 
-        targa, 
-        note,
-        inizio, 
-        fine, 
-        prezzo_totale,
-        codice_disabilita
-    } = req.body;
-
+    const { id_posto, targa, note, inizio, fine, prezzo_totale, codice_disabilita } = req.body;
     const id_utente = req.session.utente.id;
 
     try {
         const nuova = await db.tx(async t => {
-            
-            // controllo saldo utente
+
+            // 1. Controllo saldo
             const utente = await t.one(`SELECT Saldo FROM Utente WHERE ID_Utente = $1`, [id_utente]);
-            
-            const saldoCorrente = parseFloat(utente.saldo !== undefined ? utente.saldo : utente.Saldo || 0);
+            const saldoCorrente = parseFloat(utente.saldo || 0);
             const costoSosta = parseFloat(prezzo_totale);
-            
             if (saldoCorrente < costoSosta) {
-                throw { 
-                    isCustom: true, 
-                    status: 402, 
-                    message: 'Credito insufficiente per completare la prenotazione.' 
-                };
+                throw { isCustom: true, status: 402, message: 'Credito insufficiente per completare la prenotazione.' };
             }
 
-            // controllo che il garage sia aperto
+            // 2. Controllo orari garage
             const checkOrari = await t.one(`
                 SELECT 
-                    g.Is24h,
-                    g.OrarioApertura,
-                    g.OrarioChiusura,
-                    g.Nome AS nome_garage,
+                    g.Is24h, g.OrarioApertura, g.OrarioChiusura,
+                    g.Nome AS nome_garage, g.ID_Gestore,
                     p.CodicePosto,
                     ($2::timestamp::time >= g.OrarioApertura AND $2::timestamp::time <= g.OrarioChiusura) AS inizio_valido,
                     ($3::timestamp::time >= g.OrarioApertura AND $3::timestamp::time <= g.OrarioChiusura) AS fine_valida
@@ -48,119 +31,74 @@ router.post('/', isLoggato, async (req, res) => {
                 WHERE p.ID_Posto = $1
             `, [id_posto, inizio, fine]);
 
-            // Se il garage non è h24 inizio e fine devono stare negli orari di apertura/chiusura
-            if (!checkOrari.is24h) {
-                if (!checkOrari.inizio_valido || !checkOrari.fine_valida) {
-                    throw {
-                        isCustom: true,
-                        status: 400,
-                        message: 'Gli orari selezionati non rientrano nell\'orario di apertura del garage.'
-                    };
-                }
+            if (!checkOrari.is24h && (!checkOrari.inizio_valido || !checkOrari.fine_valida)) {
+                throw { isCustom: true, status: 400, message: "Gli orari selezionati non rientrano nell'orario di apertura del garage." };
             }
 
-            // blocchiamo il posto auto per la durata di questa transazione e controlliamo se è per disabili.
-            // Se un altro utente tenta di prenotare lo stesso posto contemporaneamente,
-            // il DB lo metterà in "pausa" finché noi non abbiamo finito.
+            // 3. Lock posto e controllo disabili
             const posto = await t.one('SELECT IsDisabili FROM PostoAuto WHERE ID_Posto = $1 FOR UPDATE', [id_posto]);
-
             if (posto.isdisabili && (!codice_disabilita || codice_disabilita.trim() === '')) {
-                throw { 
-                    isCustom: true, 
-                    status: 400, 
-                    message: 'Codice Contrassegno Disabili obbligatorio per questo parcheggio.' 
-                };
+                throw { isCustom: true, status: 400, message: 'Codice Contrassegno Disabili obbligatorio per questo parcheggio.' };
             }
 
-            // controllo disponibilità
+            // 4. Controllo disponibilità
             const occupato = await t.oneOrNone(`
                 SELECT ID_Prenotazione FROM Prenotazione 
-                WHERE ID_Posto = $1 
-                AND Stato = 'ATTIVA'
+                WHERE ID_Posto = $1 AND Stato = 'ATTIVA'
                 AND (InizioSosta, FineSosta) OVERLAPS ($2::timestamp, $3::timestamp)
             `, [id_posto, inizio, fine]);
-
             if (occupato) {
-                throw { 
-                    isCustom: true, 
-                    status: 409, 
-                    message: 'Posto non più disponibile per gli orari selezionati.' 
-                };
+                throw { isCustom: true, status: 409, message: 'Posto non più disponibile per gli orari selezionati.' };
             }
 
-            // genero il codice prenotazione
-            // Math.random().toString(36) converte un numero casuale in una stringa alfanumerica
-            // substring(2, 10) prende 8 caratteri, saltando la parte inizale
-            let codiceLibero = false;
+            // 5. Genera codice univoco
             let codice = '';
-
+            let codiceLibero = false;
             while (!codiceLibero) {
                 codice = 'PR-' + Math.random().toString(36).substring(2, 10).toUpperCase();
-                const esisteGia = await t.oneOrNone(`
-                    SELECT ID_Prenotazione FROM Prenotazione 
-                    WHERE CodicePrenotazione = $1
-                `, [codice]);
-
-                if (!esisteGia) {
-                    codiceLibero = true;
-                }
+                const esisteGia = await t.oneOrNone(`SELECT ID_Prenotazione FROM Prenotazione WHERE CodicePrenotazione = $1`, [codice]);
+                if (!esisteGia) codiceLibero = true;
             }
 
-            // scalo i soldi dal saldo
-            await t.none(`
-                UPDATE Utente 
-                SET Saldo = Saldo - $1 
-                WHERE ID_Utente = $2
+            // 6. Scala il saldo
+            const userUpdate = await t.one(`
+                UPDATE Utente SET Saldo = Saldo - $1 WHERE ID_Utente = $2 RETURNING Saldo
             `, [prezzo_totale, id_utente]);
+            req.session.utente.saldo = userUpdate.saldo;
 
-            // inserisco nel db la transazione
-            await t.none(`
-                INSERT INTO Transazione (ID_Utente, Tipo, Importo, Descrizione)
-                VALUES ($1, 'PRENOTAZIONE', $2, $3)
-            `, [
-                id_utente, 
-                -costoSosta, 
-                `Pagamento prenotazione ${codice}`
-            ]);
-
-            // inserisco nel db la prenotazione
-            return await t.one(`
+            // 7. Inserisci la prenotazione e recupera l'ID ← DEVE VENIRE PRIMA DELLE TRANSAZIONI
+            const nuovaPrenotazione = await t.one(`
                 INSERT INTO Prenotazione (ID_Utente, ID_Posto, CodicePrenotazione, Targa, Note, CodiceDisabilita, InizioSosta, FineSosta, PrezzoTotale)
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                 RETURNING ID_Prenotazione, CodicePrenotazione
             `, [
-                id_utente, 
-                id_posto, 
-                codice, 
-                targa, 
-                note, 
-                posto.isdisabili ? codice_disabilita : null, // Salva il codice o mette NULL
-                inizio, 
-                fine, 
-                prezzo_totale
+                id_utente, id_posto, codice, targa, note,
+                posto.isdisabili ? codice_disabilita : null,
+                inizio, fine, prezzo_totale
             ]);
+
+            // 8. Ora che l'ID esiste, inserisci le transazioni
+            await t.none(`
+                INSERT INTO Transazione (ID_Utente, ID_Prenotazione, Tipo, Importo, Descrizione)
+                VALUES ($1, $2, 'PRENOTAZIONE', $3, $4)
+            `, [id_utente, nuovaPrenotazione.id_prenotazione, -prezzo_totale, `Pagamento prenotazione ${codice}`]);
+
+            await t.none(`
+                INSERT INTO Transazione (ID_Utente, ID_Prenotazione, Tipo, Importo, Descrizione)
+                VALUES ($1, $2, 'INCASSO_SOSPESO', $3, $4)
+            `, [checkOrari.id_gestore, nuovaPrenotazione.id_prenotazione, prezzo_totale, `Incasso in sospeso per prenotazione ${codice}`]);
+
+            return nuovaPrenotazione;
         });
 
-        res.json({ 
-            success: true, 
-            messaggio: 'Prenotazione confermata', 
-            prenotazione: nuova 
-        });
+        res.json({ success: true, messaggio: 'Prenotazione confermata', prenotazione: nuova });
 
     } catch (err) {
         console.error('Errore salvataggio prenotazione:', err);
-        
         if (err.isCustom) {
-            return res.status(err.status).json({ 
-                success: false, 
-                error: err.message 
-            });
+            return res.status(err.status).json({ success: false, error: err.message });
         }
-
-        res.status(500).json({ 
-            success: false, 
-            error: 'Errore interno' 
-        });
+        res.status(500).json({ success: false, error: 'Errore interno' });
     }
 });
 
@@ -179,7 +117,7 @@ router.get('/', async (req, res) => {
             SET Stato = 'CONCLUSA' 
             WHERE ID_Utente = $1 
               AND Stato = 'ATTIVA' 
-              AND FineSosta < (NOW() + INTERVAL '2 hours')
+              AND FineSosta < (NOW() AT TIME ZONE 'Europe/Rome')
         `, [utenteId]);
 
         // 2. RECUPERO DATI POTENZIATO
@@ -228,7 +166,7 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Annullamento di una prenotazione
+// annullamento prenotazione
 router.put('/:codice/annulla', async (req, res) => {
     if (!req.session.utente || !req.session.utente.id) {
         return res.status(401).json({ success: false, error: 'Non autorizzato' });
@@ -238,60 +176,135 @@ router.put('/:codice/annulla', async (req, res) => {
         const codicePrenotazione = req.params.codice;
         const utenteId = req.session.utente.id;
         
-        // eseguiamo tutto in una transazione per evitare di annullare senza rimborsare
-        const nuovoSaldo = await db.tx(async t => {
-            // troviamo la prenotazione e blocchiamo la riga per l'update
+        const risultato = await db.tx(async t => {
             const prenotazione = await t.oneOrNone(`
-                SELECT ID_Prenotazione, PrezzoTotale, Stato 
-                FROM Prenotazione 
-                WHERE CodicePrenotazione = $1 AND ID_Utente = $2 AND Stato = 'ATTIVA'
-                FOR UPDATE
+                SELECT 
+                    p.ID_Prenotazione, p.PrezzoTotale, p.Stato, g.ID_Gestore,
+                    
+                    -- Calcolo ore mancanti all'inizio della sosta
+                    (EXTRACT(EPOCH FROM (p.InizioSosta - (NOW() AT TIME ZONE 'Europe/Rome'))) / 3600) AS ore_all_inizio,
+                    
+                    -- Calcolo minuti passati dalla creazione della prenotazione
+                    (EXTRACT(EPOCH FROM (NOW() - p.DataCreazione)) / 60) AS minuti_dalla_creazione
+
+                FROM Prenotazione p
+                JOIN PostoAuto pa ON p.ID_Posto = pa.ID_Posto
+                JOIN Garage g ON pa.ID_Garage = g.ID_Garage
+                WHERE p.CodicePrenotazione = $1 AND p.ID_Utente = $2 AND p.Stato = 'ATTIVA'
+                FOR UPDATE OF p
             `, [codicePrenotazione, utenteId]);
 
             if (!prenotazione) {
                 throw { status: 400, message: 'Prenotazione non trovata o già annullata.' };
             }
 
-            // Aggiorniamo lo stato in ANNULLATA
-            await t.none(`
-                UPDATE Prenotazione 
-                SET Stato = 'ANNULLATA' 
-                WHERE ID_Prenotazione = $1
-            `, [prenotazione.id_prenotazione]);
+            const oreAllInizio = parseFloat(prenotazione.ore_all_inizio);
+            const minutiDallaCreazione = parseFloat(prenotazione.minuti_dalla_creazione);
 
-            // riaccreditiamo i soldi al cliente
-            const utente = await t.one(`
-                UPDATE Utente 
-                SET Saldo = Saldo + $1 
-                WHERE ID_Utente = $2
-                RETURNING Saldo
-            `, [prenotazione.prezzototale, utenteId]);
+            let percentualeRimborso = 0;
+            if (oreAllInizio > 12 || minutiDallaCreazione <= 15) {
+                percentualeRimborso = 1; // Rimborso Totale
+            } else if (oreAllInizio > 0) {
+                percentualeRimborso = 0.5; // Rimborso Parziale (Penale 50%)
+            } else {
+                percentualeRimborso = 0; // Nessun Rimborso (Sosta già iniziata)
+            }
 
-            // salvo la transazione nel db
-            await t.none(`
-                INSERT INTO Transazione (ID_Utente, Tipo, Importo, Descrizione)
-                VALUES ($1, 'RIMBORSO', $2, $3)
-            `, [
-                utenteId, 
-                prenotazione.prezzototale, 
-                `Rimborso prenotazione ${codicePrenotazione}`
-            ]);
+            const importoRimborso = parseFloat(prenotazione.prezzototale) * percentualeRimborso;
+            const penaleGestore = parseFloat(prenotazione.prezzototale) - importoRimborso;
 
-            return utente.saldo;
+            // 3. Aggiorniamo lo stato della prenotazione
+            await t.none(`UPDATE Prenotazione SET Stato = 'ANNULLATA' WHERE ID_Prenotazione = $1`, [prenotazione.id_prenotazione]);
+
+            // 4. Gestione Transazioni - CLIENTE
+            if (importoRimborso > 0) {
+                await t.none(`UPDATE Utente SET Saldo = Saldo + $1 WHERE ID_Utente = $2`, [importoRimborso, utenteId]);
+                await t.none(`
+                    INSERT INTO Transazione (ID_Utente, ID_Prenotazione, Tipo, Importo, Descrizione)
+                    VALUES ($1, $2, 'RIMBORSO', $3, $4)
+                `, [utenteId, prenotazione.id_prenotazione, importoRimborso, `Rimborso (${percentualeRimborso*100}%) prenotazione ${codicePrenotazione}`]);
+            }
+
+            // 5. Gestione Transazioni - GESTORE
+            await t.none(`DELETE FROM Transazione WHERE ID_Prenotazione = $1 AND Tipo = 'INCASSO_SOSPESO'`, [prenotazione.id_prenotazione]);
+
+            if (penaleGestore > 0) {
+                await t.none(`UPDATE Utente SET Saldo = Saldo + $1 WHERE ID_Utente = $2`, [penaleGestore, prenotazione.id_gestore]);
+                await t.none(`
+                    INSERT INTO Transazione (ID_Utente, ID_Prenotazione, Tipo, Importo, Descrizione)
+                    VALUES ($1, $2, 'INCASSO_COMPLETATO', $3, $4)
+                `, [prenotazione.id_gestore, prenotazione.id_prenotazione, penaleGestore, `Penale annullamento prenotazione ${codicePrenotazione}`]);
+            }
+
+            const utenteAggiornato = await t.one(`SELECT Saldo FROM Utente WHERE ID_Utente = $1`, [utenteId]);
+            return { nuovoSaldo: utenteAggiornato.saldo, importoRimborso };
         });
+
+        req.session.utente.saldo = risultato.nuovoSaldo;
 
         res.json({ 
             success: true, 
-            messaggio: 'Prenotazione annullata e importo rimborsato con successo',
-            nuovoSaldo: nuovoSaldo
+            messaggio: `Prenotazione annullata. Rimborsato: €${risultato.importoRimborso.toFixed(2)}`,
+            nuovoSaldo: risultato.nuovoSaldo
         });
 
     } catch (err) {
-        console.error('Errore annullamento prenotazione:', err);
-        if (err.status) {
-            return res.status(err.status).json({ success: false, error: err.message });
+        console.error('Errore annullamento:', err);
+        res.status(err.status || 500).json({ success: false, error: err.message || 'Errore interno' });
+    }
+});
+
+router.get('/:codice/anteprima-annullamento', async (req, res) => {
+    try {
+        const prenotazione = await db.oneOrNone(`
+            SELECT p.PrezzoTotale,
+                   (EXTRACT(EPOCH FROM (p.InizioSosta - (NOW() AT TIME ZONE 'Europe/Rome'))) / 3600) AS ore_all_inizio,
+                   (EXTRACT(EPOCH FROM (NOW() - p.DataCreazione)) / 60) AS minuti_dalla_creazione
+            FROM Prenotazione p
+            WHERE p.CodicePrenotazione = $1 AND p.ID_Utente = $2 AND p.Stato = 'ATTIVA'
+        `, [req.params.codice, req.session.utente.id]);
+
+        if (!prenotazione) throw new Error('Prenotazione non trovata');
+
+        const oreAllInizio = parseFloat(prenotazione.ore_all_inizio);
+        const minutiDallaCreazione = parseFloat(prenotazione.minuti_dalla_creazione);
+        const prezzo = parseFloat(prenotazione.prezzototale);
+
+        let percentuale = 0, messaggio = '', motivazione = '', classe = '';
+
+        if (minutiDallaCreazione <= 15) {
+            percentuale = 100;
+            messaggio = 'Rimborso Totale';
+            motivazione = 'Hai annullato entro 15 minuti dalla prenotazione (Diritto di Recesso Rapido).';
+            classe = 'text-success';
+        } else if (oreAllInizio > 12) {
+            percentuale = 100;
+            messaggio = 'Rimborso Totale';
+            motivazione = 'Hai annullato con più di 12 ore di preavviso rispetto all\'inizio della sosta.';
+            classe = 'text-success';
+        } else if (oreAllInizio > 0) {
+            percentuale = 50;
+            messaggio = 'Rimborso Parziale';
+            motivazione = 'Mancano meno di 12 ore alla sosta: viene applicata una penale del 50%.';
+            classe = 'text-warning';
+        } else {
+            percentuale = 0;
+            messaggio = 'Nessun Rimborso';
+            motivazione = 'La sosta è già iniziata. Libererai solo il posto auto per altri utenti.';
+            classe = 'text-danger';
         }
-        res.status(500).json({ success: false, error: 'Errore interno del server' });
+
+        res.json({ 
+            success: true, 
+            dati: { 
+                rimborso: prezzo * (percentuale / 100), 
+                messaggio, 
+                motivazione, 
+                classe 
+            } 
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
     }
 });
 

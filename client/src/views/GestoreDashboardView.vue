@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { authStore } from '../store/auth.js'
+import { walletStore } from '../store/wallet.js'
 import * as bootstrap from 'bootstrap'
 import 'bootstrap-icons/font/bootstrap-icons.css'
 import Header from '../components/Header.vue'
@@ -512,6 +513,8 @@ const openInfoModal    = () => { if (infoModalInstance) infoModalInstance.show()
 // ─── Lifecycle ───────────────────────────────────────────────────────────────
 onMounted(async () => {
   ridimensionaGriglia()
+  await walletStore.contabilizzaRicavi()
+  await walletStore.caricaSaldoSospeso()
   await caricaDati()
   if (mieiGarage.value.length === 0) {
     vistaAttiva.value = 'aggiungi'
@@ -616,21 +619,33 @@ const navItems = [
                   <span class="stat-value">{{ mieiGarage.length }}</span>
                 </div>
               </div>
+
               <div class="stat-card">
                 <div class="stat-icon stat-icon--green">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                  <i class="bi bi-wallet2" style="font-size: 1.2rem;"></i>
                 </div>
                 <div class="stat-body">
-                  <span class="stat-label">Guadagno del Mese</span>
-                  <span class="stat-value">€ {{ guadagnoMese }}</span>
+                  <span class="stat-label">Saldo Disponibile</span>
+                  <span class="stat-value">€ {{ authStore.utente?.saldo || '0.00' }}</span>
                 </div>
               </div>
+
               <div class="stat-card">
                 <div class="stat-icon stat-icon--amber">
+                  <i class="bi bi-clock-history" style="font-size: 1.2rem;"></i>
+                </div>
+                <div class="stat-body">
+                  <span class="stat-label">In Arrivo</span>
+                  <span class="stat-value">€ {{ walletStore.saldoSospeso || '0.00' }}</span>
+                </div>
+              </div>
+
+              <div class="stat-card">
+                <div class="stat-icon stat-icon--blue">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 </div>
                 <div class="stat-body">
-                  <span class="stat-label">Prenotazioni Attive</span>
+                  <span class="stat-label">Prenot. Attive</span>
                   <span class="stat-value">{{ prenotazioniAttive }}</span>
                 </div>
               </div>
