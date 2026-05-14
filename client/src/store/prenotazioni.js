@@ -53,6 +53,22 @@ export const prenotazioniStore = reactive({
           console.error("Errore:", error);
           return { success: false, error: "Errore di connessione" };
       }
-  }
+  }, 
+
+  // Recupera lo storico di tutte le prenotazioni relative ai garage del gestore
+  async getPrenotazioniGestore() {
+    try {
+      const response = await fetch('/api/prenotazioni/prenotazioni-gestore', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      });
+      const data = await response.json();
+      return { success: response.ok, data };
+    } catch (error) {
+      console.error("Errore fetch prenotazioni gestore:", error);
+      return { success: false, error: "Errore di connessione" };
+    }
+  },
   
 })
