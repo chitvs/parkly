@@ -155,7 +155,7 @@ const gestisciClick = (codice) => {
     const posto = getDatiPosto(codice);
 
     if (props.isGestoreMode) {
-        if (posto) emit('manage', posto); 
+        if (posto) emit('manage', posto); // Invia l'evento al padre invece di selezionarlo
         return;
     }
 

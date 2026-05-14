@@ -1,9 +1,10 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+//import svg password
+import eyeUrl from '../icons/eye-open.svg'
+import eyeClosedUrl from '../icons/eye-closed.svg'
 import { authStore } from '../store/auth.js'
-import eyeUrl from '../assets/eye-gray.svg'
-import eyeClosedUrl from '../assets/eye-closed-gray.svg'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 
@@ -68,7 +69,7 @@ const handleRegister = async () => {
               <div class="text-center mb-4">
                 <router-link to="/">
                   <img
-                    src="../assets/Primo_Logo_00408A.svg"
+                    src="../assets/LogoParklyBlu.svg"
                     alt="logo parkly"
                     width="90"
                     class="mb-2 logo-img"
@@ -77,7 +78,7 @@ const handleRegister = async () => {
               </div>
 
               <!-- Divisore -->
-              <hr class="custom-divider mb-4">
+              <hr class="custom-divider mb-4" />
 
               <form @submit.prevent="handleRegister">
                 <!-- Dati Personali -->

@@ -45,6 +45,7 @@ CREATE TABLE Garage (
     MediaSpazio DECIMAL(3,2) DEFAULT 0.00,
     MediaSicurezza DECIMAL(3,2) DEFAULT 0.00,
     NumeroRecensioni INT DEFAULT 0,
+    Foto_URLs TEXT[],
     FOREIGN KEY (ID_Gestore) REFERENCES Utente(ID_Utente) ON DELETE CASCADE
 );
 

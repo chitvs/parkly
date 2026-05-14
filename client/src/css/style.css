@@ -17,3 +17,10 @@ body {
   background-color: var(--bg-light);
   color: var(--text-dark);
 }
+
+input, 
+button, 
+select, 
+textarea {
+  font-family: 'Inter', -apple-system, sans-serif !important;
+}

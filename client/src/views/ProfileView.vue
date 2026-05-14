@@ -8,8 +8,12 @@ import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 
 // Importiamo le icone SVG per le password
-import eyeUrl from '../assets/eye-gray.svg'
-import eyeClosedUrl from '../assets/eye-closed-gray.svg'
+import eyeUrl from '../icons/eye-open.svg'
+import eyeClosedUrl from '../icons/eye-closed.svg'
+import IconKey from '../icons/IconKey.vue'
+
+//foto profilo standard
+import defaultAvatarUrl from '../assets/default-avatar.png'
 
 const router = useRouter()
 
@@ -205,7 +209,7 @@ const submitChangePassword = async () => {
 
           <div class="text-center mb-4 pb-3 border-bottom">
             <img 
-              :src="formData.fotoProfilo_URL || '/default-avatar.png'" 
+              :src="formData.fotoProfilo_URL || defaultAvatarUrl" 
               alt="Foto Profilo" 
               class="rounded-circle mb-3 shadow-sm" 
               style="width: 120px; height: 120px; object-fit: cover; border: 3px solid var(--primary-blue, #00408A);"
@@ -255,10 +259,7 @@ const submitChangePassword = async () => {
                 class="btn btn-outline-secondary btn-lg px-3"
                 @click="openPwdModal"
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="me-2">
-                  <path fill-rule="evenodd" clip-rule="evenodd" d="M22 8.29344C22 11.7692 19.1708 14.5869 15.6807 14.5869C15.0439 14.5869 13.5939 14.4405 12.8885 13.8551L12.0067 14.7333C11.4883 15.2496 11.6283 15.4016 11.8589 15.652C11.9551 15.7565 12.0672 15.8781 12.1537 16.0505C12.1537 16.0505 12.8885 17.075 12.1537 18.0995C11.7128 18.6849 10.4783 19.5045 9.06754 18.0995L8.77362 18.3922C8.77362 18.3922 9.65538 19.4167 8.92058 20.4412C8.4797 21.0267 7.30403 21.6121 6.27531 20.5876L5.2466 21.6121C4.54119 22.3146 3.67905 21.9048 3.33616 21.6121L2.45441 20.7339C1.63143 19.9143 2.1115 19.0264 2.45441 18.6849L10.0963 11.0743C10.0963 11.0743 9.3615 9.90338 9.3615 8.29344C9.3615 4.81767 12.1907 2 15.6807 2C19.1708 2 22 4.81767 22 8.29344ZM15.681 10.4889C16.8984 10.4889 17.8853 9.50601 17.8853 8.29353C17.8853 7.08105 16.8984 6.09814 15.681 6.09814C14.4635 6.09814 13.4766 7.08105 13.4766 8.29353C13.4766 9.50601 14.4635 10.4889 15.681 10.4889Z" fill="currentColor"/>
-                </svg>
-                
+                <IconKey size="20" class="me-2" />
                 Cambia Password
               </button>
 
@@ -267,6 +268,7 @@ const submitChangePassword = async () => {
                 class="btn btn-primary btn-lg px-4" 
                 :disabled="!hasChanges"
               >
+              <i class="bi bi-floppy me-1"></i>
                 Salva Modifiche
               </button>
             </div>
@@ -277,7 +279,8 @@ const submitChangePassword = async () => {
             <p class="text-muted small mb-3">
               Una volta eliminato l'account, non potrai più recuperarlo. Tutte le tue sessioni verranno chiuse e perderai l'accesso al tuo saldo residuo.
             </p>
-            <button @click="handleDeleteAccount" class="btn btn-outline-danger px-4 py-2 fw-semibold" style="border-radius: 12px;">
+            <button @click="handleDeleteAccount" class="btn btn-outline-danger btn-lg px-4 " style="border-radius: 12px;">
+              <i class="bi bi-trash3 me-1"></i>
               Elimina Account
             </button>
           </div>
@@ -372,32 +375,109 @@ const submitChangePassword = async () => {
 </template>
 
 <style scoped>
-.page-wrapper { display: flex; flex-direction: column; min-height: 100vh; }
-.title-color { color: var(--primary-blue, #00408A); letter-spacing: -0.5px; }
-.form-label { font-size: 14px; color: #495057; margin-bottom: 6px; }
 
-.form-control {
-  height: 52px; border-radius: 12px; border: 1px solid #E0E0E0;
-  padding: 10px 18px; font-size: 15px; transition: all 0.2s ease; background-color: #fafafa;
+.page-wrapper { 
+  display: flex; 
+  flex-direction: column; 
+  min-height: 100vh; 
 }
-input[type="file"].form-control-sm { height: auto; padding: 8px 12px; font-size: 13px; border-radius: 8px; }
-.form-control:focus { border-color: var(--primary-blue, #00408A); box-shadow: 0 0 0 4px rgba(0, 64, 138, 0.1); outline: none; background-color: #ffffff; }
+.title-color { 
+  color: var(--primary-blue, #00408A); 
+  letter-spacing: -0.5px; 
+}
+.form-label { 
+  font-size: 14px; 
+  color: #495057; 
+  margin-bottom: 6px; 
+}
+.form-control {
+  height: 52px; 
+  border-radius: 12px; 
+  border: 1px solid #E0E0E0;
+  padding: 10px 18px; 
+  font-size: 15px; 
+  transition: all 0.2s ease; 
+  background-color: #fafafa;
+}
+input[type="file"].form-control-sm { 
+  height: auto; 
+  padding: 8px 12px; 
+  font-size: 13px; 
+  border-radius: 8px; 
+}
+.form-control:focus { 
+  border-color: var(--primary-blue, #00408A); 
+  box-shadow: 0 0 0 4px rgba(0, 64, 138, 0.1); 
+  outline: none; 
+  background-color: #ffffff; 
+}
 
 .btn-primary {
-  background-color: var(--primary-blue, #00408A); border: none; border-radius: 12px; height: 55px; font-weight: 600; font-size: 16px; transition: all 0.2s;
+  background-color: var(--primary-blue, #00408A); 
+  border: none; 
+  border-radius: 12px; 
+  height: 55px; 
+  font-weight: 600; 
+  font-size: 16px; 
+  transition: all 0.2s;
 }
-.btn-primary:hover:not(:disabled) { background-color: #00336E; transform: translateY(-1px); }
-.btn-primary:active:not(:disabled) { transform: translateY(0); }
-.btn-primary:disabled { background-color: #cccccc; cursor: not-allowed; opacity: 0.7; }
 
-.btn-outline-secondary { border-radius: 12px; height: 55px; font-weight: 600; font-size: 16px; display: flex; align-items: center;}
-.btn-outline-danger:hover { color: white !important; }
+.btn-primary:hover:not(:disabled) { 
+  background-color: #00336E; 
+  transform: translateY(-1px); 
+}
+.btn-primary:active:not(:disabled) { 
+  transform: translateY(0); 
+}
+.btn-primary:disabled { 
+  background-color: #cccccc; 
+  cursor: not-allowed; 
+  opacity: 0.7; 
+}
+.btn-outline-secondary { 
+  border-radius: 12px; 
+  height: 55px; 
+  font-weight: 600; 
+  font-size: 16px; 
+  display: flex; 
+  align-items: center;
+}
+.btn-outline-danger{
+  border-radius: 12px;
+  height: 55px; 
+  font-weight: 600; 
+  font-size: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-outline-danger:hover { 
+  color: white !important; 
+}
 
 /* --- STILI MODAL --- */
-.parkly-modal { border-radius: 24px; border: none; box-shadow: 0 15px 50px rgba(0, 0, 0, 0.2); }
-.modal-input { height: 52px; border-radius: 12px; border: 1px solid #e0e0e0; padding: 10px 18px; font-size: 15px; }
-.modal-input:focus { border-color: #00408a; box-shadow: 0 0 0 3px rgba(0, 64, 138, 0.1); outline: none; }
-.modal-submit-btn { height: 52px; border-radius: 12px; font-weight: 600; font-size: 1.1rem; }
+.parkly-modal { 
+  border-radius: 24px; 
+  border: none; 
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.2); 
+}
+.modal-input { 
+  height: 52px; 
+  border-radius: 12px; 
+  border: 1px solid #e0e0e0; 
+  padding: 10px 18px; 
+  font-size: 15px; 
+}
+.modal-input:focus { 
+  border-color: #00408a; 
+  box-shadow: 0 0 0 3px rgba(0, 64, 138, 0.1); outline: none; 
+}
+.modal-submit-btn { 
+  height: 52px; 
+  border-radius: 12px; 
+  font-weight: 600; 
+  font-size: 1.1rem; 
+}
 
 /* --- STILI PASSWORD GROUP (DA REGISTER E HEADER) --- */
 .password-group {

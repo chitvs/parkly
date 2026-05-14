@@ -10,6 +10,10 @@ import Footer from '../components/Footer.vue'
 import ChatBox from '../components/ChatBox.vue'
 import Pagination from '../components/Pagination.vue'
 
+// Icone dei bottoni annulla e contatta
+import IconCancel from '../icons/IconCancel.vue'
+import IconMessage from '../icons/IconMessage.vue'
+
 // variabili per i filtri e l'ordinamento
 const filtroStato = ref('') // '' = Tutte, 'ATTIVA', 'CONCLUSA', 'ANNULLATA'
 const filtroGarage = ref('') // '' = Tutti, oppure l'id_garage
@@ -330,7 +334,7 @@ const chiudiChat = () => {
       </div>
 
       <div v-else-if="bookings.length === 0" class="text-center py-5 empty-state">
-        <img src="../assets/broken_car.png" alt="Nessuna prenotazione" width="120" class="mb-3 opacity-50">
+        <img src="../assets/broken_car.png" alt="Nessuna prenotazione" width="120" class="mb-3 opacity-50" />
         <h4 class="fw-bold text-muted">Nessuna prenotazione trovata</h4>
         <p class="text-muted">Non hai ancora effettuato nessuna prenotazione con noi.</p>
         <router-link to="/ricerca" class="btn btn-primary mt-3 px-4 py-2">Trova Parcheggio</router-link>
@@ -363,13 +367,14 @@ const chiudiChat = () => {
                   </span>
 
                   <!-- Pulsante Annulla  -->
-                  <button v-if="booking.stato === 'ATTIVA'" @click="apriModaleAnnullamento(booking)"
-                    class="custom-btn btn-cancel" title="Annulla Prenotazione">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                      stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M18 6L6 18M6 6l12 12" />
-                    </svg>
-                    Annulla
+                  <button 
+                      v-if="booking.stato === 'ATTIVA'" 
+                      @click="handleCancelBooking(booking.codiceprenotazione)" 
+                      class="custom-btn btn-cancel"
+                      title="Annulla Prenotazione"
+                  >
+                  <IconCancel width="18" height="18" />
+                  Annulla
                   </button>
 
                   <!-- Pulsante Chat -->
@@ -381,14 +386,11 @@ const chiudiChat = () => {
                   >
                     <!-- Pallino notifica-->
                     <span v-if="booking.nonletti > 0" class="chat-notification-dot"></span>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                      stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                    </svg>
-                    Contatta
+                      <IconMessage width="18" height="18" />
+                        Contatta
                   </button>
 
-                  <!--Pulsante Recensioni-->
+                  <!-- Pulsante Recensioni-->
                   <div v-if="booking.stato === 'CONCLUSA' && !booking.ha_recensito"
                     class="d-flex align-items-center ms-3 border-start ps-3">
                     <span class="text-muted small fw-semibold me-2 d-none d-sm-inline">Com'è andata?</span>
@@ -562,7 +564,7 @@ const chiudiChat = () => {
         <Transition name="modal-slide" appear>
           <div class="review-modal p-4 text-center">
             <h3 class="fw-bold mb-3" style="color: #00408A">ANNULLA PRENOTAZIONE</h3>
-            <p class="text-muted">Stai per annullare la sosta per: <br>
+            <p class="text-muted">Stai per annullare la sosta per: <br />
               <strong>{{ bookingToCancel?.nomegarage }}</strong> ({{ bookingToCancel?.codiceprenotazione }})
             </p>
 

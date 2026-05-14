@@ -11,6 +11,10 @@ import Footer from '../components/Footer.vue'
 import ChatBox from '../components/ChatBox.vue'
 import { getSocket } from '../composables/useChat.js'
 
+// foto profilo standard
+import defaultAvatarUrl from '../assets/default-avatar.png'
+
+// Componenti Dashboard
 import DashboardStats from '../components/gestore/DashboardStats.vue'
 import DashboardGarageList from '../components/gestore/DashboardGarageList.vue'
 import DashboardStato from '../components/gestore/DashboardStato.vue'
@@ -25,6 +29,13 @@ const staSalvando = ref(false)
 const messaggio = ref(null)
 const reRenderKey = ref(0)
 
+// Collegamenti ai dati del Pinia Store
+const mieiGarage = computed(() => garageStore.mieiGarage || [])
+const storicoPrenotazioni = computed(() => garageStore.storicoPrenotazioni || [])
+const postiPerGarage = computed(() => garageStore.postiPerGarage || {})
+const occupazioneGarage = computed(() => garageStore.occupazioneGarage || {})
+const allerteStato = computed(() => garageStore.allerteStato || [])
+
 const formattaPerInputDate = (d) => {
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
@@ -36,7 +47,7 @@ const chatSelezionata = ref(null)
 let socket = null
 
 const handleNuovoMessaggio = (msg) => {
-  const prenotazione = garageStore.storicoPrenotazioni.find(p => Number(p.id_prenotazione) === Number(msg.id_prenotazione))
+  const prenotazione = storicoPrenotazioni.value.find(p => Number(p.id_prenotazione) === Number(msg.id_prenotazione))
   if (prenotazione) {
     const chatAperta = chatSelezionata.value && chatSelezionata.value.idPrenotazione === Number(msg.id_prenotazione)
     if (!chatAperta) prenotazione.nonletti = (prenotazione.nonletti || 0) + 1
@@ -65,6 +76,13 @@ const isEditing = ref(false)
 const idGarageInModifica = ref(null)
 const garageInModifica = ref(null)
 
+// Ricevitore per le foto caricate nel form figlio
+const fotoDaCaricare = ref([])
+
+const handleFotoDalComponente = (files) => {
+  fotoDaCaricare.value = files
+}
+
 const preparaModifica = async (garage) => {
   messaggio.value = null
   const res = await garageStore.fetchPosti(garage.id_garage)
@@ -80,25 +98,56 @@ const preparaModifica = async (garage) => {
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
+// Logica Two-Step (Store Database + Foto Supabase)
 const salvaNuovoGarage = async (payload) => {
   messaggio.value = null
   staSalvando.value = true
 
-  const res = isEditing.value
-    ? await garageStore.updateGarage(idGarageInModifica.value, payload)
-    : await garageStore.createGarage(payload)
+  try {
+    // STEP 1: Creazione/Modifica Testo Garage tramite Store
+    const res = isEditing.value
+      ? await garageStore.updateGarage(idGarageInModifica.value, payload)
+      : await garageStore.createGarage(payload)
 
-  if (res.success) {
-    isEditing.value = false
-    idGarageInModifica.value = null
-    garageInModifica.value = null
-    await garageStore.caricaDashboardGestore()
-    messaggio.value = { tipo: 'success', testo: isEditing.value ? 'Garage aggiornato!' : 'Garage pubblicato!' }
-    vistaAttiva.value = 'garage'
-  } else {
-    messaggio.value = { tipo: 'error', testo: res.error || 'Errore durante il salvataggio' }
+    if (res.success || res.garage) { 
+      // Otteniamo il nuovo ID in base a come lo store restituisce l'oggetto
+      const nuovoIdGarage = isEditing.value ? idGarageInModifica.value : (res.garage?.id_garage || res.data?.id_garage)
+
+      // STEP 2: Caricamento Immagini
+      if (fotoDaCaricare.value.length > 0 && nuovoIdGarage) {
+        const formData = new FormData()
+        fotoDaCaricare.value.forEach(file => formData.append('foto_garage', file))
+
+        const resFoto = await fetch(`/api/garage/${nuovoIdGarage}/upload-photos`, {
+          method: 'POST',
+          credentials: 'include',
+          body: formData
+        })
+
+        if (!resFoto.ok) {
+          console.error("Errore durante l'upload delle foto su Supabase")
+        }
+      }
+
+      // Pulizia form
+      isEditing.value = false
+      idGarageInModifica.value = null
+      garageInModifica.value = null
+      fotoDaCaricare.value = []
+
+      // Refresh dei dati tramite store
+      await garageStore.caricaDashboardGestore()
+      messaggio.value = { tipo: 'success', testo: isEditing.value ? 'Garage aggiornato!' : 'Garage pubblicato!' }
+      vistaAttiva.value = 'garage'
+    } else {
+      messaggio.value = { tipo: 'error', testo: res.error || 'Errore durante il salvataggio' }
+    }
+  } catch (e) {
+    console.error(e)
+    messaggio.value = { tipo: 'error', testo: 'Errore di rete o del server.' }
+  } finally {
+    staSalvando.value = false
   }
-  staSalvando.value = false
 }
 
 const aggiornaMappaOrari = async ({ inizio, fine }) => {
@@ -114,7 +163,6 @@ const openInfoModal = () => { if (infoModalInstance) infoModalInstance.show() }
 const showMaintenanceModal = ref(false)
 const postoDaGestire = ref(null)
 const manutenzioneData = ref({ inizio: '', fine: '', motivazione: '' })
-
 const currentMaintenanceStep = ref(1);
 
 const apriGestionePosto = (posto) => {
@@ -163,15 +211,17 @@ onMounted(async () => {
       garageStore.caricaDashboardGestore(),
       garageStore.caricaStoricoGestore(),
     ])
-    if (garageStore.mieiGarage.length === 0) vistaAttiva.value = 'aggiungi'
+    if (mieiGarage.value.length === 0) vistaAttiva.value = 'aggiungi'
     else vistaAttiva.value = 'statistiche'
   } finally {
     isLoading.value = false
   }
 
-  if (infoModalElement.value) infoModalInstance = new bootstrap.Modal(infoModalElement.value)
+  if (infoModalElement.value) {
+    infoModalInstance = new bootstrap.Modal(infoModalElement.value)
+  }
   socket = getSocket()
-  socket.on('nuovo_messaggio', handleNuovoMessaggio)
+  if(socket) socket.on('nuovo_messaggio', handleNuovoMessaggio)
 })
 
 onUnmounted(() => {
@@ -192,18 +242,16 @@ const navItems = [
   { id: 'statistiche', label: 'Statistiche', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>' },
   { id: 'garage', label: 'I miei Garage', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>' },
   { id: 'stato', label: 'Stato Corrente', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>' },
-  { id: 'storico', label: 'Storico', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>' },
+  { id: 'storico', label: 'Storico Prenotazioni', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>' },
   { id: 'aggiungi', label: 'Aggiungi Garage', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' },
 ]
 
-const menuFiltrato = computed(() => garageStore.mieiGarage.length === 0 ? navItems.filter(i => i.id === 'aggiungi') : navItems)
+const menuFiltrato = computed(() => mieiGarage.value.length === 0 ? navItems.filter(i => i.id === 'aggiungi') : navItems)
 
 const prenotazioniPostoSelezionato = computed(() => {
-  if (!postoDaGestire.value || !garageStore.storicoPrenotazioni) return [];
-
+  if (!postoDaGestire.value || !storicoPrenotazioni.value) return [];
   const oraAttuale = new Date();
-
-  return garageStore.storicoPrenotazioni
+  return storicoPrenotazioni.value
     .filter(p =>
       p.id_posto === postoDaGestire.value.id_posto &&
       p.stato === 'ATTIVA' &&
@@ -258,7 +306,7 @@ const formattaDataLeggibile = (dataIso) => {
           </a>
         </nav>
         <div class="sidebar-user">
-          <img :src="authStore.utente?.fotoProfilo_URL || '/default-avatar.png'" alt="Avatar" class="sidebar-avatar" />
+          <img :src="authStore.utente?.fotoProfilo_URL || defaultAvatarUrl" alt="Avatar" class="sidebar-avatar" />
           <div class="sidebar-user-info">
             <span class="sidebar-user-name">{{ authStore.utente?.nome }} {{ authStore.utente?.cognome }}</span>
             <span class="sidebar-user-role">Gestore</span>
@@ -279,22 +327,27 @@ const formattaDataLeggibile = (dataIso) => {
             <button @click="messaggio = null" class="close-btn">×</button>
           </div>
 
-          <DashboardStats v-if="vistaAttiva === 'statistiche'" :miei-garage="garageStore.mieiGarage"
-            :storico-prenotazioni="garageStore.storicoPrenotazioni" />
+          <DashboardStats v-if="vistaAttiva === 'statistiche'" :miei-garage="mieiGarage"
+            :storico-prenotazioni="storicoPrenotazioni" />
 
-          <DashboardGarageList v-if="vistaAttiva === 'garage'" :miei-garage="garageStore.mieiGarage"
-            @modifica="preparaModifica" />
+          <DashboardGarageList v-if="vistaAttiva === 'garage'" :miei-garage="mieiGarage" @modifica="preparaModifica" />
 
-          <DashboardStato v-if="vistaAttiva === 'stato'" :key="'stato-' + reRenderKey"
-            :miei-garage="garageStore.mieiGarage" :posti-per-garage="garageStore.postiPerGarage"
-            :occupazione-garage="garageStore.occupazioneGarage" :prenotazioni="garageStore.storicoPrenotazioni"
+          <DashboardStato v-if="vistaAttiva === 'stato'" :key="'stato-' + reRenderKey" :miei-garage="mieiGarage"
+            :posti-per-garage="postiPerGarage" :occupazione-garage="occupazioneGarage" :allerte-stato="allerteStato"
             @verifica-disponibilita="aggiornaMappaOrari" @manage-posto="apriGestionePosto" />
 
-          <DashboardStorico v-if="vistaAttiva === 'storico'" :prenotazioni="garageStore.storicoPrenotazioni"
+          <DashboardStorico v-if="vistaAttiva === 'storico'" :prenotazioni="storicoPrenotazioni"
             @apri-chat="apriChat" />
 
-          <DashboardGarageForm v-if="vistaAttiva === 'aggiungi'" :is-editing="isEditing" :garage-data="garageInModifica"
-            :sta-salvando="staSalvando" @save="salvaNuovoGarage" @open-info="openInfoModal" />
+          <DashboardGarageForm 
+            v-if="vistaAttiva === 'aggiungi'" 
+            :is-editing="isEditing" 
+            :garage-data="garageInModifica"
+            :sta-salvando="staSalvando" 
+            @save="salvaNuovoGarage" 
+            @update-photos="handleFotoDalComponente"
+            @open-info="openInfoModal" 
+          />
         </template>
       </main>
     </div>
@@ -311,12 +364,9 @@ const formattaDataLeggibile = (dataIso) => {
           </div>
           <div class="modal-body px-4 pb-4 pt-0">
             <ul class="info-list">
-              <li>Cerca il tuo indirizzo per avvicinarti, poi clicca sulla mappa interattiva per posizionare il pin
-                esattamente sopra il tuo garage.</li>
-              <li>Configura la tipologia del posto (Auto, Moto, Furgone) e aggiungi servizi extra. Il codice verrà
-                generato in automatico se lasciato vuoto.</li>
-              <li>Una volta creati i posti, selezionali dalla tavolozza e clicca sulla griglia a scacchiera per
-                disegnare visivamente il layout reale del garage.</li>
+              <li>Cerca il tuo indirizzo per avvicinarti, poi clicca sulla mappa interattiva per posizionare il pin esattamente sopra il tuo garage.</li>
+              <li>Configura la tipologia del posto (Auto, Moto, Furgone) e aggiungi servizi extra. Il codice verrà generato in automatico se lasciato vuoto.</li>
+              <li>Una volta creati i posti, selezionali dalla tavolozza e clicca sulla griglia a scacchiera per disegnare visivamente il layout reale del garage.</li>
             </ul>
           </div>
         </div>
@@ -351,16 +401,14 @@ const formattaDataLeggibile = (dataIso) => {
                 <p class="modal-sub">Questo posto è bloccato e non è visibile ai clienti.</p>
 
                 <div class="p-3 bg-light border rounded-3 mb-4">
-                  <strong class="d-block mb-2 text-dark" style="font-size: 0.85rem; text-transform: uppercase;">Dettagli
-                    del blocco:</strong>
+                  <strong class="d-block mb-2 text-dark" style="font-size: 0.85rem; text-transform: uppercase;">Dettagli del blocco:</strong>
                   <div class="d-flex justify-content-between mb-1 small">
                     <span class="text-muted">Inizio:</span>
                     <span class="fw-bold">{{ formattaDataLeggibile(postoDaGestire.manutenzione?.inizio) }}</span>
                   </div>
                   <div class="d-flex justify-content-between mb-2 small">
                     <span class="text-muted">Fine:</span>
-                    <span class="fw-bold text-danger">{{ formattaDataLeggibile(postoDaGestire.manutenzione?.fine)
-                    }}</span>
+                    <span class="fw-bold text-danger">{{ formattaDataLeggibile(postoDaGestire.manutenzione?.fine) }}</span>
                   </div>
                   <div class="pt-2 mt-2 border-top small">
                     <span class="text-muted d-block mb-1">Motivazione:</span>
@@ -385,22 +433,18 @@ const formattaDataLeggibile = (dataIso) => {
 
                   <div class="mb-2">
                     <label class="field-label mb-2">Calendario Occupazione</label>
-                    <div v-if="prenotazioniPostoSelezionato.length === 0"
-                      class="p-4 bg-light rounded-4 text-center border">
+                    <div v-if="prenotazioniPostoSelezionato.length === 0" class="p-4 bg-light rounded-4 text-center border">
                       <i class="bi bi-calendar-check text-success fs-2 d-block mb-2"></i>
-                      <span class="text-muted small">Nessun impegno futuro per questo posto.<br>Puoi procedere
-                        liberamente.</span>
+                      <span class="text-muted small">Nessun impegno futuro per questo posto.<br>Puoi procedere liberamente.</span>
                     </div>
                     <div v-else class="d-flex flex-column gap-2 pe-1">
                       <div v-for="pren in prenotazioniPostoSelezionato" :key="pren.id_prenotazione"
                         class="p-3 bg-white border rounded-3 d-flex justify-content-between align-items-center">
                         <div>
                           <span class="fw-bold d-block text-dark small">{{ pren.targa || 'Targa N/D' }}</span>
-                          <span class="text-muted extra-small">{{ formattaDataLeggibile(pren.iniziososta) }} - {{
-                            formattaDataLeggibile(pren.finesosta) }}</span>
+                          <span class="text-muted extra-small">{{ formattaDataLeggibile(pren.iniziososta) }} - {{ formattaDataLeggibile(pren.finesosta) }}</span>
                         </div>
-                        <span
-                          class="badge bg-primary-subtle text-primary rounded-pill px-2 py-1 extra-small">Prenotato</span>
+                        <span class="badge bg-primary-subtle text-primary rounded-pill px-2 py-1 extra-small">Prenotato</span>
                       </div>
                     </div>
                   </div>
@@ -434,20 +478,15 @@ const formattaDataLeggibile = (dataIso) => {
                     </div>
                   </div>
 
-                  <div class="field-wrap mb-2">
-                    <label class="field-label">
-                      Motivazione
-                      <span class="optional-pill">opzionale</span>
-                    </label>
-                    <textarea v-model="manutenzioneData.motivazione" class="review-textarea" rows="3"
-                      placeholder="Es. Sostituzione lampade, pulizia straordinaria..."></textarea>
+                  <div class="form-group mb-4">
+                    <label class="field-label">Motivazione (Opzionale)</label>
+                    <textarea v-model="manutenzioneData.motivazione" class="form-input w-100" style="height:auto; min-height:80px;" rows="2" placeholder="Es. Lavori di verniciatura o riparazione prese"></textarea>
                   </div>
                 </div>
-                <div class="review-footer">
-                  <button class="cta-btn cta-btn--danger w-100" @click="salvaManutenzione"
-                    :disabled="!isManutenzioneValida">
-                    Conferma Blocco Posto
-                  </button>
+                
+                <div class="review-footer d-flex gap-2">
+                  <button class="cta-btn cta-btn--ghost flex-grow-1" @click="showMaintenanceModal = false">Annulla</button>
+                  <button class="cta-btn cta-btn--danger flex-grow-1" :disabled="!isManutenzioneValida" @click="salvaManutenzione">Conferma Blocco</button>
                 </div>
               </div>
             </template>
@@ -456,11 +495,12 @@ const formattaDataLeggibile = (dataIso) => {
       </div>
     </Transition>
 
-    <Footer />
+  <Footer />
   </div>
 </template>
 
 <style scoped>
+
 .page-wrapper {
   display: flex;
   flex-direction: column;
@@ -633,6 +673,7 @@ const formattaDataLeggibile = (dataIso) => {
 .main-content {
   flex: 1;
   padding: 40px 48px;
+  overflow-y: auto; /* Aggiunto da style/ui-cleanup */
 }
 
 .loading-state {
@@ -654,7 +695,7 @@ const formattaDataLeggibile = (dataIso) => {
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
-
+ 
 @keyframes spin {
   to {
     transform: rotate(360deg);

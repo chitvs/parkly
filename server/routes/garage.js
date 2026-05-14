@@ -1,6 +1,14 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../database/db");
+const multer = require('multer');
+const { createClient } = require('@supabase/supabase-js');
+
+// configura il client Supabase usando le variabili dell'environment
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+
+// configura Multer (handler per le foto prima di mandarle a Supabase)
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Ritorna la lista di tutti i garage
 router.get("/", async (req, res) => {
@@ -195,6 +203,67 @@ router.post('/garages-gestore', async (req, res) => {
     res.status(500).json({ error: 'Errore interno del server durante il salvataggio.' });
   }
 });
+
+//Caricamento foto del garage
+router.post('/:id/upload-photos', upload.array('foto_garage', 10), async (req, res) => {
+  //  Controllo permessi
+  const utenteLoggato = req.session?.utente;
+  if (!utenteLoggato || utenteLoggato.ruolo !== 'GESTORE') {
+    return res.status(401).json({ error: 'Accesso negato' });
+  }
+
+  const idGarage = req.params.id;
+  const files = req.files;
+
+  if (!files || files.length === 0) {
+    return res.status(400).json({ error: 'Nessun file caricato' });
+  }
+
+  try {
+    //  Controllo di sicurezza: il garage esiste ed è di questo gestore?
+    const garage = await db.oneOrNone('SELECT ID_Garage FROM Garage WHERE ID_Garage = $1 AND ID_Gestore = $2', [idGarage, utenteLoggato.id]);
+    if (!garage) {
+      return res.status(403).json({ error: 'Garage non trovato o non autorizzato' });
+    }
+
+    const urlsCaricate = [];
+
+    // Loop per caricare ogni singola foto su Supabase
+    for (const file of files) {
+      const estensione = file.originalname.split('.').pop();
+      // Organizzo i file per cartella usando l'ID del garage
+      const nomeFile = `${idGarage}/${Date.now()}_${Math.random().toString(36).substring(7)}.${estensione}`;
+
+      const { error } = await supabase
+        .storage
+        .from('garage-photos') 
+        .upload(nomeFile, file.buffer, {
+          contentType: file.mimetype,
+          upsert: false
+        });
+
+      if (error) throw error;
+
+      // Recupero l'URL pubblico
+      const { data: publicUrlData } = supabase.storage.from('garage-photos').getPublicUrl(nomeFile);
+      urlsCaricate.push(publicUrlData.publicUrl);
+    }
+
+    // Salvo gli URL nel database (aggiungendoli all'array esistente o creandolo)
+    await db.none(
+      'UPDATE Garage SET Foto_URLs = array_cat(COALESCE(Foto_URLs, ARRAY[]::TEXT[]), $1) WHERE ID_Garage = $2',
+      [urlsCaricate, idGarage]
+    );
+
+    res.json({ success: true, urls: urlsCaricate });
+
+  } catch (err) {
+    console.error('Errore caricamento foto garage:', err);
+    res.status(500).json({ error: 'Errore durante il caricamento delle foto' });
+  }
+});
+
+router.get('/stato-garages-gestore', async (req, res) => { res.json([]); });
 
 router.get("/:id", async (req, res) => {
   try {
@@ -443,6 +512,7 @@ router.put('/garages-gestore/:id', async (req, res) => {
   }
 });
 
+// ─── Aggiunta blocco manutenzione a un singolo posto ─────────────────────────
 router.post('/garages-gestore/:id/posti/:id_posto/manutenzione', async (req, res) => {
     try {
         const utenteLoggato = req.session?.utente;
@@ -499,8 +569,10 @@ router.delete('/garages-gestore/:idGarage/posti/:idPosto/manutenzione/:idManuten
             return res.status(401).json({ error: 'Accesso negato' });
         }
 
+        // Salvagente: cattura l'ID indipendentemente da come lo hai salvato nella sessione
         const idGestore = utenteLoggato.id || utenteLoggato.id_utente;
         const { idGarage, idPosto, idManutenzione } = req.params;
+
 
         if (!idGestore) {
             throw new Error("ID Gestore risultante è undefined!");

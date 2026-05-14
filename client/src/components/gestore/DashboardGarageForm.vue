@@ -13,7 +13,8 @@ const props = defineProps({
     staSalvando: { type: Boolean, default: false }
 })
 
-const emit = defineEmits(['save', 'open-info'])
+// Aggiunto l'evento update-photos per mandare le immagini al componente padre
+const emit = defineEmits(['save', 'open-info', 'update-photos'])
 
 const { calcolandoCoordinate, loadLeaflet, initMap, calcolaCoordinate } = useGarageMapGestore()
 const {
@@ -30,6 +31,13 @@ const localGarage = ref({
     orarioapertura: '08:00', orariochiusura: '20:00', is24h: false
 })
 const erroriValidazione = ref({})
+
+// Gestione selezione foto
+const fotoSelezionate = ref([])
+const handleFotoSelezionate = (event) => {
+    fotoSelezionate.value = Array.from(event.target.files)
+    emit('update-photos', fotoSelezionate.value)
+}
 
 onMounted(async () => {
     await loadLeaflet()
@@ -170,8 +178,7 @@ const inviaDati = () => {
                         <label class="form-label">Civico*</label>
                         <input type="text" :class="['form-input', { 'input-error': erroriValidazione.civico }]"
                             v-model="localGarage.civico" placeholder="Es. 10">
-                        <span v-if="erroriValidazione.civico" class="form-error-text">{{ erroriValidazione.civico
-                            }}</span>
+                        <span v-if="erroriValidazione.civico" class="form-error-text">{{ erroriValidazione.civico }}</span>
                     </div>
                 </div>
 
@@ -186,15 +193,13 @@ const inviaDati = () => {
                         <label class="form-label">Città*</label>
                         <input type="text" :class="['form-input', { 'input-error': erroriValidazione.citta }]"
                             v-model="localGarage.citta" placeholder="Es. Roma">
-                        <span v-if="erroriValidazione.citta" class="form-error-text">{{ erroriValidazione.citta
-                            }}</span>
+                        <span v-if="erroriValidazione.citta" class="form-error-text">{{ erroriValidazione.citta }}</span>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Provincia (Sigla)*</label>
                         <input type="text" :class="['form-input', { 'input-error': erroriValidazione.provincia }]"
                             v-model="localGarage.provincia" maxlength="2" placeholder="Es. RM">
-                        <span v-if="erroriValidazione.provincia" class="form-error-text">{{ erroriValidazione.provincia
-                            }}</span>
+                        <span v-if="erroriValidazione.provincia" class="form-error-text">{{ erroriValidazione.provincia }}</span>
                     </div>
                 </div>
 
@@ -238,6 +243,21 @@ const inviaDati = () => {
                     </div>
                 </div>
 
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Foto del Garage (Max 10)</label>
+                        <input 
+                            type="file" 
+                            multiple 
+                            accept="image/*" 
+                            class="form-input" 
+                            style="padding: 10px;" 
+                            @change="handleFotoSelezionate"
+                        >
+                        <span class="form-hint">Puoi selezionare più immagini contemporaneamente (es. tenendo premuto CTRL o CMD).</span>
+                    </div>
+                </div>
+
                 <div class="section-header" style="margin-top: 30px;">
                     <h2>Tariffario e Orari</h2>
                 </div>
@@ -247,24 +267,21 @@ const inviaDati = () => {
                         <input type="number" step="0.50" min="0"
                             :class="['form-input', { 'input-error': erroriValidazione.tariffabase }]"
                             v-model="localGarage.tariffabase" placeholder="Es. 2.50">
-                        <span v-if="erroriValidazione.tariffabase" class="form-error-text">{{
-                            erroriValidazione.tariffabase }}</span>
+                        <span v-if="erroriValidazione.tariffabase" class="form-error-text">{{ erroriValidazione.tariffabase }}</span>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Tariffa Moto (€/h)</label>
                         <input type="number" step="0.50" min="0"
                             :class="['form-input', { 'input-error': erroriValidazione.tariffamoto }]"
                             v-model="localGarage.tariffamoto" placeholder="Opzionale">
-                        <span v-if="erroriValidazione.tariffamoto" class="form-error-text">{{
-                            erroriValidazione.tariffamoto }}</span>
+                        <span v-if="erroriValidazione.tariffamoto" class="form-error-text">{{ erroriValidazione.tariffamoto }}</span>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Tariffa Furgone (€/h)</label>
                         <input type="number" step="0.50" min="0"
                             :class="['form-input', { 'input-error': erroriValidazione.tariffafurgone }]"
                             v-model="localGarage.tariffafurgone" placeholder="Opzionale">
-                        <span v-if="erroriValidazione.tariffafurgone" class="form-error-text">{{
-                            erroriValidazione.tariffafurgone }}</span>
+                        <span v-if="erroriValidazione.tariffafurgone" class="form-error-text">{{ erroriValidazione.tariffafurgone }}</span>
                     </div>
                 </div>
 
@@ -274,16 +291,14 @@ const inviaDati = () => {
                         <input type="number" step="0.50" min="0"
                             :class="['form-input', { 'input-error': erroriValidazione.sovrapprezzoelettrica }]"
                             v-model="localGarage.sovrapprezzoelettrica" placeholder="Es. 2.00">
-                        <span v-if="erroriValidazione.sovrapprezzoelettrica" class="form-error-text">{{
-                            erroriValidazione.sovrapprezzoelettrica }}</span>
+                        <span v-if="erroriValidazione.sovrapprezzoelettrica" class="form-error-text">{{ erroriValidazione.sovrapprezzoelettrica }}</span>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Sconto Disabili (-€/h)</label>
                         <input type="number" step="0.50" min="0"
                             :class="['form-input', { 'input-error': erroriValidazione.scontodisabili }]"
                             v-model="localGarage.scontodisabili" placeholder="Es. 1.00">
-                        <span v-if="erroriValidazione.scontodisabili" class="form-error-text">{{
-                            erroriValidazione.scontodisabili }}</span>
+                        <span v-if="erroriValidazione.scontodisabili" class="form-error-text">{{ erroriValidazione.scontodisabili }}</span>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Altezza Massima (m)</label>
@@ -433,6 +448,8 @@ const inviaDati = () => {
 </template>
 
 <style scoped>
+
+/* Ripristino esatto del CSS originale della form */
 .vista {
     animation: fadeIn 0.25s ease;
 }

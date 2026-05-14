@@ -21,6 +21,7 @@ const postoSelezionato = ref(null)
 const messaggio = ref(null)
 const isMapConfirmed = ref(false)
 const isPrenotando = ref(false)
+const fotoIngrandita = ref(null)
 
 onMounted(async () => {
     garageStore.clearGarageData()
@@ -43,6 +44,22 @@ watch([checkIn, checkOut], () => {
     isMapConfirmed.value = false
     postoSelezionato.value = null
 })
+
+// Estrae le foto in modo sicuro
+const fotoGarage = computed(() => {
+    // Il database di solito restituisce i nomi delle colonne in minuscolo
+    return garageStore.currentGarage?.foto_urls || []
+})
+
+const apriFoto = (url) => {
+    fotoIngrandita.value = url
+    document.body.style.overflow = 'hidden' // Blocca lo scroll della pagina
+}
+
+const chiudiFoto = () => {
+    fotoIngrandita.value = null
+    document.body.style.overflow = '' // Sblocca lo scroll
+}
 
 // leggiamo i prezzi base direttamente dal record del garage
 const tariffePerVeicolo = computed(() => {
@@ -86,7 +103,7 @@ const formattaCude = () => {
 const isCudeValido = computed(() => {
     // se non abbiamo selezionato un posto per disabili, il campo è tecnicamente "valido" a prescindere
     if (!postoSelezionato.value?.isdisabili) return true;
-    
+
     // solo lettere maiuscole, numeri e trattini. Lunghezza da 5 a 20 caratteri.
     const regex = /^[A-Z0-9-]{5,20}$/;
     return regex.test(codiceDisabilita.value);
@@ -255,8 +272,7 @@ watch(paginaRecensioniCorrente, () => {
                         <p class="descrizione">{{ garageStore.currentGarage?.descrizione }}</p>
                         <div class="badge-row">
                             <div class="badge">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                                     <circle cx="12" cy="10" r="3" />
                                 </svg>
@@ -272,14 +288,13 @@ watch(paginaRecensioniCorrente, () => {
                             </div>
 
                             <div class="badge" v-else>
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <circle cx="12" cy="12" r="10" />
                                     <polyline points="12 6 12 12 16 14" />
                                 </svg>
-                                {{ garageStore.currentGarage?.orarioapertura.substring(0, 5) }} - {{
-                                    garageStore.currentGarage?.orariochiusura.substring(0,5) }}
+                                {{ garageStore.currentGarage?.orarioapertura.substring(0, 5) }} - {{ garageStore.currentGarage?.orariochiusura.substring(0,5) }}
                             </div>
+                            
                             <div class="badge" v-if="garageStore.currentGarage?.altezzamassima">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M12 22V5"/>
@@ -310,19 +325,29 @@ watch(paginaRecensioniCorrente, () => {
                         </div>
 
                         <div class="special-rates-container" v-if="sovrapprezzoElettrica || scontoDisabili">
-                            
                             <div class="special-line ev-line" v-if="sovrapprezzoElettrica">
                                 <span class="v-tipo">Ricarica elettrica</span>
                                 <span class="prezzo-valore-small">+€{{ sovrapprezzoElettrica }}<span>/h</span></span>
                             </div>
-
                             <div class="special-line cude-line" v-if="scontoDisabili">
                                 <span class="v-tipo">Sconto Disabili</span>
                                 <span class="prezzo-valore-small">-€{{ scontoDisabili }}<span>/h</span></span>
                             </div>
-
                         </div>
                     </div>
+                </div>
+            </section>
+
+            <section class="gallery-section" v-if="fotoGarage.length > 0">
+                <div class="gallery-track">
+                    <img 
+                        v-for="(url, index) in fotoGarage" 
+                        :key="index" 
+                        :src="url" 
+                        alt="Foto garage" 
+                        class="gallery-img"
+                        @click="apriFoto(url)"
+                    >
                 </div>
             </section>
 
@@ -559,11 +584,117 @@ watch(paginaRecensioniCorrente, () => {
                 </div>
             </section>
         </main>
+
+        <div v-if="fotoIngrandita" class="photo-modal" @click="chiudiFoto">
+            <button class="close-photo-btn" @click="chiudiFoto">
+                <i class="bi bi-x-lg"></i>
+            </button>
+            <img :src="fotoIngrandita" alt="Foto garage ingrandita" @click.stop>
+        </div>
+
     </div>
     <Footer />
 </template>
 
 <style scoped>
+
+/* AGGIUNTA STILI PER LA GALLERIA */
+.gallery-section {
+    max-width: 1200px;
+    margin: 24px auto 0;
+    padding: 0 32px;
+}
+
+.gallery-track {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    padding-bottom: 12px;
+    scrollbar-width: thin; 
+}
+
+.gallery-track::-webkit-scrollbar {
+    height: 8px;
+}
+
+.gallery-track::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 4px;
+}
+
+.gallery-img {
+    height: 220px;
+    width: auto;
+    min-width: 280px;
+    object-fit: cover;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    border: 0.5px solid var(--border-light, #e2e8f0);
+}
+
+.gallery-img:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
+}
+
+@media (max-width: 800px) {
+    .gallery-section {
+        padding: 0 16px;
+    }
+    .gallery-img {
+        height: 180px;
+        min-width: 240px;
+    }
+}
+
+/* STILI PER IL MODAL FOTO */
+.photo-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(5px);
+}
+
+.photo-modal img {
+    max-width: 90%;
+    max-height: 90vh;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    object-fit: contain;
+}
+
+.close-photo-btn {
+    position: absolute;
+    top: 24px;
+    right: 32px;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: none;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+    z-index: 10001;
+}
+
+.close-photo-btn:hover {
+    background: rgba(255, 255, 255, 0.4);
+}
+
+/* --- VECCHI STILI PRESERVATI --- */
 .page-container {
     background: var(--bg-light);
     min-height: 100vh;
