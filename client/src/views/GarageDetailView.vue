@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { garageStore } from '../store/garage'
 import { authStore } from '../store/auth'
@@ -23,7 +23,22 @@ const isMapConfirmed = ref(false)
 const isPrenotando = ref(false)
 const fotoIngrandita = ref(null)
 
+// genera la data e ora attuale in formato locale ISO per bloccare le date passate nel calendario nativo
+const oggiIso = computed(() => {
+    const tzoffset = (new Date()).getTimezoneOffset() * 60000; // offset in millisecondi
+    return (new Date(Date.now() - tzoffset)).toISOString().slice(0, 16);
+})
+
+const handleEscape = (e) => {
+    if (e.key === 'Escape' && fotoIngrandita.value) {
+        chiudiFoto()
+    }
+}
+
 onMounted(async () => {
+    // listener per chiudere la foto con ESC
+    document.addEventListener('keydown', handleEscape)
+
     garageStore.clearGarageData()
     await garageStore.fetchGarage(Number(props.id))
 
@@ -38,6 +53,11 @@ onMounted(async () => {
     if (checkIn.value && checkOut.value) {
         await aggiornaMappa()
     }
+})
+
+onUnmounted(() => {
+    // rimuovo il listener quando il componente viene distrutto
+    document.removeEventListener('keydown', handleEscape)
 })
 
 watch([checkIn, checkOut], () => {
@@ -379,11 +399,11 @@ watch(paginaRecensioniCorrente, () => {
 
                         <div class="form-group">
                             <label>Arrivo</label>
-                            <input type="datetime-local" v-model="checkIn">
+                            <input type="datetime-local" v-model="checkIn" :min="oggiIso">
                         </div>
                         <div class="form-group">
                             <label>Partenza</label>
-                            <input type="datetime-local" v-model="checkOut">
+                            <input type="datetime-local" v-model="checkOut" :min="oggiIso">
                         </div>
 
                         <div class="action-buttons">
@@ -451,9 +471,10 @@ watch(paginaRecensioniCorrente, () => {
                             </div>
                         </div>
 
-                        <button class="btn fill" :disabled="!isMapConfirmed || !postoSelezionato || !targa || !isTargaValida || (postoSelezionato.isdisabili && !isCudeValido)"
+                        <button class="btn fill" :disabled="!isMapConfirmed || !postoSelezionato || !targa || !isTargaValida || (postoSelezionato.isdisabili && !isCudeValido) || isPrenotando"
                             @click="gestisciPrenotazione">
-                            Prenota ora
+                            <span v-if="isPrenotando"><i class="bi bi-hourglass-split"></i> Elaborazione...</span>
+                            <span v-else>Prenota ora</span>
                         </button>
 
                     </div>
@@ -526,52 +547,51 @@ watch(paginaRecensioniCorrente, () => {
                         </div>
 
                         <div class="user-comments-section mt-5 pt-4 border-top">
-                            <div class="comments-grid">
-                                <div v-for="(recensione, index) in recensioniPaginate" :key="index"
-                                    class="comment-card">
-                                    <div class="comment-header">
-                                        <div class="user-avatar">
-                                            <img v-if="recensione.fotoprofilo_url" :src="recensione.fotoprofilo_url"
-                                                alt="User avatar">
-                                            <span v-else>{{ recensione.nome.charAt(0).toUpperCase() }}</span>
+                            <div class="reviews-wrapper">
+                                <div class="comments-grid">
+                                    <div v-for="(recensione, index) in recensioniPaginate" :key="index" class="comment-card">
+                                        <div class="comment-header">
+                                            <div class="user-avatar">
+                                                <img v-if="recensione.fotoprofilo_url" :src="recensione.fotoprofilo_url"
+                                                    alt="User avatar">
+                                                <span v-else>{{ recensione.nome.charAt(0).toUpperCase() }}</span>
+                                            </div>
+
+                                            <div class="user-info">
+                                                <h4 class="user-name">{{ recensione.nome }} {{ recensione.inizialecognome }}.</h4>
+                                            </div>
                                         </div>
 
-                                        <div class="user-info">
-                                            <h4 class="user-name">{{ recensione.nome }} {{ recensione.inizialecognome
-                                            }}.</h4>
+                                        <div class="comment-meta">
+                                            <div class="small-stars">
+                                                <i v-for="star in 5" :key="'s' + star" class="bi"
+                                                    :class="star <= Math.round(recensione.votogenerale) ? 'bi-star-fill star--on' : 'bi-star star--off'">
+                                                </i>
+                                            </div>
+                                            <span class="meta-dot">·</span>
+                                            <span class="comment-date">{{ formattaDataRecensione(recensione.datacreazione) }}</span>
                                         </div>
+
+                                        <p class="comment-text"
+                                            :class="{ 'comment-text--expanded': commentiEspansi.has(index) }"
+                                            v-if="recensione.commento">{{ recensione.commento }}</p>
+                                        <p class="comment-text text-muted fst-italic" v-else></p>
+
+                                        <button v-if="recensione.commento && recensione.commento.length > 180"
+                                            class="mostra-altro-btn" @click="toggleCommento(index)">
+                                            {{ commentiEspansi.has(index) ? 'Mostra meno' : 'Mostra altro' }}
+                                        </button>
                                     </div>
-
-                                    <div class="comment-meta">
-                                        <div class="small-stars">
-                                            <i v-for="star in 5" :key="'s' + star" class="bi"
-                                                :class="star <= Math.round(recensione.votogenerale) ? 'bi-star-fill star--on' : 'bi-star star--off'">
-                                            </i>
-                                        </div>
-                                        <span class="meta-dot">·</span>
-                                        <span class="comment-date">{{ formattaDataRecensione(recensione.datacreazione)
-                                        }}</span>
-                                    </div>
-
-                                    <p class="comment-text"
-                                        :class="{ 'comment-text--expanded': commentiEspansi.has(index) }"
-                                        v-if="recensione.commento">{{ recensione.commento }}</p>
-                                    <p class="comment-text text-muted fst-italic" v-else></p>
-
-                                    <button v-if="recensione.commento && recensione.commento.length > 180"
-                                        class="mostra-altro-btn" @click="toggleCommento(index)">
-                                        {{ commentiEspansi.has(index) ? 'Mostra meno' : 'Mostra altro' }}
-                                    </button>
                                 </div>
-                            </div>
-                            
-                            <div class="pagination-wrapper mt-5 d-flex justify-content-center" v-if="garageStore.recensioni.length > 0">
-                                <Pagination
-                                    compact
-                                    v-model:paginaCorrente="paginaRecensioniCorrente"
-                                    v-model:elementiPerPagina="recensioniPerPagina"
-                                    :totaleElementi="garageStore.recensioni.length"
-                                />
+                                
+                                <div class="pagination-wrapper mt-5 d-flex justify-content-center" v-if="garageStore.recensioni.length > 0">
+                                    <Pagination
+                                        compact
+                                        v-model:paginaCorrente="paginaRecensioniCorrente"
+                                        v-model:elementiPerPagina="recensioniPerPagina"
+                                        :totaleElementi="garageStore.recensioni.length"
+                                    />
+                                </div>
                             </div>
                         </div>
 
@@ -1201,6 +1221,7 @@ watch(paginaRecensioniCorrente, () => {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 32px 48px;
+    align-content: start;
 }
 
 .comment-card {
@@ -1381,9 +1402,25 @@ watch(paginaRecensioniCorrente, () => {
     width: 100%;
 }
 
-@media (max-width: 600px) {
+.reviews-wrapper {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 420px;
+}
+
+@media (max-width: 800px) {
     .special-line {
         justify-content: flex-start; 
+    }
+    
+    .comments-grid {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+
+    .reviews-wrapper {
+        min-height: 780px; 
     }
 }
 </style>
