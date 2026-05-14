@@ -1,5 +1,8 @@
 <script setup>
-defineProps({
+import { ref, computed, watch } from 'vue'
+import Pagination from '../Pagination.vue'
+
+const props = defineProps({
     prenotazioni: {
         type: Array,
         required: true,
@@ -18,6 +21,23 @@ const formatData = (iso) => {
 
 const statoBadge = (stato) =>
     stato === 'ATTIVA' ? 'badge--green' : stato === 'ANNULLATA' ? 'badge--red' : 'badge--gray'
+
+// logica paginazione
+const paginaCorrente = ref(1)
+const elementiPerPagina = ref(5)
+
+const prenotazioniPaginate = computed(() => {
+    const inizio = (paginaCorrente.value - 1) * elementiPerPagina.value
+    return props.prenotazioni.slice(inizio, inizio + elementiPerPagina.value)
+})
+
+const scrollInAlto = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+watch(() => props.prenotazioni, () => {
+    paginaCorrente.value = 1
+}, { deep: true })
 </script>
 
 <template>
@@ -44,7 +64,7 @@ const statoBadge = (stato) =>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="p in prenotazioni" :key="p.id_prenotazione">
+                    <tr v-for="p in prenotazioniPaginate" :key="p.id_prenotazione">
                         <td><span class="targa-badge">{{ p.codiceprenotazione }}</span></td>
                         <td class="td-bold">{{ p.nome_garage }}</td>
                         <td><span class="targa-badge">{{ p.targa }}</span></td>
@@ -70,6 +90,16 @@ const statoBadge = (stato) =>
                 </tbody>
             </table>
         </div>
+
+        <div class="pagination-container mt-4" v-if="prenotazioni.length > 0">
+            <Pagination 
+                v-model:paginaCorrente="paginaCorrente" 
+                v-model:elementiPerPagina="elementiPerPagina"
+                :totaleElementi="prenotazioni.length" 
+                @cambio-pagina="scrollInAlto"
+            />
+        </div>
+
     </section>
 </template>
 
@@ -253,5 +283,9 @@ const statoBadge = (stato) =>
     background: #E74C3C;
     border-radius: 50%;
     border: 2px solid #fff;
+}
+
+.mt-4 {
+    margin-top: 1.5rem;
 }
 </style>
