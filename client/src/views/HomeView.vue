@@ -41,7 +41,6 @@ const fetchRandomGarages = async () => {
                 nome: g.nome,
                 indirizzo: g.indirizzo,
                 tariffa: Number(g.tariffabase || 0).toFixed(2),
-                // prende la prima foto dell'array se presente
                 immagine: (g.foto_urls && g.foto_urls.length > 0) ? g.foto_urls[0] : 
                           (g.Foto_URLs && g.Foto_URLs.length > 0) ? g.Foto_URLs[0] : null
             }))
@@ -625,7 +624,6 @@ const features = [
     }
 
     .garage-card-wrapper {
-        /* 2 card esatte su tablet: (100% - 24px di gap singolo) / 2 */
         flex: 0 0 calc((100% - 24px) / 2);
         max-width: calc((100% - 24px) / 2);
     }
@@ -644,7 +642,6 @@ const features = [
     }
 
     .garage-card-wrapper {
-        /* 85% su mobile per far intravedere la card successiva e invitare allo scroll */
         flex: 0 0 85%;
         max-width: 85%;
     }
