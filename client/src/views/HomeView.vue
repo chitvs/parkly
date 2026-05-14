@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, nextTick } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
+import { authStore } from '../store/auth.js'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 import SearchBar from '../components/SearchBar.vue'
@@ -211,7 +212,7 @@ const features = [
                 </div>
             </section>
 
-            <div class="cta-wrap">
+            <div class="cta-wrap" v-if="authStore.utente?.ruolo !== 'GESTORE'">
                 <div class="cta">
                     <div class="cta-text">
                         <h2>Hai un garage? Lavora con noi.</h2>
