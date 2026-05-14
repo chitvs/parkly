@@ -23,18 +23,38 @@ import DashboardGarageForm from '../components/gestore/DashboardGarageForm.vue'
 
 const isGestore = computed(() => authStore.utente?.ruolo === 'GESTORE')
 
-const vistaAttiva = ref('statistiche')
+const vistaAttiva = ref('garage')
 const isLoading = ref(false)
 const staSalvando = ref(false)
 const messaggio = ref(null)
 const reRenderKey = ref(0)
+const isGarageDropdownOpen = ref(false)
 
-// Collegamenti ai dati del Pinia Store
+// Collegamenti ai dati dello Store
 const mieiGarage = computed(() => garageStore.mieiGarage || [])
 const storicoPrenotazioni = computed(() => garageStore.storicoPrenotazioni || [])
 const postiPerGarage = computed(() => garageStore.postiPerGarage || {})
 const occupazioneGarage = computed(() => garageStore.occupazioneGarage || {})
 const allerteStato = computed(() => garageStore.allerteStato || [])
+
+const idGarageSelezionatoGlobale = computed({
+  get: () => garageStore.idGarageSelezionato,
+  set: (val) => garageStore.setGarageSelezionato(val)
+})
+
+const mieiGarageFiltrati = computed(() => {
+  if (idGarageSelezionatoGlobale.value === 'TUTTI') {
+    return mieiGarage.value;
+  }
+  return mieiGarage.value.filter(g => Number(g.id_garage) === Number(idGarageSelezionatoGlobale.value));
+})
+
+const storicoPrenotazioniFiltrato = computed(() => {
+  if (idGarageSelezionatoGlobale.value === 'TUTTI') {
+    return storicoPrenotazioni.value;
+  }
+  return storicoPrenotazioni.value.filter(p => Number(p.id_garage) === Number(idGarageSelezionatoGlobale.value));
+})
 
 const formattaPerInputDate = (d) => {
   const y = d.getFullYear()
@@ -109,7 +129,7 @@ const salvaNuovoGarage = async (payload) => {
       ? await garageStore.updateGarage(idGarageInModifica.value, payload)
       : await garageStore.createGarage(payload)
 
-    if (res.success || res.garage) { 
+    if (res.success || res.garage) {
       // Otteniamo il nuovo ID in base a come lo store restituisce l'oggetto
       const nuovoIdGarage = isEditing.value ? idGarageInModifica.value : (res.garage?.id_garage || res.data?.id_garage)
 
@@ -212,7 +232,7 @@ onMounted(async () => {
       garageStore.caricaStoricoGestore(),
     ])
     if (mieiGarage.value.length === 0) vistaAttiva.value = 'aggiungi'
-    else vistaAttiva.value = 'statistiche'
+    else vistaAttiva.value = 'garage'
   } finally {
     isLoading.value = false
   }
@@ -221,7 +241,7 @@ onMounted(async () => {
     infoModalInstance = new bootstrap.Modal(infoModalElement.value)
   }
   socket = getSocket()
-  if(socket) socket.on('nuovo_messaggio', handleNuovoMessaggio)
+  if (socket) socket.on('nuovo_messaggio', handleNuovoMessaggio)
 })
 
 onUnmounted(() => {
@@ -238,13 +258,18 @@ watch(vistaAttiva, (newVal) => {
   }
 })
 
-const navItems = [
-  { id: 'statistiche', label: 'Statistiche', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>' },
+const navTop = [
   { id: 'garage', label: 'I miei Garage', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>' },
-  { id: 'stato', label: 'Stato Corrente', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>' },
-  { id: 'storico', label: 'Storico Prenotazioni', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>' },
   { id: 'aggiungi', label: 'Aggiungi Garage', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' },
 ]
+
+const navBottom = [
+  { id: 'statistiche', label: 'Statistiche', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>' },
+  { id: 'stato', label: 'Stato Corrente', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>' },
+  { id: 'storico', label: 'Storico Prenotazioni', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>' },
+]
+
+const showNavBottom = computed(() => mieiGarage.value.length > 0)
 
 const menuFiltrato = computed(() => mieiGarage.value.length === 0 ? navItems.filter(i => i.id === 'aggiungi') : navItems)
 
@@ -297,14 +322,56 @@ const formattaDataLeggibile = (dataIso) => {
           </svg>
           <span>Area Gestore</span>
         </div>
-        <nav class="sidebar-nav">
-          <a v-for="item in menuFiltrato" :key="item.id" href="#"
+
+        <nav class="sidebar-nav top-nav">
+          <a v-for="item in navTop" :key="item.id" href="#" v-show="showNavBottom || item.id === 'aggiungi'"
             :class="['nav-item', { active: vistaAttiva === item.id }]" @click.prevent="vistaAttiva = item.id">
             <span class="nav-icon" v-html="item.icon"></span>
             <span class="nav-label">{{ item.label }}</span>
             <span v-if="vistaAttiva === item.id" class="nav-indicator"></span>
           </a>
         </nav>
+
+        <div class="sidebar-divider" v-if="showNavBottom"></div>
+
+        <div class="sidebar-filter" v-click-outside="() => isGarageDropdownOpen = false">
+          <span class="sidebar-filter-label">Garage</span>
+
+          <div class="garage-dropdown-wrapper">
+            <button class="garage-trigger" @click="isGarageDropdownOpen = !isGarageDropdownOpen">
+              <span>{{idGarageSelezionatoGlobale === 'TUTTI' ? 'Tutti i Garage' : mieiGarage.find(g => g.id_garage ===
+                idGarageSelezionatoGlobale)?.nome }}</span>
+              <svg :class="['garage-chevron', { 'rotated': isGarageDropdownOpen }]" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+
+            <ul v-if="isGarageDropdownOpen" class="garage-menu">
+              <li v-if="idGarageSelezionatoGlobale !== 'TUTTI'">
+                <a class="garage-menu-item" @click="idGarageSelezionatoGlobale = 'TUTTI'; isGarageDropdownOpen = false">
+                  Tutti i Garage
+                </a>
+              </li>
+              <li v-for="g in mieiGarage" :key="g.id_garage" v-show="idGarageSelezionatoGlobale !== g.id_garage">
+                <a class="garage-menu-item"
+                  @click="idGarageSelezionatoGlobale = g.id_garage; isGarageDropdownOpen = false">
+                  {{ g.nome }}
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <nav class="sidebar-nav bottom-nav" v-if="showNavBottom">
+          <a v-for="item in navBottom" :key="item.id" href="#"
+            :class="['nav-item', { active: vistaAttiva === item.id }]" @click.prevent="vistaAttiva = item.id">
+            <span class="nav-icon" v-html="item.icon"></span>
+            <span class="nav-label">{{ item.label }}</span>
+            <span v-if="vistaAttiva === item.id" class="nav-indicator"></span>
+          </a>
+        </nav>
+
         <div class="sidebar-user">
           <img :src="authStore.utente?.fotoProfilo_URL || defaultAvatarUrl" alt="Avatar" class="sidebar-avatar" />
           <div class="sidebar-user-info">
@@ -327,27 +394,21 @@ const formattaDataLeggibile = (dataIso) => {
             <button @click="messaggio = null" class="close-btn">×</button>
           </div>
 
-          <DashboardStats v-if="vistaAttiva === 'statistiche'" :miei-garage="mieiGarage"
-            :storico-prenotazioni="storicoPrenotazioni" />
+          <DashboardStats v-if="vistaAttiva === 'statistiche'" :miei-garage="mieiGarageFiltrati"
+            :storico-prenotazioni="storicoPrenotazioniFiltrato" />
 
           <DashboardGarageList v-if="vistaAttiva === 'garage'" :miei-garage="mieiGarage" @modifica="preparaModifica" />
 
-          <DashboardStato v-if="vistaAttiva === 'stato'" :key="'stato-' + reRenderKey" :miei-garage="mieiGarage"
+          <DashboardStato v-if="vistaAttiva === 'stato'" :key="'stato-' + reRenderKey" :miei-garage="mieiGarageFiltrati"
             :posti-per-garage="postiPerGarage" :occupazione-garage="occupazioneGarage" :allerte-stato="allerteStato"
             @verifica-disponibilita="aggiornaMappaOrari" @manage-posto="apriGestionePosto" />
 
-          <DashboardStorico v-if="vistaAttiva === 'storico'" :prenotazioni="storicoPrenotazioni"
+          <DashboardStorico v-if="vistaAttiva === 'storico'" :prenotazioni="storicoPrenotazioniFiltrato"
             @apri-chat="apriChat" />
 
-          <DashboardGarageForm 
-            v-if="vistaAttiva === 'aggiungi'" 
-            :is-editing="isEditing" 
-            :garage-data="garageInModifica"
-            :sta-salvando="staSalvando" 
-            @save="salvaNuovoGarage" 
-            @update-photos="handleFotoDalComponente"
-            @open-info="openInfoModal" 
-          />
+          <DashboardGarageForm v-if="vistaAttiva === 'aggiungi'" :is-editing="isEditing" :garage-data="garageInModifica"
+            :sta-salvando="staSalvando" @save="salvaNuovoGarage" @update-photos="handleFotoDalComponente"
+            @open-info="openInfoModal" />
         </template>
       </main>
     </div>
@@ -364,9 +425,14 @@ const formattaDataLeggibile = (dataIso) => {
           </div>
           <div class="modal-body px-4 pb-4 pt-0">
             <ul class="info-list">
-              <li>Cerca il tuo indirizzo per avvicinarti, poi clicca sulla mappa interattiva per posizionare il pin esattamente sopra il tuo garage.</li>
-              <li>Configura la tipologia del posto (Auto, Moto, Furgone) e aggiungi servizi extra. Il codice verrà generato in automatico se lasciato vuoto.</li>
-              <li>Una volta creati i posti, selezionali dalla tavolozza e clicca sulla griglia a scacchiera per disegnare visivamente il layout reale del garage.</li>
+              <li>Cerca il tuo indirizzo per avvicinarti, poi clicca sulla mappa interattiva per posizionare il pin
+                esattamente sopra il tuo garage.</li>
+              <li>Configura la tipologia del posto (Auto, Moto, Furgone) e aggiungi servizi extra. Il codice verrà
+                generato
+                in automatico se lasciato vuoto.</li>
+              <li>Una volta creati i posti, selezionali dalla tavolozza e clicca sulla griglia a scacchiera per
+                disegnare
+                visivamente il layout reale del garage.</li>
             </ul>
           </div>
         </div>
@@ -401,14 +467,17 @@ const formattaDataLeggibile = (dataIso) => {
                 <p class="modal-sub">Questo posto è bloccato e non è visibile ai clienti.</p>
 
                 <div class="p-3 bg-light border rounded-3 mb-4">
-                  <strong class="d-block mb-2 text-dark" style="font-size: 0.85rem; text-transform: uppercase;">Dettagli del blocco:</strong>
+                  <strong class="d-block mb-2 text-dark" style="font-size: 0.85rem; text-transform: uppercase;">Dettagli
+                    del
+                    blocco:</strong>
                   <div class="d-flex justify-content-between mb-1 small">
                     <span class="text-muted">Inizio:</span>
                     <span class="fw-bold">{{ formattaDataLeggibile(postoDaGestire.manutenzione?.inizio) }}</span>
                   </div>
                   <div class="d-flex justify-content-between mb-2 small">
                     <span class="text-muted">Fine:</span>
-                    <span class="fw-bold text-danger">{{ formattaDataLeggibile(postoDaGestire.manutenzione?.fine) }}</span>
+                    <span class="fw-bold text-danger">{{ formattaDataLeggibile(postoDaGestire.manutenzione?.fine)
+                      }}</span>
                   </div>
                   <div class="pt-2 mt-2 border-top small">
                     <span class="text-muted d-block mb-1">Motivazione:</span>
@@ -433,18 +502,22 @@ const formattaDataLeggibile = (dataIso) => {
 
                   <div class="mb-2">
                     <label class="field-label mb-2">Calendario Occupazione</label>
-                    <div v-if="prenotazioniPostoSelezionato.length === 0" class="p-4 bg-light rounded-4 text-center border">
+                    <div v-if="prenotazioniPostoSelezionato.length === 0"
+                      class="p-4 bg-light rounded-4 text-center border">
                       <i class="bi bi-calendar-check text-success fs-2 d-block mb-2"></i>
-                      <span class="text-muted small">Nessun impegno futuro per questo posto.<br>Puoi procedere liberamente.</span>
+                      <span class="text-muted small">Nessun impegno futuro per questo posto.<br>Puoi procedere
+                        liberamente.</span>
                     </div>
                     <div v-else class="d-flex flex-column gap-2 pe-1">
                       <div v-for="pren in prenotazioniPostoSelezionato" :key="pren.id_prenotazione"
                         class="p-3 bg-white border rounded-3 d-flex justify-content-between align-items-center">
                         <div>
                           <span class="fw-bold d-block text-dark small">{{ pren.targa || 'Targa N/D' }}</span>
-                          <span class="text-muted extra-small">{{ formattaDataLeggibile(pren.iniziososta) }} - {{ formattaDataLeggibile(pren.finesosta) }}</span>
+                          <span class="text-muted extra-small">{{ formattaDataLeggibile(pren.iniziososta) }} - {{
+                            formattaDataLeggibile(pren.finesosta) }}</span>
                         </div>
-                        <span class="badge bg-primary-subtle text-primary rounded-pill px-2 py-1 extra-small">Prenotato</span>
+                        <span
+                          class="badge bg-primary-subtle text-primary rounded-pill px-2 py-1 extra-small">Prenotato</span>
                       </div>
                     </div>
                   </div>
@@ -480,13 +553,17 @@ const formattaDataLeggibile = (dataIso) => {
 
                   <div class="form-group mb-4">
                     <label class="field-label">Motivazione (Opzionale)</label>
-                    <textarea v-model="manutenzioneData.motivazione" class="form-input w-100" style="height:auto; min-height:80px;" rows="2" placeholder="Es. Lavori di verniciatura o riparazione prese"></textarea>
+                    <textarea v-model="manutenzioneData.motivazione" class="form-input w-100"
+                      style="height:auto; min-height:80px;" rows="2"
+                      placeholder="Es. Lavori di verniciatura o riparazione prese"></textarea>
                   </div>
                 </div>
-                
+
                 <div class="review-footer d-flex gap-2">
-                  <button class="cta-btn cta-btn--ghost flex-grow-1" @click="showMaintenanceModal = false">Annulla</button>
-                  <button class="cta-btn cta-btn--danger flex-grow-1" :disabled="!isManutenzioneValida" @click="salvaManutenzione">Conferma Blocco</button>
+                  <button class="cta-btn cta-btn--ghost flex-grow-1"
+                    @click="showMaintenanceModal = false">Annulla</button>
+                  <button class="cta-btn cta-btn--danger flex-grow-1" :disabled="!isManutenzioneValida"
+                    @click="salvaManutenzione">Conferma Blocco</button>
                 </div>
               </div>
             </template>
@@ -495,12 +572,11 @@ const formattaDataLeggibile = (dataIso) => {
       </div>
     </Transition>
 
-  <Footer />
+    <Footer />
   </div>
 </template>
 
 <style scoped>
-
 .page-wrapper {
   display: flex;
   flex-direction: column;
@@ -588,6 +664,20 @@ const formattaDataLeggibile = (dataIso) => {
   flex: 1;
 }
 
+.sidebar-nav.top-nav {
+  flex: 0 0 auto;
+}
+
+.sidebar-nav.bottom-nav {
+  flex: 1;
+}
+
+.sidebar-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 16px 8px;
+}
+
 .nav-item {
   position: relative;
   display: flex;
@@ -673,7 +763,7 @@ const formattaDataLeggibile = (dataIso) => {
 .main-content {
   flex: 1;
   padding: 40px 48px;
-  overflow-y: auto; /* Aggiunto da style/ui-cleanup */
+  overflow-y: auto;
 }
 
 .loading-state {
@@ -695,7 +785,7 @@ const formattaDataLeggibile = (dataIso) => {
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
- 
+
 @keyframes spin {
   to {
     transform: rotate(360deg);
@@ -1094,5 +1184,93 @@ const formattaDataLeggibile = (dataIso) => {
   flex-direction: column;
   flex: 1;
   min-height: 0;
+}
+
+.sidebar-filter {
+  padding: 0 12px 14px;
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.07);
+  margin-bottom: 4px;
+}
+
+.sidebar-filter-label {
+  display: block;
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.35);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 5px;
+  padding-left: 2px;
+}
+
+.garage-dropdown-wrapper {
+  position: relative;
+}
+
+.garage-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.92);
+  border: 0.5px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 7px 11px;
+  font-size: 0.82rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+  text-align: left;
+}
+
+.garage-trigger:hover {
+  background-color: rgba(255, 255, 255, 0.10);
+  border-color: rgba(255, 255, 255, 0.20);
+}
+
+.garage-chevron {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.4);
+  transition: transform 0.2s ease;
+}
+
+.garage-chevron.rotated {
+  transform: rotate(180deg);
+}
+
+.garage-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: #F4F7F6;
+  border-radius: 14px;
+  padding: 0.45rem 1rem;
+  list-style: none;
+  margin: 0;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  z-index: 200;
+  overflow: hidden;
+}
+
+.garage-menu-item {
+  display: block;
+  padding: 0.25rem 0;
+  font-size: 0.88rem;
+  color: #00408A;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+  text-decoration: none;
+}
+
+.garage-menu-item:hover {
+  background-color: #e8eef8;
+  color: #00408A;
 }
 </style>

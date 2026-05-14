@@ -24,7 +24,7 @@ const ultimoGiornoMese = new Date(dataCorrente.getFullYear(), dataCorrente.getMo
 
 const filtroInizio = ref(formattaPerInputDate(primoGiornoMese))
 const filtroFine = ref(formattaPerInputDate(ultimoGiornoMese))
-const garageSelezionato = ref('TUTTI')
+const isSingoloGarage = computed(() => props.mieiGarage.length === 1)
 
 const dateRange = computed(() => {
     const inizio = new Date(filtroInizio.value)
@@ -38,9 +38,7 @@ const prenotazioniFiltrate = computed(() => {
     const { inizio, fine } = dateRange.value
     return props.storicoPrenotazioni.filter(p => {
         const dataP = new Date(p.iniziososta)
-        const matchesGarage = garageSelezionato.value === 'TUTTI' || Number(p.id_garage) === Number(garageSelezionato.value)
-        const matchesData = dataP >= inizio && dataP <= fine
-        return matchesGarage && matchesData
+        return dataP >= inizio && dataP <= fine
     })
 })
 
@@ -55,7 +53,7 @@ const kpiData = computed(() => {
         .reduce((acc, p) => acc + parseFloat(p.prezzototale || 0), 0)
         .toFixed(2)
 
-    if (garageSelezionato.value === 'TUTTI') {
+    if (!isSingoloGarage.value) {
         return [
             { id: 1, label: 'Garage Totali', value: props.mieiGarage.length, icon: 'bi-building', color: 'blue' },
             { id: 2, label: 'Incasso Totale', value: `€ ${incasso}`, icon: 'bi-cash-coin', color: 'green' },
@@ -131,10 +129,7 @@ const chartDataStato = computed(() => {
 
 const chartDataRadar = computed(() => {
     const CATEGORIE_RADAR = ['posizione', 'prezzo', 'pulizia', 'spazio', 'sicurezza']
-    const garageTarget = garageSelezionato.value === 'TUTTI'
-        ? props.mieiGarage
-        : props.mieiGarage.filter(g => Number(g.id_garage) === Number(garageSelezionato.value))
-
+    const garageTarget = props.mieiGarage
     const medie = CATEGORIE_RADAR.map(cat => {
         const somma = garageTarget.reduce((acc, g) => acc + parseFloat(g[`media${cat}`] || 0), 0)
         return garageTarget.length ? somma / garageTarget.length : 0
@@ -173,18 +168,11 @@ const chartDataRevenuePerGarage = computed(() => ({
             <div>
                 <h1>Dashboard</h1>
                 <p class="subtitle">
-                    {{ garageSelezionato === 'TUTTI' ? 'Panoramica di tutti i tuoi parcheggi' : 'Statistiche di dettaglio del parcheggio' }}
+                    {{ !isSingoloGarage ? 'Panoramica di tutti i tuoi parcheggi' : 'Statistiche di dettaglio del parcheggio' }}
                 </p>
             </div>
 
             <div class="stats-filters">
-                <div class="form-group stats-filters__group">
-                    <label class="form-label stats-filters__label">Seleziona Garage</label>
-                    <select class="form-input stats-filters__select" v-model="garageSelezionato">
-                        <option value="TUTTI">Tutti i Garage</option>
-                        <option v-for="g in mieiGarage" :key="g.id_garage" :value="g.id_garage">{{ g.nome }}</option>
-                    </select>
-                </div>
                 <div class="form-group stats-filters__group">
                     <label class="form-label stats-filters__label">Dal</label>
                     <input type="date" class="form-input stats-filters__date" v-model="filtroInizio">
@@ -236,7 +224,7 @@ const chartDataRevenuePerGarage = computed(() => ({
 
         <div class="charts-row charts-row--single">
             <div class="chart-card chart-card--centered">
-                <template v-if="garageSelezionato === 'TUTTI'">
+                <template v-if="!isSingoloGarage">
                     <div class="chart-header chart-header--center">
                         <h3 class="chart-title">Confronto Incassi per Garage</h3>
                     </div>

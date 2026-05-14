@@ -5,13 +5,14 @@ export const garageStore = reactive({
   currentGarage: null,
   posti: [],
   recensioni: [],
-  
+
   // --- STATI GESTORE ---
   mieiGarage: [],
   storicoPrenotazioni: [],
   postiPerGarage: {},
   occupazioneGarage: {},
-  
+  idGarageSelezionato: 'TUTTI',
+
   // --- STATI CONDIVISI ---
   isLoading: false,
 
@@ -102,6 +103,10 @@ export const garageStore = reactive({
     }
   },
 
+  setGarageSelezionato(id) {
+    this.idGarageSelezionato = id;
+  },
+
   async caricaDashboardGestore() {
     this.isLoading = true;
     try {
@@ -109,6 +114,13 @@ export const garageStore = reactive({
       if (!res.success) return { success: false };
 
       this.mieiGarage = markRaw(res.data);
+
+      if (this.idGarageSelezionato !== 'TUTTI') {
+        const esisteAncora = this.mieiGarage.some(g => Number(g.id_garage) === Number(this.idGarageSelezionato));
+        if (!esisteAncora) {
+          this.idGarageSelezionato = 'TUTTI';
+        }
+      }
 
       const nuoviPosti = {};
       const nuovaOccupazione = {};
