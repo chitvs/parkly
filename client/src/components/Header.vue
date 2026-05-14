@@ -1,6 +1,6 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import * as bootstrap from 'bootstrap'
 import logoUrl from '../assets/Primo_Logo_00408A.svg'
 import { authStore } from '../store/auth.js' // Importa lo store
@@ -8,6 +8,9 @@ import eyeUrl from '../assets/eye-gray.svg'
 import eyeClosedUrl from '../assets/eye-closed-gray.svg'
 
 const router = useRouter()
+const route = useRoute()
+
+const isRegisterPage = computed(() => route.path === '/register')
 
 const loginIdentificatore = ref('')
 const loginPassword = ref('')
@@ -85,12 +88,12 @@ const handleLogout = async () => {
       </div>
     </RouterLink>
 
-    <nav class="nav-links">
+    <nav class="nav-links" v-if="!isRegisterPage">
       <RouterLink to="/">Home</RouterLink>
       <RouterLink to="/garage">Garage</RouterLink>
     </nav>
 
-    <div class="user-actions">
+    <div class="user-actions" v-if="!isRegisterPage">
       <template v-if="!authStore.utente">
         <RouterLink to="/register" class="register-btn">Registrati</RouterLink>
         <button type="button" class="login-btn" @click="openLoginModal">

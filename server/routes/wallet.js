@@ -60,7 +60,6 @@ router.get('/transazioni', async (req, res) => {
             FROM Transazione
             WHERE ID_Utente = $1
             ORDER BY DataCreazione DESC
-            LIMIT 30
         `, [req.session.utente.id]);
 
         res.json({ success: true, data: transazioni });
