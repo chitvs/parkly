@@ -64,7 +64,6 @@ defineEmits(['modifica'])
 </template>
 
 <style scoped>
-/* Stili estratti dal componente principale per renderlo indipendente */
 .vista {
     animation: fadeIn 0.25s ease;
 }

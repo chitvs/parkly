@@ -217,6 +217,7 @@ const statoBadge = (stato) =>
     font-family: 'Courier New', monospace;
     color: #444;
     letter-spacing: 0.06em;
+    white-space: nowrap;
 }
 
 /* Bottoni Chat */

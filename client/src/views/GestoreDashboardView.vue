@@ -11,7 +11,7 @@ import Footer from '../components/Footer.vue'
 import ChatBox from '../components/ChatBox.vue'
 import { getSocket } from '../composables/useChat.js'
 
-//foto profilo standard
+// foto profilo standard
 import defaultAvatarUrl from '../assets/default-avatar.png'
 
 // Componenti Dashboard
@@ -26,15 +26,15 @@ const isGestore = computed(() => authStore.utente?.ruolo === 'GESTORE')
 const vistaAttiva = ref('statistiche')
 const isLoading = ref(false)
 const staSalvando = ref(false)
-const messaggio   = ref(null)
+const messaggio = ref(null)
+const reRenderKey = ref(0)
 
-// ─── Dati principali ────────────────────────────────────────────────────────
-const mieiGarage           = ref([])
-const storicoPrenotazioni  = ref([])
-const allerteStato         = ref([])
-const occupazioneGarage    = ref({})
-const postiPerGarage       = ref({})
-const reRenderKey          = ref(0)
+// Collegamenti ai dati del Pinia Store
+const mieiGarage = computed(() => garageStore.mieiGarage || [])
+const storicoPrenotazioni = computed(() => garageStore.storicoPrenotazioni || [])
+const postiPerGarage = computed(() => garageStore.postiPerGarage || {})
+const occupazioneGarage = computed(() => garageStore.occupazioneGarage || {})
+const allerteStato = computed(() => garageStore.allerteStato || [])
 
 const formattaPerInputDate = (d) => {
   const y = d.getFullYear()
@@ -85,12 +85,11 @@ const handleFotoDalComponente = (files) => {
 
 const preparaModifica = async (garage) => {
   messaggio.value = null
-  const res = await fetch(`/api/garage/${garage.id_garage}/posti`, { credentials: 'include' })
-  const data = await res.json()
+  const res = await garageStore.fetchPosti(garage.id_garage)
 
   garageInModifica.value = {
     ...garage,
-    posti_raw: data.success ? data.posti : []
+    posti_raw: res.success ? res.posti : []
   }
 
   isEditing.value = true
@@ -99,33 +98,21 @@ const preparaModifica = async (garage) => {
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-// Logica Two-Step (JSON Database + Foto Supabase)
+// Logica Two-Step (Store Database + Foto Supabase)
 const salvaNuovoGarage = async (payload) => {
   messaggio.value = null
   staSalvando.value = true
 
   try {
-    let res;
-    let nuovoIdGarage = null;
-
-    // STEP 1: Creazione/Modifica Testo Garage
-    if (isEditing.value) {
-      res = await garageStore.updateGarage(idGarageInModifica.value, payload)
-      nuovoIdGarage = idGarageInModifica.value
-    } else {
-      const raw = await fetch('/api/garage/garages-gestore', {
-        method: 'POST', credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-      res = await raw.json()
-      if (res.success && res.garage) {
-        nuovoIdGarage = res.garage.id_garage
-      }
-    }
+    // STEP 1: Creazione/Modifica Testo Garage tramite Store
+    const res = isEditing.value
+      ? await garageStore.updateGarage(idGarageInModifica.value, payload)
+      : await garageStore.createGarage(payload)
 
     if (res.success || res.garage) { 
-      
+      // Otteniamo il nuovo ID in base a come lo store restituisce l'oggetto
+      const nuovoIdGarage = isEditing.value ? idGarageInModifica.value : (res.garage?.id_garage || res.data?.id_garage)
+
       // STEP 2: Caricamento Immagini
       if (fotoDaCaricare.value.length > 0 && nuovoIdGarage) {
         const formData = new FormData()
@@ -142,13 +129,14 @@ const salvaNuovoGarage = async (payload) => {
         }
       }
 
-      // Pulizia e refresh
+      // Pulizia form
       isEditing.value = false
       idGarageInModifica.value = null
       garageInModifica.value = null
       fotoDaCaricare.value = []
 
-      await caricaGarage()
+      // Refresh dei dati tramite store
+      await garageStore.caricaDashboardGestore()
       messaggio.value = { tipo: 'success', testo: isEditing.value ? 'Garage aggiornato!' : 'Garage pubblicato!' }
       vistaAttiva.value = 'garage'
     } else {
@@ -162,51 +150,10 @@ const salvaNuovoGarage = async (payload) => {
   }
 }
 
-const caricaGarage = async () => {
-  const res = await fetch('/api/garage/garages-gestore', { credentials: 'include' })
-  if (!res.ok) return
-  const data = await res.json()
-
-  const nuoviPosti = {}
-  const nuovaOccupazione = {}
-
-  await Promise.all(data.map(async (g) => {
-    try {
-      const [rPosti, rOcc] = await Promise.all([
-        fetch(`/api/garage/${g.id_garage}/posti`, { credentials: 'include' }),
-        fetch(`/api/garage/${g.id_garage}/occupazione`, { credentials: 'include' })
-      ])
-      if (rPosti.ok) nuoviPosti[g.id_garage] = (await rPosti.json()).posti
-      if (rOcc.ok) nuovaOccupazione[g.id_garage] = Math.round((await rOcc.json()).percentuale)
-    } catch (e) { console.error(e) }
-  }))
-
-  postiPerGarage.value = nuoviPosti
-  occupazioneGarage.value = nuovaOccupazione
-  mieiGarage.value = data
-  reRenderKey.value++
-}
-
 const aggiornaMappaOrari = async ({ inizio, fine }) => {
   const iIso = new Date(inizio).toISOString()
   const fIso = new Date(fine).toISOString()
-  await Promise.all(mieiGarage.value.map(async (g) => {
-    try {
-      const r = await fetch(`/api/garage/${g.id_garage}/posti?inizio=${iIso}&fine=${fIso}`, { credentials: 'include' })
-      if (r.ok) postiPerGarage.value[g.id_garage] = (await r.json()).posti
-    } catch (e) { console.error(e) }
-  }))
-  reRenderKey.value++
-}
-
-const caricaStorico = async () => {
-  const res = await fetch('/api/prenotazioni/prenotazioni-gestore', { credentials: 'include' })
-  if (res.ok) storicoPrenotazioni.value = await res.json()
-}
-
-const caricaStato = async () => {
-  const res = await fetch('/api/garage/stato-garages-gestore', { credentials: 'include' })
-  if (res.ok) allerteStato.value = await res.json()
+  await garageStore.aggiornaMappaOrariGestore(iIso, fIso)
 }
 
 const infoModalElement = ref(null)
@@ -216,7 +163,6 @@ const openInfoModal = () => { if (infoModalInstance) infoModalInstance.show() }
 const showMaintenanceModal = ref(false)
 const postoDaGestire = ref(null)
 const manutenzioneData = ref({ inizio: '', fine: '', motivazione: '' })
-
 const currentMaintenanceStep = ref(1);
 
 const apriGestionePosto = (posto) => {
@@ -235,24 +181,41 @@ const salvaManutenzione = async () => {
   if (res.success) {
     showMaintenanceModal.value = false
     messaggio.value = { tipo: 'success', testo: res.message }
-    await caricaGarage()
+    await garageStore.caricaDashboardGestore()
   } else {
     alert(res.error)
   }
 }
 
 const rimuoviManutenzione = async () => {
-  // Funzione per sbloccare la manutenzione (Se implementata nello store)
-  showMaintenanceModal.value = false;
-  await caricaGarage();
-}
+  const idManutenzione = postoDaGestire.value?.manutenzione?.id_manutenzione;
+  if (!idManutenzione) return;
+
+  const res = await garageStore.removeMaintenance(postoDaGestire.value.id_garage, postoDaGestire.value.id_posto, idManutenzione);
+
+  if (res.success) {
+    showMaintenanceModal.value = false;
+    messaggio.value = { tipo: 'success', testo: res.message };
+    await garageStore.caricaDashboardGestore()
+  } else {
+    alert(res.error);
+  }
+};
 
 onMounted(async () => {
-  isLoading.value = true;
-  await caricaGarage();
-  await caricaStorico();
-  await caricaStato();
-  isLoading.value = false;
+  isLoading.value = true
+  try {
+    await Promise.all([
+      walletStore.contabilizzaRicavi(),
+      walletStore.caricaSaldoSospeso(),
+      garageStore.caricaDashboardGestore(),
+      garageStore.caricaStoricoGestore(),
+    ])
+    if (mieiGarage.value.length === 0) vistaAttiva.value = 'aggiungi'
+    else vistaAttiva.value = 'statistiche'
+  } finally {
+    isLoading.value = false
+  }
 
   if (infoModalElement.value) {
     infoModalInstance = new bootstrap.Modal(infoModalElement.value)
@@ -285,7 +248,6 @@ const navItems = [
 
 const menuFiltrato = computed(() => mieiGarage.value.length === 0 ? navItems.filter(i => i.id === 'aggiungi') : navItems)
 
-
 const prenotazioniPostoSelezionato = computed(() => {
   if (!postoDaGestire.value || !storicoPrenotazioni.value) return [];
   const oraAttuale = new Date();
@@ -310,7 +272,6 @@ const formattaDataLeggibile = (dataIso) => {
     day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
   }).format(new Date(dataIso));
 };
-
 </script>
 
 <template>
@@ -428,8 +389,7 @@ const formattaDataLeggibile = (dataIso) => {
                 <span :class="['step-pip', currentMaintenanceStep >= 1 ? 'step-pip--on' : '']"></span>
                 <span :class="['step-pip', currentMaintenanceStep >= 2 ? 'step-pip--on' : '']"></span>
               </div>
-              <div v-else></div> 
-              <button class="close-btn" @click="showMaintenanceModal = false">
+              <div v-else></div> <button class="close-btn" @click="showMaintenanceModal = false">
                 <i class="bi bi-x-lg"></i>
               </button>
             </div>
@@ -540,9 +500,19 @@ const formattaDataLeggibile = (dataIso) => {
 </template>
 
 <style scoped>
-/* ── Layout ─────────────────────────────────────────────────────────────── */
-.page-wrapper    { display: flex; flex-direction: column; min-height: 100vh; background-color: var(--bg-light, #F5F5F3); font-family: 'Inter', -apple-system, sans-serif; }
-.dashboard-layout { display: flex; flex: 1; }
+
+.page-wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--bg-light, #F5F5F3);
+  font-family: 'Inter', -apple-system, sans-serif;
+}
+
+.dashboard-layout {
+  display: flex;
+  flex: 1;
+}
 
 .access-denied {
   flex: 1;
@@ -703,7 +673,7 @@ const formattaDataLeggibile = (dataIso) => {
 .main-content {
   flex: 1;
   padding: 40px 48px;
-  overflow-y: auto;
+  overflow-y: auto; /* Aggiunto da style/ui-cleanup */
 }
 
 .loading-state {
@@ -725,7 +695,7 @@ const formattaDataLeggibile = (dataIso) => {
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
-
+ 
 @keyframes spin {
   to {
     transform: rotate(360deg);
