@@ -33,13 +33,17 @@ const fetchRandomGarages = async () => {
 
         if (data.success && data.garage && data.garage.length > 0) {
             const shuffled = data.garage.sort(() => 0.5 - Math.random())
+            // limite di 8 garage
             const selected = shuffled.slice(0, 8)
 
             randomGarages.value = selected.map(g => ({
                 id: g.id_garage,
                 nome: g.nome,
                 indirizzo: g.indirizzo,
-                tariffa: Number(g.tariffabase || 0).toFixed(2)
+                tariffa: Number(g.tariffabase || 0).toFixed(2),
+                // prende la prima foto dell'array se presente
+                immagine: (g.foto_urls && g.foto_urls.length > 0) ? g.foto_urls[0] : 
+                          (g.Foto_URLs && g.Foto_URLs.length > 0) ? g.Foto_URLs[0] : null
             }))
 
             await nextTick()
@@ -194,7 +198,8 @@ const features = [
                         <div class="garage-card-wrapper" v-for="g in randomGarages" :key="g.id">
                             <div class="garage-card" @click="goToGarage(g.id)">
                                 <div class="garage-img-placeholder">
-                                    <i class="bi bi-car-front-fill"></i>
+                                    <img v-if="g.immagine" :src="g.immagine" :alt="g.nome" class="garage-img" />
+                                    <i v-else class="bi bi-car-front-fill"></i>
                                 </div>
                                 <div class="garage-info">
                                     <h4>{{ g.nome }}</h4>
@@ -500,8 +505,8 @@ const features = [
 }
 
 .garage-card-wrapper {
-    flex: 0 0 250px;
-    width: 250px;
+    flex: 0 0 236px;
+    width: 237px;
     scroll-snap-align: start;
 }
 
@@ -531,6 +536,13 @@ const features = [
     color: #94a3b8;
     font-size: 2rem;
     border-bottom: 1px solid #cbd5e1;
+    overflow: hidden;
+}
+
+.garage-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .garage-info {
