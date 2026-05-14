@@ -45,7 +45,6 @@ const matrice = computed(() => {
     );
 });
 
-// numero totale di unità in larghezza
 const numUnitaColonne = computed(() => {
     if (matrice.value.length === 0) return {};
 
@@ -54,17 +53,14 @@ const numUnitaColonne = computed(() => {
     ));
 });
 
-// costruzione delle celle nella grid
 const celle = computed(() => {
     const risultato = [];
-    // occupate[colonnaUnita] = fino a quale riga è occupata da un rowspan
     const occupate = {};
 
     matrice.value.forEach((riga, r) => {
         let unitaCorrente = 1;
 
         riga.forEach((cella) => {
-            // salta le unità già occupate da rowspan di righe precedenti
             while (occupate[unitaCorrente] > r + 1) {
                 unitaCorrente++;
             }
@@ -109,11 +105,8 @@ const celle = computed(() => {
 const gridStyle = computed(() => {
     if (!matrice.value.length) return {};
 
-    // tutte le colonne sono 30px (unità moto).
-    // le auto (2x1) e furgoni (2x2) si spanneranno su 2 colonne = 60px + gap.
     const colonneTemplate = Array(numUnitaColonne.value).fill('30px').join(' ');
 
-    // se la riga ha almeno un posto reale 90px, altrimenti 60px
     const righeTemplate = matrice.value.map(riga => {
         const haPostiReali = riga.some(c => c.codice !== 'X');
         return haPostiReali ? '90px' : '60px';
@@ -162,7 +155,7 @@ const gestisciClick = (codice) => {
     const posto = getDatiPosto(codice);
 
     if (props.isGestoreMode) {
-        if (posto) emit('manage', posto); // Invia l'evento al padre invece di selezionarlo
+        if (posto) emit('manage', posto); 
         return;
     }
 

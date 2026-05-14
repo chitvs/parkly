@@ -73,8 +73,8 @@ const kpiData = computed(() => {
 })
 
 const CHART_COLORS = {
-    blue: '#0066CC', blueAlpha: 'rgba(0, 102, 204, 0.2)',
-    darkBlue: '#00408A', green: '#27AE60',
+    blue: '#00408A', blueAlpha: 'rgba(0, 102, 204, 0.2)',
+    darkBlue: '#00408A', green: '#137333',
     greenAlpha: 'rgba(39, 174, 96, 0.2)', red: '#C0392B',
 }
 
@@ -123,7 +123,7 @@ const chartDataStato = computed(() => {
     return {
         labels: ['Attive', 'Concluse', 'Annullate'],
         datasets: [{
-            backgroundColor: [CHART_COLORS.darkBlue, CHART_COLORS.green, CHART_COLORS.red],
+            backgroundColor: [CHART_COLORS.green, CHART_COLORS.blue, CHART_COLORS.red],
             data: [conteggio.ATTIVA, conteggio.CONCLUSA, conteggio.ANNULLATA],
         }],
     }

@@ -38,11 +38,9 @@ export const garageStore = reactive({
   async fetchPosti(id, inizio, fine) {
     try {
       let url = `/api/garage/${id}/posti`;
-      // Aggiungiamo i parametri solo se sono definiti
       if (inizio && fine) {
         url += `?inizio=${inizio}&fine=${fine}`;
       }
-      // Aggiunto credentials: 'include' per permettere al gestore di vedere i posti bloccati
       const response = await fetch(url, { credentials: 'include' })
       const data = await response.json()
       if (data.success) this.posti = markRaw(data.posti)

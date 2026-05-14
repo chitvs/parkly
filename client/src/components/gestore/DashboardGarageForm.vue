@@ -433,7 +433,6 @@ const inviaDati = () => {
 </template>
 
 <style scoped>
-/* Ripristino esatto del CSS originale della form */
 .vista {
     animation: fadeIn 0.25s ease;
 }

@@ -443,7 +443,6 @@ router.put('/garages-gestore/:id', async (req, res) => {
   }
 });
 
-// ─── Aggiunta blocco manutenzione a un singolo posto ─────────────────────────
 router.post('/garages-gestore/:id/posti/:id_posto/manutenzione', async (req, res) => {
     try {
         const utenteLoggato = req.session?.utente;
@@ -500,10 +499,8 @@ router.delete('/garages-gestore/:idGarage/posti/:idPosto/manutenzione/:idManuten
             return res.status(401).json({ error: 'Accesso negato' });
         }
 
-        // Salvagente: cattura l'ID indipendentemente da come lo hai salvato nella sessione
         const idGestore = utenteLoggato.id || utenteLoggato.id_utente;
         const { idGarage, idPosto, idManutenzione } = req.params;
-
 
         if (!idGestore) {
             throw new Error("ID Gestore risultante è undefined!");

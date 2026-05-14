@@ -633,7 +633,6 @@ const formattaDataLeggibile = (dataIso) => {
 .main-content {
   flex: 1;
   padding: 40px 48px;
-  /* overflow-y: auto; */
 }
 
 .loading-state {

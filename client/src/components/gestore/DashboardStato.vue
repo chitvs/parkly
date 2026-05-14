@@ -11,7 +11,6 @@ const props = defineProps({
 
 const emit = defineEmits(['verifica-disponibilita', 'manage-posto'])
 
-// ─── Slider temporale ────────────────────────────────────────────────────────
 const STEP_MIN = 30
 const MAX_HOURS = 48
 const MAX_STEPS = (MAX_HOURS * 60) / STEP_MIN
@@ -36,7 +35,6 @@ const sliderLabel = computed(() => {
     return `${dateStr} · ${timeStr}`
 })
 
-// ─── Autoplay ────────────────────────────────────────────────────────────────
 const isPlaying = ref(false)
 let playTimer = null
 
@@ -54,7 +52,6 @@ const togglePlay = () => {
 
 onUnmounted(() => { if (playTimer) clearInterval(playTimer) })
 
-// ─── Core computation ─────────────────────────────────────────────────────────
 const totalePosti = (idGarage) => {
     const list = props.postiPerGarage[idGarage] ?? []
     return list.filter(p => p.isattivo !== false).length || list.length
@@ -103,20 +100,23 @@ const flussoSlider = computed(() => {
     return out
 })
 
-const kpiGlobali = computed(() => {
-    let arrivi = 0, partenze = 0, occupati = 0, totPosti = 0
+const kpiPerGarage = computed(() => {
+    const out = {}
     for (const g of props.mieiGarage) {
         const f = flussoSlider.value[g.id_garage]
-        arrivi += f.arrivi
-        partenze += f.partenze
         const tot = totalePosti(g.id_garage)
-        totPosti += tot
-        occupati += Math.round((occSlider.value[g.id_garage] / 100) * tot)
+        const occupati = Math.round((occSlider.value[g.id_garage] / 100) * tot)
+
+        out[g.id_garage] = {
+            arrivi: f.arrivi,
+            partenze: f.partenze,
+            occupati,
+            totPosti: tot
+        }
     }
-    return { arrivi, partenze, occupati, totPosti }
+    return out
 })
 
-// ─── Mini-timeline 24h ───────────────────────────────────────────────────────
 const TIMELINE_SLOTS = 24
 
 const timelineSlots = computed(() => {
@@ -141,12 +141,11 @@ const timelinePerGarage = computed(() => {
     return out
 })
 
-// ─── UI helpers ──────────────────────────────────────────────────────────────
 const getOccColor = (pct) => {
-    if (pct >= 90) return '#E74C3C' // Rosso (Critico)
-    if (pct >= 75) return '#E67E22' // Arancione (Quasi pieno)
-    if (pct >= 50) return '#F1C40F' // Giallo (Si sta riempiendo)
-    return '#27AE60'                // Verde (Tranquillo)
+    if (pct >= 90) return '#E74C3C'
+    if (pct >= 75) return '#E67E22'
+    if (pct >= 50) return '#F1C40F'
+    return '#27AE60'
 }
 
 const getOccClass = (pct) => {
@@ -156,29 +155,41 @@ const getOccClass = (pct) => {
     return ''
 }
 
-// ─── Gestione Planimetrie e Filtri Indipendenti ───────────────────────────────
 const planimetriaAperta = ref({})
-const filtriDate = ref({}) // Struttura: { id_garage: { inizio: '', fine: '' } }
+const filtriDate = ref({})
 
-// Aggiungi una funzione helper per formattare la data per l'input datetime-local
 const formatForDatetimeLocal = (date) => {
-    const tzOffset = date.getTimezoneOffset() * 60000; // offset in millisecondi
+    const tzOffset = date.getTimezoneOffset() * 60000;
     const localISOTime = (new Date(date - tzOffset)).toISOString().slice(0, 16);
     return localISOTime;
 }
 
-// Aggiungi questo insieme alle altre variabili ref
 const usaDateManuali = ref({})
 
-// Modifica togglePlanimetria per resettare la vista manuale quando si chiude/apre
+const isRicercaManualeAttiva = computed(() => {
+    return Object.values(usaDateManuali.value).some(stato => stato === true)
+})
+
+const attivaRicercaManuale = (id) => {
+    usaDateManuali.value[id] = true
+
+    if (isPlaying.value) togglePlay()
+
+    const adesso = new Date()
+    const traUnOra = new Date(adesso.getTime() + 3_600_000)
+
+    filtriDate.value[id] = {
+        inizio: formatForDatetimeLocal(adesso),
+        fine: formatForDatetimeLocal(traUnOra)
+    }
+}
+
 const togglePlanimetria = (id) => {
     planimetriaAperta.value[id] = !planimetriaAperta.value[id]
 
     if (planimetriaAperta.value[id]) {
-        // Reset alla modalità slider
         usaDateManuali.value[id] = false
 
-        // Sincronizza i filtri invisibili con lo slider
         const start = sliderTime.value;
         const end = new Date(start.getTime() + 3_600_000);
         filtriDate.value[id] = {
@@ -186,7 +197,6 @@ const togglePlanimetria = (id) => {
             fine: formatForDatetimeLocal(end)
         }
 
-        // Esegui la chiamata API per aggiornare la mappa con l'orario dello slider
         onVerifica(id)
     }
 }
@@ -200,14 +210,11 @@ const onVerifica = (id) => {
     emit('verifica-disponibilita', { inizio: filtro.inizio, fine: filtro.fine })
 }
 
-// Variabile per tenere traccia del timer di ritardo (Debounce)
 let mapUpdateTimer = null;
 
 watch(sliderTime, (newTime) => {
-    // 1. Azzera il timer ogni volta che lo slider si muove
     clearTimeout(mapUpdateTimer);
 
-    // 2. Aggiorna immediatamente le date interne per tutti i garage aperti in modalità slider
     props.mieiGarage.forEach(garage => {
         const id = garage.id_garage;
         if (planimetriaAperta.value[id] && !usaDateManuali.value[id]) {
@@ -221,7 +228,6 @@ watch(sliderTime, (newTime) => {
 
     props.mieiGarage.forEach(garage => {
         const id = garage.id_garage;
-        // Se la mappa è ancora aperta e non stiamo usando le date manuali, fai la chiamata!
         if (planimetriaAperta.value[id] && !usaDateManuali.value[id]) {
             onVerifica(id);
         }
@@ -235,7 +241,7 @@ watch(sliderTime, (newTime) => {
         <div class="page-header">
             <div>
                 <h1>Stato Corrente</h1>
-                <p class="subtitle">Occupazione e flusso dei tuoi garage nel tempo</p>
+                <p class="subtitle">Monitora i flussi dei veicoli e gestisci la manutenzione dei posti.</p>
             </div>
         </div>
 
@@ -262,7 +268,7 @@ watch(sliderTime, (newTime) => {
 
                 <div class="time-nav-actions">
                     <button class="play-btn" :class="{ playing: isPlaying }" @click="togglePlay"
-                        :title="isPlaying ? 'Pausa' : 'Riproduci'">
+                        :title="isPlaying ? 'Pausa' : 'Riproduci'" :disabled="isRicercaManualeAttiva">
                         <svg v-if="!isPlaying" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                             <polygon points="5 3 19 12 5 21 5 3" />
                         </svg>
@@ -277,32 +283,9 @@ watch(sliderTime, (newTime) => {
 
             <div class="slider-wrap">
                 <span class="slider-edge">Ora</span>
-                <input type="range" class="time-slider" :min="0" :max="MAX_STEPS" v-model.number="sliderStep" />
+                <input type="range" class="time-slider" :min="0" :max="MAX_STEPS" v-model.number="sliderStep"
+                    :disabled="isRicercaManualeAttiva" />
                 <span class="slider-edge">+48h</span>
-            </div>
-
-            <div class="kpi-row">
-                <div class="kpi-chip kpi-occ">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="3" width="18" height="18" rx="2" />
-                        <line x1="3" y1="9" x2="21" y2="9" />
-                    </svg>
-                    <span>{{ kpiGlobali.occupati }}/{{ kpiGlobali.totPosti }} posti occupati</span>
-                </div>
-                <div class="kpi-chip kpi-arrivi">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="12" y1="5" x2="12" y2="19" />
-                        <polyline points="19 12 12 19 5 12" />
-                    </svg>
-                    <span>{{ kpiGlobali.arrivi }} arrivi prossima ora</span>
-                </div>
-                <div class="kpi-chip kpi-partenze">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="12" y1="19" x2="12" y2="5" />
-                        <polyline points="5 12 12 5 19 12" />
-                    </svg>
-                    <span>{{ kpiGlobali.partenze }} partenze prossima ora</span>
-                </div>
             </div>
         </div>
 
@@ -317,6 +300,34 @@ watch(sliderTime, (newTime) => {
                     <span :class="['badge', garage.isattivo ? 'badge--green' : 'badge--red']">
                         {{ garage.isattivo ? 'Attivo' : 'Inattivo' }}
                     </span>
+                </div>
+
+                <div class="kpi-row mb-3">
+                    <div class="kpi-chip kpi-occ">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" />
+                            <line x1="3" y1="9" x2="21" y2="9" />
+                        </svg>
+                        <span>{{ kpiPerGarage[garage.id_garage].occupati }}/{{ kpiPerGarage[garage.id_garage].totPosti
+                            }} posti occupati</span>
+                    </div>
+                    <div class="kpi-chip kpi-arrivi">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19" />
+                            <polyline points="19 12 12 19 5 12" />
+                        </svg>
+                        <span>{{ kpiPerGarage[garage.id_garage].arrivi }} arrivi pross. ora</span>
+                    </div>
+                    <div class="kpi-chip kpi-partenze">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <line x1="12" y1="19" x2="12" y2="5" />
+                            <polyline points="5 12 12 5 19 12" />
+                        </svg>
+                        <span>{{ kpiPerGarage[garage.id_garage].partenze }} partenze pross. ora</span>
+                    </div>
                 </div>
 
                 <div class="occ-section">
@@ -335,28 +346,6 @@ watch(sliderTime, (newTime) => {
                 </div>
 
                 <div class="flusso-row">
-                    <div class="flusso-chip flusso-chip--arrivi">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2.5">
-                            <line x1="12" y1="5" x2="12" y2="19" />
-                            <polyline points="19 12 12 19 5 12" />
-                        </svg>
-                        <div>
-                            <span class="flusso-num">{{ flussoSlider[garage.id_garage].arrivi }}</span>
-                            <span class="flusso-desc">arrivi</span>
-                        </div>
-                    </div>
-                    <div class="flusso-chip flusso-chip--partenze">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2.5">
-                            <line x1="12" y1="19" x2="12" y2="5" />
-                            <polyline points="5 12 12 5 19 12" />
-                        </svg>
-                        <div>
-                            <span class="flusso-num">{{ flussoSlider[garage.id_garage].partenze }}</span>
-                            <span class="flusso-desc">partenze</span>
-                        </div>
-                    </div>
                     <div class="stato-meta">
                         <span>
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -375,7 +364,7 @@ watch(sliderTime, (newTime) => {
                     <p class="timeline-title">Prossime 24h — occupazione prevista</p>
                     <div class="timeline-bars">
                         <div v-for="(slot, i) in timelinePerGarage[garage.id_garage]" :key="i" class="timeline-col"
-                            :class="{ 'timeline-col--cursor': i === 0 }" :title="`${slot.label}: ${slot.occ}%`">
+                            :title="`${slot.label}: ${slot.occ}%`">
                             <div class="timeline-bar-track">
                                 <div class="timeline-bar-fill" :style="{
                                     height: Math.max(slot.occ, 2) + '%',
@@ -412,7 +401,7 @@ watch(sliderTime, (newTime) => {
                                     Stai visualizzando la mappa per: <strong>{{ sliderLabel }}</strong>
                                 </span>
                                 <button class="toggle-plan-btn" style="text-decoration: underline;"
-                                    @click="usaDateManuali[garage.id_garage] = true">
+                                    @click="attivaRicercaManuale(garage.id_garage)">
                                     Cerca data specifica
                                 </button>
                             </div>
@@ -422,7 +411,7 @@ watch(sliderTime, (newTime) => {
                                     <span style="font-size: 0.8rem; font-weight: 600;">Ricerca manuale oltre le
                                         48h</span>
                                     <button class="toggle-plan-btn"
-                                        @click="usaDateManuali[garage.id_garage] = false; togglePlanimetria(garage.id_garage); togglePlanimetria(garage.id_garage);">
+                                        @click="usaDateManuali[garage.id_garage] = false; togglePlanimetria(garage.id_garage);">
                                         Torna allo slider
                                     </button>
                                 </div>
@@ -451,7 +440,6 @@ watch(sliderTime, (newTime) => {
 </template>
 
 <style scoped>
-/* ── Layout ─────────────────────────────────────────────────────────────────── */
 .vista {
     animation: fadeIn 0.25s ease;
 }
@@ -491,20 +479,16 @@ watch(sliderTime, (newTime) => {
     margin: 0;
 }
 
-/* ── Temporal Navigator (Sticky) ────────────────────────────────────────────── */
 .sticky-nav {
     position: sticky;
     top: 80px;
-    /* Si aggancia all'inizio del contenitore di scroll */
     z-index: 100;
     box-shadow: 0 10px 30px rgba(0, 32, 74, 0.08);
-    /* Ombra per staccarlo dallo sfondo quando scorri */
 }
 
 .time-nav-card {
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(8px);
-    /* Effetto vetro elegante quando gli scorri sotto */
     -webkit-backdrop-filter: blur(8px);
     border: 0.5px solid #E8E8E8;
     border-radius: 14px;
@@ -585,7 +569,6 @@ watch(sliderTime, (newTime) => {
     background: #E67E22;
 }
 
-/* Slider */
 .slider-wrap {
     display: flex;
     align-items: center;
@@ -631,7 +614,6 @@ watch(sliderTime, (newTime) => {
     transform: scale(1.2);
 }
 
-/* KPI chips */
 .kpi-row {
     display: flex;
     gap: 10px;
@@ -667,7 +649,6 @@ watch(sliderTime, (newTime) => {
     border-color: #FAD7A0;
 }
 
-/* ── Garage Grid ───────────────────────────────────────────────────────────── */
 .stato-grid {
     display: flex;
     flex-direction: column;
@@ -734,7 +715,6 @@ watch(sliderTime, (newTime) => {
     color: #C0392B;
 }
 
-/* ── Occupazione ─────────────────────────────────────────────────────────── */
 .occ-section {
     margin-bottom: 12px;
 }
@@ -773,49 +753,12 @@ watch(sliderTime, (newTime) => {
     transition: width 0.4s ease, background 0.4s ease;
 }
 
-/* ── Flusso & Meta ────────────────────────────────────────────────────────── */
 .flusso-row {
     display: flex;
     align-items: center;
     gap: 10px;
     margin-bottom: 16px;
     flex-wrap: wrap;
-}
-
-.flusso-chip {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    border-radius: 8px;
-    border: 0.5px solid transparent;
-}
-
-.flusso-chip--arrivi {
-    background: #EAFAF1;
-    color: #1E8449;
-    border-color: #A9DFBF;
-}
-
-.flusso-chip--partenze {
-    background: #FEF9EE;
-    color: #935116;
-    border-color: #FAD7A0;
-}
-
-.flusso-num {
-    font-size: 1rem;
-    font-weight: 800;
-    display: block;
-    line-height: 1;
-}
-
-.flusso-desc {
-    font-size: 0.65rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    opacity: 0.75;
 }
 
 .stato-meta {
@@ -832,7 +775,6 @@ watch(sliderTime, (newTime) => {
     gap: 4px;
 }
 
-/* ── Timeline 24h ────────────────────────────────────────────────────────── */
 .timeline-section {
     margin-bottom: 16px;
     border-top: 1px solid #f4f4f4;
@@ -865,19 +807,6 @@ watch(sliderTime, (newTime) => {
     position: relative;
 }
 
-.timeline-col--cursor .timeline-bar-track::before {
-    content: '';
-    position: absolute;
-    top: -4px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #0066CC;
-    box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.2);
-}
-
 .timeline-bar-track {
     flex: 1;
     width: 100%;
@@ -905,7 +834,6 @@ watch(sliderTime, (newTime) => {
     left: 0;
 }
 
-/* ── Planimetria collassabile ─────────────────────────────────────────────── */
 .planimetria-section {
     border-top: 1px solid #f4f4f4;
     padding-top: 12px;
@@ -998,7 +926,6 @@ watch(sliderTime, (newTime) => {
     padding: 0 16px;
 }
 
-/* ── Responsive ──────────────────────────────────────────────────────────── */
 @media (max-width: 600px) {
     .kpi-row {
         gap: 6px;
@@ -1022,5 +949,16 @@ watch(sliderTime, (newTime) => {
         align-items: flex-start;
         gap: 10px;
     }
+}
+
+.time-slider:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    filter: grayscale(100%);
+}
+
+.play-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 </style>
