@@ -505,8 +505,8 @@ const features = [
 }
 
 .garage-card-wrapper {
-    flex: 0 0 236px;
-    width: 237px;
+    flex: 0 0 calc((100% - 72px) / 4);
+    max-width: calc((100% - 72px) / 4);
     scroll-snap-align: start;
 }
 
@@ -625,8 +625,9 @@ const features = [
     }
 
     .garage-card-wrapper {
-        flex: 0 0 50%;
-        max-width: 50%;
+        /* 2 card esatte su tablet: (100% - 24px di gap singolo) / 2 */
+        flex: 0 0 calc((100% - 24px) / 2);
+        max-width: calc((100% - 24px) / 2);
     }
 
     .cta {
@@ -643,8 +644,9 @@ const features = [
     }
 
     .garage-card-wrapper {
-        flex: 0 0 100%;
-        max-width: 100%;
+        /* 85% su mobile per far intravedere la card successiva e invitare allo scroll */
+        flex: 0 0 85%;
+        max-width: 85%;
     }
 
     .gallery-header {
