@@ -13,7 +13,6 @@ const props = defineProps({
     staSalvando: { type: Boolean, default: false }
 })
 
-// Aggiunto l'evento update-photos per mandare le immagini al componente padre
 const emit = defineEmits(['save', 'open-info', 'update-photos'])
 
 const { calcolandoCoordinate, loadLeaflet, initMap, calcolaCoordinate } = useGarageMapGestore()
@@ -47,7 +46,11 @@ onMounted(async () => {
         localGarage.value = {
             ...g,
             tariffabase: g.tariffaauto || g.tariffabase,
-            via: g.indirizzo || g.via,
+            via: g.via || '',
+            civico: g.civico || '',
+            cap: g.cap || '',
+            citta: g.citta || '',
+            provincia: g.provincia || '',
             orarioapertura: g.orarioapertura?.substring(0, 5) || '08:00',
             orariochiusura: g.orariochiusura?.substring(0, 5) || '20:00'
         }
@@ -91,13 +94,40 @@ const validaForm = () => {
     const errori = {}
     const g = localGarage.value
 
+    // Validazione indirizzi
     if (!g.nome?.trim()) errori.nome = 'Obbligatorio.'
-    if (!g.via?.trim()) errori.via = 'Obbligatorio.'
-    if (!g.civico?.trim()) errori.civico = 'Obbligatorio.'
-    if (!g.cap?.trim()) errori.cap = 'Obbligatorio.'
-    if (!g.citta?.trim()) errori.citta = 'Obbligatorio.'
-    if (!g.provincia?.trim()) errori.provincia = 'Obbligatorio.'
+
+    if (!g.via?.trim()) {
+        errori.via = 'Obbligatorio.'
+    } else if (g.via.trim().length < 3) {
+        errori.via = 'Inserisci una via valida (min. 3 caratteri).'
+    }
+
+    if (!g.civico?.trim()) {
+        errori.civico = 'Obbligatorio.'
+    }
+
+    if (!g.cap?.trim()) {
+        errori.cap = 'Obbligatorio.'
+    } else if (!/^\d{5}$/.test(g.cap.trim())) {
+        errori.cap = 'Il CAP deve essere di 5 cifre.'
+    }
+
+    if (!g.citta?.trim()) {
+        errori.citta = 'Obbligatorio.'
+    } else if (g.citta.trim().length < 2) {
+        errori.citta = 'Inserisci una città valida.'
+    }
+
+    if (!g.provincia?.trim()) {
+        errori.provincia = 'Obbligatorio.'
+    } else if (!/^[A-Z]{2}$/.test(g.provincia.trim())) {
+        errori.provincia = 'Deve essere una sigla di 2 lettere (es. RM).'
+    }
+
     if (!g.latitudine || !g.longitudine) errori.coordinate = 'Clicca sulla mappa per catturare le coordinate esatte.'
+    
+    // Validazione tariffe
     if (!g.tariffabase || g.tariffabase <= 0) errori.tariffabase = 'La tariffa auto è obbligatoria e > 0.'
 
     const tipiPresenti = new Set()
@@ -118,6 +148,7 @@ const validaForm = () => {
     if (necessitaDisabili && (g.scontodisabili === null || g.scontodisabili === '')) errori.scontodisabili = 'Imposta uno sconto (anche 0).'
     else if (g.scontodisabili < 0) errori.scontodisabili = 'Non può essere negativo.'
 
+    // Validazione mappa
     if (postiConfigurati.value.length === 0) errori.mappatestuale = 'Devi configurare almeno un posto auto.'
     else if (codiciPosizionati.value.size < postiConfigurati.value.length) errori.mappatestuale = 'Devi posizionare TUTTI i posti creati sulla scacchiera.'
 
@@ -185,20 +216,29 @@ const inviaDati = () => {
                 <div class="form-row form-row--3col">
                     <div class="form-group">
                         <label class="form-label">CAP*</label>
+                        <!-- Forza solo numeri e massimo 5 caratteri -->
                         <input type="text" :class="['form-input', { 'input-error': erroriValidazione.cap }]"
-                            v-model="localGarage.cap" placeholder="Es. 00100">
+                            v-model="localGarage.cap" 
+                            @input="localGarage.cap = localGarage.cap.replace(/\D/g, '').slice(0, 5)"
+                            placeholder="Es. 00100">
                         <span v-if="erroriValidazione.cap" class="form-error-text">{{ erroriValidazione.cap }}</span>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Città*</label>
+                        <!-- impedisce l'inserimento di numeri -->
                         <input type="text" :class="['form-input', { 'input-error': erroriValidazione.citta }]"
-                            v-model="localGarage.citta" placeholder="Es. Roma">
+                            v-model="localGarage.citta" 
+                            @input="localGarage.citta = localGarage.citta.replace(/\d/g, '')"
+                            placeholder="Es. Roma">
                         <span v-if="erroriValidazione.citta" class="form-error-text">{{ erroriValidazione.citta }}</span>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Provincia (Sigla)*</label>
+                        <!-- Forza maiuscolo, solo lettere e massimo 2 caratteri -->
                         <input type="text" :class="['form-input', { 'input-error': erroriValidazione.provincia }]"
-                            v-model="localGarage.provincia" maxlength="2" placeholder="Es. RM">
+                            v-model="localGarage.provincia" 
+                            @input="localGarage.provincia = localGarage.provincia.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 2)"
+                            placeholder="Es. RM">
                         <span v-if="erroriValidazione.provincia" class="form-error-text">{{ erroriValidazione.provincia }}</span>
                     </div>
                 </div>

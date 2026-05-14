@@ -128,7 +128,7 @@ router.post('/garages-gestore', async (req, res) => {
     const idGestore = utenteLoggato.id;
 
     const {
-      nome, descrizione, indirizzo, latitudine, longitudine,
+      nome, descrizione, indirizzo, via, civico, cap, citta, provincia, latitudine, longitudine,
       tariffabase, tariffamoto, tariffafurgone, sovrapprezzoelettrica, scontodisabili,
       altezzamassima, orarioapertura, orariochiusura, is24h, mappatestuale, posti, 
       nrighe, ncolonne 
@@ -145,15 +145,20 @@ router.post('/garages-gestore', async (req, res) => {
     const result = await db.tx(async t => {
       const garage = await t.one(
         `INSERT INTO Garage
-          (ID_Gestore, Nome, Descrizione, Indirizzo, Latitudine, Longitudine, AltezzaMassima, TariffaAuto, TariffaMoto, TariffaFurgone, SovrapprezzoElettrica, ScontoDisabili, OrarioApertura, OrarioChiusura, Is24h, MappaTestuale, NRighe, NColonne, IsAttivo)
+          (ID_Gestore, Nome, Descrizione, Indirizzo, Via, Civico, Cap, Citta, Provincia, Latitudine, Longitudine, AltezzaMassima, TariffaAuto, TariffaMoto, TariffaFurgone, SovrapprezzoElettrica, ScontoDisabili, OrarioApertura, OrarioChiusura, Is24h, MappaTestuale, NRighe, NColonne, IsAttivo)
          VALUES
-          ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, TRUE)
+          ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, TRUE)
          RETURNING *`,
         [
           idGestore,
           nome,
           descrizione || null,
           indirizzo, 
+          via || null,
+          civico || null,
+          cap || null,
+          citta || null,
+          provincia || null,
           latitudine,
           longitudine,
           altezzamassima || null,
@@ -204,7 +209,7 @@ router.post('/garages-gestore', async (req, res) => {
   }
 });
 
-//Caricamento foto del garage
+// Caricamento foto del garage
 router.post('/:id/upload-photos', upload.array('foto_garage', 10), async (req, res) => {
   //  Controllo permessi
   const utenteLoggato = req.session?.utente;
@@ -423,7 +428,7 @@ router.get("/:id/recensioni", async (req, res) => {
   }
 });
 
-// ─── Modifica di un garage esistente ─────────────────────────────────────────
+// Modifica di un garage esistente
 router.put('/garages-gestore/:id', async (req, res) => {
   try {
     const utenteLoggato = req.session?.utente;
@@ -435,7 +440,7 @@ router.put('/garages-gestore/:id', async (req, res) => {
     const idGestore = utenteLoggato.id;
 
     const {
-      nome, descrizione, indirizzo, latitudine, longitudine,
+      nome, descrizione, indirizzo, via, civico, cap, citta, provincia, latitudine, longitudine,
       tariffabase, tariffamoto, tariffafurgone, sovrapprezzoelettrica, scontodisabili,
       altezzamassima, orarioapertura, orariochiusura, is24h, mappatestuale, posti, nrighe, ncolonne 
     } = req.body;
@@ -449,38 +454,36 @@ router.put('/garages-gestore/:id', async (req, res) => {
     const mappa = mappatestuale || null;
 
     const result = await db.tx(async t => {
-      // 1. Verifica che il garage sia di questo gestore
+      // Verifica che il garage sia di questo gestore
       const garageEsistente = await t.oneOrNone('SELECT ID_Garage FROM Garage WHERE ID_Garage = $1 AND ID_Gestore = $2', [idGarage, idGestore]);
       if (!garageEsistente) throw new Error('Garage non trovato o non autorizzato');
 
-      // 2. Aggiornamento dati generali
+      // Aggiornamento dati generali
       const garage = await t.one(`
         UPDATE Garage SET
-          Nome = $1, Descrizione = $2, Indirizzo = $3, Latitudine = $4, Longitudine = $5,
-          AltezzaMassima = $6, TariffaAuto = $7, TariffaMoto = $8, TariffaFurgone = $9,
-          SovrapprezzoElettrica = $10, ScontoDisabili = $11, OrarioApertura = $12,
-          OrarioChiusura = $13, Is24h = $14, MappaTestuale = $15, NRighe = $16, NColonne = $17
-        WHERE ID_Garage = $18
+          Nome = $1, Descrizione = $2, Indirizzo = $3, Via = $4, Civico = $5, Cap = $6, Citta = $7, Provincia = $8,
+          Latitudine = $9, Longitudine = $10, AltezzaMassima = $11, TariffaAuto = $12, TariffaMoto = $13,
+          TariffaFurgone = $14, SovrapprezzoElettrica = $15, ScontoDisabili = $16, OrarioApertura = $17,
+          OrarioChiusura = $18, Is24h = $19, MappaTestuale = $20, NRighe = $21, NColonne = $22
+        WHERE ID_Garage = $23
         RETURNING *
       `, [
-        nome, descrizione || null, indirizzo, latitudine, longitudine,
-        altezzamassima || null, tariffabase, tariffamoto || null, tariffafurgone || null,
-        sovrapprezzoelettrica || null, scontodisabili || null, apertura, chiusura,
-        is24h || false, mappa, nrighe, ncolonne, idGarage
+        nome, descrizione || null, indirizzo, via || null, civico || null, cap || null, citta || null, provincia || null,
+        latitudine, longitudine, altezzamassima || null, tariffabase, tariffamoto || null,
+        tariffafurgone || null, sovrapprezzoelettrica || null, scontodisabili || null, apertura,
+        chiusura, is24h || false, mappa, nrighe, ncolonne, idGarage
       ]);
 
-      // 3. Gestione Posti Auto (Upsert & Soft-Delete)
+      // Gestione Posti Auto
       const postiAttuali = await t.any('SELECT ID_Posto, CodicePosto FROM PostoAuto WHERE ID_Garage = $1 AND IsAttivo = TRUE', [idGarage]);
       const codiciRicevuti = posti.map(p => p.codice);
 
-      // Soft-delete dei posti rimossi dalla griglia
       for (const pDB of postiAttuali) {
         if (!codiciRicevuti.includes(pDB.codiceposto)) {
           await t.none('UPDATE PostoAuto SET IsAttivo = FALSE WHERE ID_Posto = $1', [pDB.id_posto]);
         }
       }
 
-      // Inserisci i posti nuovi, o aggiorna quelli esistenti, o riattiva quelli in soft-delete
       if (posti && Array.isArray(posti)) {
         for (const posto of posti) {
           await t.none(`
