@@ -60,6 +60,24 @@ const {
 const paginaCorrente = ref(1)
 const elementiPerPagina = ref(5)
 
+const totaleElementiPaginazione = computed(() => {
+    return garagesFiltrati.value.length + (hasMoreResults.value ? 1 : 0)
+})
+
+const showExtendedResultsBlock = computed(() => {
+    if (!hasMoreResults.value) return false
+    const indexVirtuale = garagesFiltrati.value.length
+    const inizio = (paginaCorrente.value - 1) * elementiPerPagina.value
+    const fine = inizio + elementiPerPagina.value
+    return indexVirtuale >= inizio && indexVirtuale < fine
+})
+
+const garageListMinHeight = computed(() => {
+    const altezzaCard = 196 // 180px altezza card + 16px margin-bottom
+    const altezzaPaginazione = 90
+    return `${elementiPerPagina.value * altezzaCard + altezzaPaginazione}px`
+})
+
 const garagesPaginati = computed(() => {
     const inizio = (paginaCorrente.value - 1) * elementiPerPagina.value
     return garagesFiltrati.value.slice(inizio, inizio + elementiPerPagina.value)
@@ -76,7 +94,10 @@ const caricaAltriFS = () => {
 }
 
 const scrollInAlto = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
 
     const fsScroll = document.querySelector('.fs-scroll-content')
     if (fsScroll) {
@@ -102,7 +123,11 @@ watch([checkIn, checkOut], async ([newIn, newOut]) => {
     }
 })
 
-watch(garagesFiltrati, (newGarages) => {
+const isFiltering = ref(false)
+
+watch(garagesFiltrati, async (newGarages) => {
+    isFiltering.value = true
+
     paginaCorrente.value = 1
     elementiVisibiliFS.value = 6
 
@@ -112,9 +137,24 @@ watch(garagesFiltrati, (newGarages) => {
         const marker = markersRefs[id]
         activeIds.includes(Number(id)) ? marker.addTo(fullMapInstance) : marker.remove()
     })
+
+    await nextTick()
+
+    isFiltering.value = false
 }, { deep: true })
 
+const handlePageChange = async () => {
+    await nextTick();
+    scrollInAlto();
+}
+
 onMounted(async () => {
+
+    if ('scrollRestoration' in history) {
+        history.scrollRestoration = 'manual';
+    }
+
+    window.scrollTo({ top: 0, behavior: 'instant' })
 
     if (route.query.location) searchLocation.value = route.query.location
     if (route.query.checkIn) checkIn.value = route.query.checkIn
@@ -342,10 +382,10 @@ const handleSuggestionSelected = (place) => {
                                                             <p>{{ garage.indirizzo.slice(0, 30) }}...</p>
                                                             <p v-if="garage.displayPOIName">
                                                                 a {{ garage.displayDistanceLabel }} da {{
-                                                                garage.displayPOIName }}
+                                                                    garage.displayPOIName }}
                                                             </p>
                                                             <span class="mini-price">€{{ getDisplayPrice(garage)
-                                                                }}/ora</span>
+                                                            }}/ora</span>
                                                         </div>
                                                     </div>
 
@@ -406,7 +446,7 @@ const handleSuggestionSelected = (place) => {
                 </div>
             </aside>
 
-            <main class="zone-results">
+            <main class="zone-results" :style="{ minHeight: garageListMinHeight }">
                 <div v-if="isLoading" class="loading-state text-center py-5">
                     <div class="spinner"></div>
                     <p>Caricamento parcheggi...</p>
@@ -427,7 +467,7 @@ const handleSuggestionSelected = (place) => {
                         </h2>
                     </div>
 
-                    <div class="garage-list">
+                    <div class="garage-list"  :style="{ minHeight: garageListMinHeight }" >
                         <div v-for="garage in garagesPaginati" :key="garage.id_garage" class="garage-card"
                             @click="goToDetail(garage)">
 
@@ -491,7 +531,7 @@ const handleSuggestionSelected = (place) => {
                             </div>
                         </div>
 
-                        <div v-if="hasMoreResults" class="extended-results-container">
+                        <div v-if="showExtendedResultsBlock" class="extended-results-container">
                             <p class="extended-info">
                                 Ci sono altri parcheggi tra {{ raggioKm }}km e {{ Math.max(raggioKm + 3, 5) }}km...
                             </p>
@@ -502,8 +542,8 @@ const handleSuggestionSelected = (place) => {
 
                         <div v-if="garagesFiltrati.length > 0" class="mt-3 px-2 pagination-container">
                             <Pagination v-model:paginaCorrente="paginaCorrente"
-                                v-model:elementiPerPagina="elementiPerPagina" :totaleElementi="garagesFiltrati.length"
-                                @cambio-pagina="scrollInAlto" />
+                                v-model:elementiPerPagina="elementiPerPagina" :totaleElementi="totaleElementiPaginazione"
+                                @cambio-pagina="handlePageChange" />
                         </div>
 
                     </div>
@@ -515,6 +555,10 @@ const handleSuggestionSelected = (place) => {
 </template>
 
 <style scoped>
+html, body {
+    overflow-anchor: none;
+}
+
 .garage-wrapper {
     display: flex;
     flex-direction: column;
@@ -551,8 +595,10 @@ const handleSuggestionSelected = (place) => {
     flex-direction: column;
     gap: 1.5rem;
     position: sticky;
-    top: 20px;
+    top: 100px;
     height: fit-content;
+    align-self: flex-start; 
+    height: max-content;
 }
 
 .zone-map {
@@ -651,6 +697,8 @@ const handleSuggestionSelected = (place) => {
     flex: 1;
     display: flex;
     flex-direction: column;
+    min-height: 100vh;
+    overflow-anchor: none;
 }
 
 .garage-list {
