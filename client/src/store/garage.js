@@ -197,6 +197,24 @@ export const garageStore = reactive({
     }
   },
 
+  async uploadPhotos(idGarage, formData) {
+    this.isLoading = true;
+    try {
+      const response = await fetch(`/api/garage/${idGarage}/upload-photos`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Errore durante l'upload delle foto");
+      return { success: true, urls: data.urls };
+    } catch (err) {
+      return { success: false, error: err.message || 'Errore di rete' };
+    } finally {
+      this.isLoading = false;
+    }
+  },
+
   async aggiornaMappaOrariGestore(inizioIso, fineIso) {
     await Promise.all(this.mieiGarage.map(async (g) => {
       try {

@@ -90,6 +90,7 @@ const handleSave = async () => {
 }
 
 //salvo la nuova foto profilo
+//salvo la nuova foto profilo
 const handleFileUpload = async (event) => {
   const file = event.target.files[0];
   if (!file) return;
@@ -98,23 +99,19 @@ const handleFileUpload = async (event) => {
   data.append('avatar', file); 
 
   try {
-    const response = await fetch('/api/auth/upload-avatar', {
-      method: 'POST', credentials: 'include', body: data 
-    });
-    const result = await response.json();
+    // Chiamata centralizzata allo store!
+    const result = await authStore.uploadAvatar(data);
+
     if (result.success) {
+      // Aggiorna solo le variabili locali del form, lo store ha già aggiornato il localStorage e i dati globali
       formData.fotoProfilo_URL = result.url;
       originalData.value.fotoProfilo_URL = result.url;
-      if (authStore.utente) {
-        authStore.utente.fotoProfilo_URL = result.url;
-        localStorage.setItem('utente', JSON.stringify(authStore.utente)); 
-      }
       alert("Foto profilo aggiornata!");
     } else {
-      alert(result.error);
+      alert(result.error || "Errore durante il caricamento.");
     }
   } catch (err) {
-    alert("Errore durante il caricamento dell'immagine.");
+    alert("Errore imprevisto.");
   }
 }
 

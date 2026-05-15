@@ -118,7 +118,7 @@ const preparaModifica = async (garage) => {
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-// Logica Two-Step (Store Database + Foto Supabase)
+// Logica Two-Step (Store Database + Foto Store Supabase)
 const salvaNuovoGarage = async (payload) => {
   messaggio.value = null
   staSalvando.value = true
@@ -133,19 +133,15 @@ const salvaNuovoGarage = async (payload) => {
       // Otteniamo il nuovo ID in base a come lo store restituisce l'oggetto
       const nuovoIdGarage = isEditing.value ? idGarageInModifica.value : (res.garage?.id_garage || res.data?.id_garage)
 
-      // STEP 2: Caricamento Immagini
+      // STEP 2: Caricamento Immagini tramite la chiamata allo store
       if (fotoDaCaricare.value.length > 0 && nuovoIdGarage) {
         const formData = new FormData()
         fotoDaCaricare.value.forEach(file => formData.append('foto_garage', file))
 
-        const resFoto = await fetch(`/api/garage/${nuovoIdGarage}/upload-photos`, {
-          method: 'POST',
-          credentials: 'include',
-          body: formData
-        })
+        const resFoto = await garageStore.uploadPhotos(nuovoIdGarage, formData)
 
-        if (!resFoto.ok) {
-          console.error("Errore durante l'upload delle foto su Supabase")
+        if (!resFoto.success) {
+          console.error("Errore durante l'upload delle foto su Supabase: ", resFoto.error)
         }
       }
 

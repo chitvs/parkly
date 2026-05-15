@@ -139,6 +139,28 @@ async updateProfile(payload) {
     return { success: false, error: "Errore di connessione col server" };
   }
 },
+async uploadAvatar(formData) {
+    try {
+      const response = await fetch('/api/auth/upload-avatar', {
+        method: 'POST', 
+        credentials: 'include', 
+        body: formData 
+      });
+      
+      const result = await response.json();
+      
+      // Se l'upload ha successo, aggiorna subito l'utente globale e il localStorage
+      if (result.success && this.utente) {
+        this.utente.fotoProfilo_URL = result.url;
+        this.setUtente(this.utente);
+      }
+      
+      return result;
+    } catch (error) {
+      console.error("Errore upload avatar:", error);
+      return { success: false, error: "Errore di connessione durante il caricamento." };
+    }
+  },
 
 // Logica Logout completa
   async logout() {
