@@ -330,7 +330,7 @@ const formattaDataLeggibile = (dataIso) => {
 
         <div class="sidebar-divider" v-if="showNavBottom"></div>
 
-        <div class="sidebar-filter" v-click-outside="() => isGarageDropdownOpen = false">
+        <div class="sidebar-filter">
           <span class="sidebar-filter-label">Garage</span>
 
           <div class="garage-dropdown-wrapper">
