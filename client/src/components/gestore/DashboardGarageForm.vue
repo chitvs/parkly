@@ -444,7 +444,9 @@ const inviaDati = () => {
                         <span class="tavolozza-label">Strumento attivo:</span>
                         <button type="button" class="tool-btn btn-gomma"
                             :class="{ active: strumentoAttivo === 'GOMMA' }"
-                            @click="strumentoAttivo = 'GOMMA'">Gomma</button>
+                            @click="strumentoAttivo = 'GOMMA'">
+                            <i class="bi bi-eraser"></i>
+                            Gomma</button>
                         <button type="button" v-for="posto in postiConfigurati" :key="posto.codice" class="tool-btn"
                             :class="[posto.tipo.toLowerCase(), { active: strumentoAttivo?.codice === posto.codice, disabled: codiciPosizionati.has(posto.codice) }]"
                             :disabled="codiciPosizionati.has(posto.codice)" @click="selezionaStrumento(posto)">

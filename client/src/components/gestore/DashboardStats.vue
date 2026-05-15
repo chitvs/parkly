@@ -3,6 +3,8 @@ import { ref, computed } from 'vue'
 import { Chart as ChartJS, CategoryScale, LinearScale, RadialLinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js'
 import { Line, Doughnut, Radar, Bar } from 'vue-chartjs'
 
+import IconGarage from '../../icons/IconGarage.vue'
+
 ChartJS.register(CategoryScale, LinearScale, RadialLinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement)
 
 const props = defineProps({
@@ -55,10 +57,10 @@ const kpiData = computed(() => {
 
     if (!isSingoloGarage.value) {
         return [
-            { id: 1, label: 'Garage Totali', value: props.mieiGarage.length, icon: 'bi-building', color: 'blue' },
+            { id: 1, label: 'Garage Totali', value: props.mieiGarage.length, icon: 'IconGarage', color: 'blue' },
             { id: 2, label: 'Incasso Totale', value: `€ ${incasso}`, icon: 'bi-cash-coin', color: 'green' },
             { id: 3, label: 'In Arrivo', value: `€ ${inArrivo}`, icon: 'bi-clock-history', color: 'amber' },
-            { id: 4, label: 'Prenot. Attive', value: attive, icon: 'bi-car-front', color: 'blue' },
+            { id: 4, label: 'Prenot. Attive', value: attive, icon: 'bi-bookmark-check', color: 'blue' },
         ]
     }
 
@@ -187,7 +189,8 @@ const chartDataRevenuePerGarage = computed(() => ({
         <div class="stats-grid">
             <div v-for="kpi in kpiData" :key="kpi.id" class="stat-card">
                 <div :class="['stat-icon', `stat-icon--${kpi.color}`]">
-                    <i :class="['bi', kpi.icon]" style="font-size: 1.2rem;"></i>
+                    <IconGarage v-if="kpi.icon === 'IconGarage'" style="width: 22px; height: 22px;" />
+                    <i v-else :class="['bi', kpi.icon]" style="font-size: 1.2rem;"></i>
                 </div>
                 <div class="stat-body">
                     <span class="stat-label">{{ kpi.label }}</span>
