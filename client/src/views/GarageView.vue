@@ -77,7 +77,7 @@ const caricaAltriFS = () => {
 
 const scrollInAlto = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
-    
+
     const fsScroll = document.querySelector('.fs-scroll-content')
     if (fsScroll) {
         fsScroll.scrollTo({ top: 0, behavior: 'smooth' })
@@ -105,7 +105,7 @@ watch([checkIn, checkOut], async ([newIn, newOut]) => {
 watch(garagesFiltrati, (newGarages) => {
     paginaCorrente.value = 1
     elementiVisibiliFS.value = 6
-    
+
     if (!fullMapInstance) return
     const activeIds = newGarages.map(g => g.id_garage)
     Object.keys(markersRefs).forEach(id => {
@@ -301,22 +301,20 @@ const handleSuggestionSelected = (place) => {
 
                                             <div class="fs-col-filters">
                                                 <div class="fs-panel-header">
-                                                    <h3 style="display: flex; justify-content: space-between; width: 100%;">
+                                                    <h3
+                                                        style="display: flex; justify-content: space-between; width: 100%;">
                                                         Filtri
                                                         <button @click="resetFilters" class="reset-btn"
                                                             style="color: white;">Reset</button>
                                                     </h3>
                                                 </div>
                                                 <div class="fs-scroll-content">
-                                                    <GarageFilters
-                                                        v-model:filterTipoVeicolo="filterTipoVeicolo"
-                                                        v-model:maxPrice="maxPrice"
-                                                        v-model:filter24h="filter24h"
+                                                    <GarageFilters v-model:filterTipoVeicolo="filterTipoVeicolo"
+                                                        v-model:maxPrice="maxPrice" v-model:filter24h="filter24h"
                                                         v-model:filterCoperto="filterCoperto"
                                                         v-model:filterElettrico="filterElettrico"
                                                         v-model:filterDisabili="filterDisabili"
-                                                        v-model:minHeight="minHeight"
-                                                        v-model:raggioKm="raggioKm"
+                                                        v-model:minHeight="minHeight" v-model:raggioKm="raggioKm"
                                                         :hasLocation="!!searchLocation" />
                                                 </div>
                                             </div>
@@ -330,23 +328,29 @@ const handleSuggestionSelected = (place) => {
                                                         :key="'fs-' + garage.id_garage" class="fs-mini-card"
                                                         @mouseenter="setHover(garage, true)"
                                                         @click="selectGarage(garage)">
-                                                        
+
                                                         <div class="mini-thumb">
-                                                            <img v-if="garage.foto_urls && garage.foto_urls.length > 0" :src="garage.foto_urls[0]" class="mini-image" alt="Foto Garage" />
-                                                            <div v-else class="gcard-letter-box">{{ garage.nome.charAt(0) }}</div>
+                                                            <img v-if="garage.foto_urls && garage.foto_urls.length > 0"
+                                                                :src="garage.foto_urls[0]" class="mini-image"
+                                                                alt="Foto Garage" />
+                                                            <div v-else class="gcard-letter-box">{{
+                                                                garage.nome.charAt(0) }}</div>
                                                         </div>
 
                                                         <div class="mini-details">
                                                             <h4>{{ garage.nome }}</h4>
                                                             <p>{{ garage.indirizzo.slice(0, 30) }}...</p>
                                                             <p v-if="garage.displayPOIName">
-                                                                a {{ garage.displayDistanceLabel }} da {{ garage.displayPOIName }}
+                                                                a {{ garage.displayDistanceLabel }} da {{
+                                                                garage.displayPOIName }}
                                                             </p>
-                                                            <span class="mini-price">€{{ getDisplayPrice(garage) }}/ora</span>
+                                                            <span class="mini-price">€{{ getDisplayPrice(garage)
+                                                                }}/ora</span>
                                                         </div>
                                                     </div>
 
-                                                    <div v-if="elementiVisibiliFS < garagesFiltrati.length" class="load-more-container">
+                                                    <div v-if="elementiVisibiliFS < garagesFiltrati.length"
+                                                        class="load-more-container">
                                                         <button @click="caricaAltriFS" class="btn-load-more">
                                                             Mostra altri risultati
                                                         </button>
@@ -372,7 +376,8 @@ const handleSuggestionSelected = (place) => {
                                                         placeholder="Cerca sulla mappa..."
                                                         @suggestion-selected="handleSuggestionSelected" />
                                                 </div>
-                                                <button class="fs-reset-view" @click="resetMapView" title="Ripristina visuale">
+                                                <button class="fs-reset-view" @click="resetMapView"
+                                                    title="Ripristina visuale">
                                                     <span style="font-size: 1.2rem;"><img src="../assets/refresh.svg"
                                                             class="icon-card" alt="Pin"
                                                             style="transform:translateX(3px) translateY(-0.5px) scale(1.7)" /></span>
@@ -394,16 +399,10 @@ const handleSuggestionSelected = (place) => {
                         <button @click="resetFilters" class="reset-btn">Reset</button>
                     </div>
 
-                    <GarageFilters
-                        v-model:filterTipoVeicolo="filterTipoVeicolo"
-                        v-model:maxPrice="maxPrice"
-                        v-model:filter24h="filter24h"
-                        v-model:filterCoperto="filterCoperto"
-                        v-model:filterElettrico="filterElettrico"
-                        v-model:filterDisabili="filterDisabili"
-                        v-model:minHeight="minHeight"
-                        v-model:raggioKm="raggioKm"
-                        :hasLocation="!!searchLocation" />
+                    <GarageFilters v-model:filterTipoVeicolo="filterTipoVeicolo" v-model:maxPrice="maxPrice"
+                        v-model:filter24h="filter24h" v-model:filterCoperto="filterCoperto"
+                        v-model:filterElettrico="filterElettrico" v-model:filterDisabili="filterDisabili"
+                        v-model:minHeight="minHeight" v-model:raggioKm="raggioKm" :hasLocation="!!searchLocation" />
                 </div>
             </aside>
 
@@ -414,14 +413,17 @@ const handleSuggestionSelected = (place) => {
                 </div>
 
                 <div v-else-if="garagesFiltrati.length === 0 && !hasMoreResults" class="empty-state">
-                    <p>Nessun garage trovato a {{ searchLocation || 'destinazione' }}.</p>
+                    <h2 class="results-count">
+                        Risultati: <span>nessun parcheggio trovato.</span>
+                    </h2>
+                    <!-- disattivare qui il filtro per ordinare le card -->
                 </div>
 
                 <template v-else>
                     <div class="results-header" v-if="garagesFiltrati.length > 0">
                         <h2 class="results-count">
                             Risultati: <span>{{ garagesFiltrati.length }} parcheggi
-                                trovati</span>
+                                trovati.</span>
                         </h2>
                     </div>
 
@@ -430,7 +432,8 @@ const handleSuggestionSelected = (place) => {
                             @click="goToDetail(garage)">
 
                             <div class="gcard-thumb">
-                                <img v-if="garage.foto_urls && garage.foto_urls.length > 0" :src="garage.foto_urls[0]" class="gcard-image" alt="Foto Garage" />
+                                <img v-if="garage.foto_urls && garage.foto_urls.length > 0" :src="garage.foto_urls[0]"
+                                    class="gcard-image" alt="Foto Garage" />
                                 <div v-else class="gcard-letter-box">{{ garage.nome.charAt(0) }}</div>
                                 <span v-if="garage.is24h" class="gcard-badge-top">24/7</span>
                             </div>
@@ -480,13 +483,14 @@ const handleSuggestionSelected = (place) => {
                             <div class="gcard-right">
                                 <div class="gcard-price-block">
                                     <span class="price-label">
-                                        {{ filterTipoVeicolo === 'ALL' ? 'TARIFFA BASE' : 'TARIFFA ' + filterTipoVeicolo }}
+                                        {{ filterTipoVeicolo === 'ALL' ? 'TARIFFA BASE' : 'TARIFFA ' + filterTipoVeicolo
+                                        }}
                                     </span>
                                     <span class="price-value">€{{ getDisplayPrice(garage) }}/ora</span>
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div v-if="hasMoreResults" class="extended-results-container">
                             <p class="extended-info">
                                 Ci sono altri parcheggi tra {{ raggioKm }}km e {{ Math.max(raggioKm + 3, 5) }}km...
@@ -497,12 +501,9 @@ const handleSuggestionSelected = (place) => {
                         </div>
 
                         <div v-if="garagesFiltrati.length > 0" class="mt-3 px-2 pagination-container">
-                            <Pagination 
-                                v-model:paginaCorrente="paginaCorrente"
-                                v-model:elementiPerPagina="elementiPerPagina"
-                                :totaleElementi="garagesFiltrati.length" 
-                                @cambio-pagina="scrollInAlto" 
-                            />
+                            <Pagination v-model:paginaCorrente="paginaCorrente"
+                                v-model:elementiPerPagina="elementiPerPagina" :totaleElementi="garagesFiltrati.length"
+                                @cambio-pagina="scrollInAlto" />
                         </div>
 
                     </div>
@@ -683,7 +684,8 @@ const handleSuggestionSelected = (place) => {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    overflow: hidden; /* IMPORTANTE PER MANTENERE IL BORDO DELLA CARD */
+    overflow: hidden;
+    /* IMPORTANTE PER MANTENERE IL BORDO DELLA CARD */
 }
 
 /* --- NUOVI STILI PER LE IMMAGINI --- */
@@ -697,7 +699,8 @@ const handleSuggestionSelected = (place) => {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    border-radius: 8px; /* Per farla combaciare con i bordi arrotondati del quadratino */
+    border-radius: 8px;
+    /* Per farla combaciare con i bordi arrotondati del quadratino */
 }
 
 .gcard-letter-box {
@@ -1101,8 +1104,8 @@ const handleSuggestionSelected = (place) => {
 }
 
 .icon {
-  width: 16px;
-  height: 16px;
+    width: 16px;
+    height: 16px;
 }
 
 :deep(.custom-search-marker) {
