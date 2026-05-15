@@ -8,7 +8,8 @@ const props = defineProps({
     checkOut: { type: String, default: '' },
     showSubmitButton: { type: Boolean, default: false },
     simple: { type: Boolean, default: false },
-    placeholder: { type: String, default: 'Cerca un punto di interesse...' }
+    placeholder: { type: String, default: 'Cerca un punto di interesse...' },
+    hasDateError: { type: Boolean, default: false }
 })
 
 const emit = defineEmits(['update:location', 'update:checkIn', 'update:checkOut', 'search', 'suggestion-selected'])
@@ -72,12 +73,12 @@ const handleBlur = () => {
         </div>
 
         <template v-if="!simple">
-            <div class="input-group">
+            <div class="input-group" :class="{ 'is-invalid-group': hasDateError }">
                 <label>Check-in</label>
                 <input type="datetime-local" :value="checkIn" @input="$emit('update:checkIn', $event.target.value)"
                     required>
             </div>
-            <div class="input-group">
+            <div class="input-group" :class="{ 'is-invalid-group': hasDateError }">
                 <label>Check-out</label>
                 <input type="datetime-local" :value="checkOut" @input="$emit('update:checkOut', $event.target.value)"
                     required>
