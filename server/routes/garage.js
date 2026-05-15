@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require("../database/db");
 const multer = require('multer');
 const { createClient } = require('@supabase/supabase-js');
+const { isGestore } = require('../middleware/authMiddleware');
 
 // configura il client Supabase usando le variabili dell'environment
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
@@ -102,13 +103,9 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.get('/garages-gestore', async (req, res) => {
+router.get('/garages-gestore', isGestore, async (req, res) => {
   try {
-    const utenteLoggato = req.session?.utente;
-    if (!utenteLoggato || utenteLoggato.ruolo !== 'GESTORE') {
-      return res.status(401).json({ error: 'Accesso negato' });
-    }
-    const idGestore = utenteLoggato.id;
+    const idGestore = req.session.utente.id;
     const result = await db.any('SELECT * FROM Garage WHERE ID_Gestore = $1', [idGestore]);
     res.json(result);
   } catch (error) {
@@ -118,15 +115,9 @@ router.get('/garages-gestore', async (req, res) => {
 });
 
 // Crea un nuovo garage per il gestore loggato
-router.post('/garages-gestore', async (req, res) => {
+router.post('/garages-gestore', isGestore, async (req, res) => {
   try {
-    const utenteLoggato = req.session?.utente;
-    if (!utenteLoggato || utenteLoggato.ruolo !== 'GESTORE') {
-      return res.status(401).json({ error: 'Accesso negato' });
-    }
-
-    const idGestore = utenteLoggato.id;
-
+    const idGestore = req.session.utente.id;
     const {
       nome, descrizione, indirizzo, via, civico, cap, citta, provincia, latitudine, longitudine,
       tariffabase, tariffamoto, tariffafurgone, sovrapprezzoelettrica, scontodisabili,
@@ -210,14 +201,10 @@ router.post('/garages-gestore', async (req, res) => {
 });
 
 // Caricamento foto del garage
-router.post('/:id/upload-photos', upload.array('foto_garage', 10), async (req, res) => {
-  //  Controllo permessi
-  const utenteLoggato = req.session?.utente;
-  if (!utenteLoggato || utenteLoggato.ruolo !== 'GESTORE') {
-    return res.status(401).json({ error: 'Accesso negato' });
-  }
+router.post('/:id/upload-photos', isGestore, upload.array('foto_garage', 10), async (req, res) => {
 
   const idGarage = req.params.id;
+  const idGestore = req.session.utente.id;
   const files = req.files;
 
   if (!files || files.length === 0) {
@@ -225,11 +212,8 @@ router.post('/:id/upload-photos', upload.array('foto_garage', 10), async (req, r
   }
 
   try {
-    //  Controllo di sicurezza: il garage esiste ed è di questo gestore?
-    const garage = await db.oneOrNone('SELECT ID_Garage FROM Garage WHERE ID_Garage = $1 AND ID_Gestore = $2', [idGarage, utenteLoggato.id]);
-    if (!garage) {
-      return res.status(403).json({ error: 'Garage non trovato o non autorizzato' });
-    }
+    const garage = await db.oneOrNone('SELECT ID_Garage FROM Garage WHERE ID_Garage = $1 AND ID_Gestore = $2', [idGarage, idGestore]);
+    if (!garage) return res.status(403).json({ error: 'Garage non trovato o non autorizzato' });
 
     const urlsCaricate = [];
 
@@ -267,8 +251,6 @@ router.post('/:id/upload-photos', upload.array('foto_garage', 10), async (req, r
     res.status(500).json({ error: 'Errore durante il caricamento delle foto' });
   }
 });
-
-router.get('/stato-garages-gestore', async (req, res) => { res.json([]); });
 
 router.get("/:id", async (req, res) => {
   try {
@@ -429,15 +411,11 @@ router.get("/:id/recensioni", async (req, res) => {
 });
 
 // Modifica di un garage esistente
-router.put('/garages-gestore/:id', async (req, res) => {
+router.put('/garages-gestore/:id', isGestore, async (req, res) => {
   try {
-    const utenteLoggato = req.session?.utente;
-    if (!utenteLoggato || utenteLoggato.ruolo !== 'GESTORE') {
-      return res.status(401).json({ error: 'Accesso negato' });
-    }
 
     const idGarage = req.params.id;
-    const idGestore = utenteLoggato.id;
+    const idGestore = req.session.utente.id;
 
     const {
       nome, descrizione, indirizzo, via, civico, cap, citta, provincia, latitudine, longitudine,
@@ -516,16 +494,12 @@ router.put('/garages-gestore/:id', async (req, res) => {
 });
 
 // ─── Aggiunta blocco manutenzione a un singolo posto ─────────────────────────
-router.post('/garages-gestore/:id/posti/:id_posto/manutenzione', async (req, res) => {
+router.post('/garages-gestore/:id/posti/:id_posto/manutenzione', isGestore, async (req, res) => {
     try {
-        const utenteLoggato = req.session?.utente;
-        if (!utenteLoggato || utenteLoggato.ruolo !== 'GESTORE') {
-            return res.status(401).json({ error: 'Accesso negato' });
-        }
 
         const { id, id_posto } = req.params;
         const { inizio, fine, motivazione } = req.body;
-        const idGestore = utenteLoggato.id;
+        const idGestore = req.session.utente.id;
 
         if (!inizio || !fine) return res.status(400).json({ error: 'Date obbligatorie' });
 
@@ -564,22 +538,11 @@ router.post('/garages-gestore/:id/posti/:id_posto/manutenzione', async (req, res
 });
 
 // DELETE /api/garage/garages-gestore/:idGarage/posti/:idPosto/manutenzione/:idManutenzione
-router.delete('/garages-gestore/:idGarage/posti/:idPosto/manutenzione/:idManutenzione', async (req, res) => {
+router.delete('/garages-gestore/:idGarage/posti/:idPosto/manutenzione/:idManutenzione', isGestore, async (req, res) => {
     try {
-        const utenteLoggato = req.session?.utente;
 
-        if (!utenteLoggato || utenteLoggato.ruolo !== 'GESTORE') {
-            return res.status(401).json({ error: 'Accesso negato' });
-        }
-
-        // Salvagente: cattura l'ID indipendentemente da come lo hai salvato nella sessione
-        const idGestore = utenteLoggato.id || utenteLoggato.id_utente;
+        const idGestore = req.session.utente.id;
         const { idGarage, idPosto, idManutenzione } = req.params;
-
-
-        if (!idGestore) {
-            throw new Error("ID Gestore risultante è undefined!");
-        }
 
         const checkGarage = await db.oneOrNone(
             'SELECT 1 FROM Garage WHERE ID_Garage = $1 AND ID_Gestore = $2',
@@ -602,7 +565,6 @@ router.delete('/garages-gestore/:idGarage/posti/:idPosto/manutenzione/:idManuten
 
         res.json({ success: true, message: "Manutenzione rimossa. Il posto è di nuovo disponibile." });
     } catch (err) {
-        console.error("!!! ERRORE CRASH IN DELETE MANUTENZIONE !!!");
         console.error(err.message);
         res.status(500).json({ success: false, error: "Errore interno del server: " + err.message });
     }

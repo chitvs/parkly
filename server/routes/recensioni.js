@@ -1,13 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../database/db');
+const { isLoggato } = require('../middleware/authMiddleware');
 
 // POST /api/recensioni - Crea una nuova recensione
-router.post('/', async (req, res) => {
+router.post('/', isLoggato, async (req, res) => {
     // 1. Estrai i dati dal corpo della richiesta
     const { 
         id_prenotazione, 
-        id_utente, 
         id_garage, 
         voto_generale, 
         voto_posizione, 
@@ -17,6 +17,8 @@ router.post('/', async (req, res) => {
         voto_sicurezza, 
         commento 
     } = req.body;
+
+    const id_utente = req.session.utente.id;
 
     // 2. Validazione di base
     if (!id_prenotazione || !id_utente || !id_garage || !voto_generale) {
@@ -78,10 +80,9 @@ router.post('/', async (req, res) => {
 });
 
 // PUT /api/recensioni/:id_prenotazione - Modifica una recensione
-router.put('/:id_prenotazione', async (req, res) => {
+router.put('/:id_prenotazione', isLoggato, async (req, res) => {
     const { id_prenotazione } = req.params;
     const { 
-        id_utente, 
         id_garage, 
         voto_generale, 
         voto_posizione, 
@@ -91,6 +92,8 @@ router.put('/:id_prenotazione', async (req, res) => {
         voto_sicurezza, 
         commento 
     } = req.body;
+
+    const id_utente = req.session.utente.id;
 
     if (!id_prenotazione || !id_utente || !id_garage || !voto_generale) {
         return res.status(400).json({ success: false, error: 'Dati mancanti' });
@@ -136,12 +139,12 @@ router.put('/:id_prenotazione', async (req, res) => {
 });
 
 // DELETE /api/recensioni/:id_prenotazione - Elimina una recensione
-router.delete('/:id_prenotazione', async (req, res) => {
+router.delete('/:id_prenotazione', isLoggato, async (req, res) => {
     const { id_prenotazione } = req.params;
-    // Passiamo id_utente e id_garage tramite query string per la delete
-    const { id_utente, id_garage } = req.query; 
+    const { id_garage } = req.query;
+    const id_utente = req.session.utente.id; 
 
-    if (!id_prenotazione || !id_utente || !id_garage) {
+    if (!id_prenotazione || !id_garage) {
         return res.status(400).json({ success: false, error: 'Dati mancanti' });
     }
 

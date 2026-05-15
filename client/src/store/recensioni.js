@@ -37,10 +37,10 @@ export const recensioniStore = reactive({
   },
 
   // Elimina una recensione
-  async deleteReview(id_prenotazione, id_utente, id_garage) {
+  async deleteReview(id_prenotazione, id_garage) {
     try {
       // Passiamo id_utente e id_garage come query parameters
-      const response = await fetch(`/api/recensioni/${id_prenotazione}?id_utente=${id_utente}&id_garage=${id_garage}`, {
+      const response = await fetch(`/api/recensioni/${id_prenotazione}?id_garage=${id_garage}`, {
         method: 'DELETE',
         credentials: 'include'
       });

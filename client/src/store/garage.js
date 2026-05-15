@@ -69,6 +69,7 @@ export const garageStore = reactive({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
+        credentials: 'include'
       })
       return await response.json()
     } catch (err) {
@@ -186,6 +187,7 @@ export const garageStore = reactive({
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(garageData),
+        credentials: 'include'
       })
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || 'Errore durante l\'aggiornamento')
@@ -216,6 +218,7 @@ export const garageStore = reactive({
       const response = await fetch(`/api/garage/garages-gestore/${idGarage}/posti/${idPosto}/manutenzione`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(maintenanceData),
       })
       const data = await response.json()
