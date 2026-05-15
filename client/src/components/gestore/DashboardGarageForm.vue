@@ -385,9 +385,9 @@ const inviaDati = () => {
                     </div>
                     <div class="form-group check-group">
                         <label class="checkbox-label"><input type="checkbox" v-model="nuovoPosto.isElettrica"
-                                class="checkbox-input"> El.</label>
+                                class="checkbox-input"> Elettrico</label>
                         <label class="checkbox-label"><input type="checkbox" v-model="nuovoPosto.isDisabili"
-                                class="checkbox-input"> Dis.</label>
+                                class="checkbox-input"> Disabili</label>
                         <label class="checkbox-label"><input type="checkbox" v-model="nuovoPosto.isCoperto"
                                 class="checkbox-input"> Coperto</label>
                     </div>
