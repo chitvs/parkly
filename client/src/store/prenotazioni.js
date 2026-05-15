@@ -47,7 +47,9 @@ export const prenotazioniStore = reactive({
 
   async getAnteprimaAnnullamento(codice) {
       try {
-          const response = await fetch(`/api/prenotazioni/${codice}/anteprima-annullamento`);
+          const response = await fetch(`/api/prenotazioni/${codice}/anteprima-annullamento`, {
+            credentials: 'include'
+          });
           return await response.json();
       } catch (error) {
           console.error("Errore:", error);

@@ -1,24 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../database/db');
-
-/*
-MIDDLEWARE DI AUTENTICAZIONE
-Intercetta la richiesta prima che arrivi alla rotta.
-Se non c'è una sessione attiva (niente cookie valido), blocca tutto con un errore 401.
- */
-function requireAuth(req, res, next) {
-  if (!req.session?.utente) {
-    return res.status(401).json({ error: 'Non autenticato.' });
-  }
-  next(); // Passa il controllo alla rotta successiva
-}
+const { isLoggato } = require('../middleware/authMiddleware');
 
 /**
  * GET /api/messaggi/:idPrenotazione
  * Restituisce lo storico dei messaggi di una specifica prenotazione.
  */
-router.get('/:idPrenotazione', requireAuth, async (req, res) => {
+router.get('/:idPrenotazione', isLoggato, async (req, res) => {
   const idPrenotazione = parseInt(req.params.idPrenotazione);
   const idUtente = req.session.utente.id; // Chi sta facendo la richiesta?
 

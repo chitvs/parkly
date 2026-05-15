@@ -1148,7 +1148,6 @@ html, body {
     margin-top: auto !important;
     margin-bottom: 0rem;
     background-color: transparent;
-    padding-top: 2rem;
 }
 
 .icon {

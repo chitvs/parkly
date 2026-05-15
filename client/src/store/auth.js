@@ -18,7 +18,9 @@ export const authStore = reactive({
   // Verifica se la sessione server sia ancora valida
   async checkAuth() {
     try {
-      const response = await fetch('/api/auth/me');
+      const response = await fetch('/api/auth/me', {
+        credentials: 'include'
+      });
       if (response.ok) {
         const data = await response.json();
         this.setUtente(data.utente);
@@ -167,7 +169,8 @@ async uploadAvatar(formData) {
     try {
       await fetch('/api/auth/logout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
       });
     } catch (err) {
       console.error("Errore durante il logout lato server:", err);
@@ -181,7 +184,8 @@ async uploadAvatar(formData) {
     try {
       const res = await fetch('/api/auth/delete-account', {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
       });
       
       const data = await res.json();
@@ -205,7 +209,8 @@ async uploadAvatar(formData) {
     try {
       const response = await fetch('/api/auth/upgrade-role', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
       });
       
       const data = await response.json();

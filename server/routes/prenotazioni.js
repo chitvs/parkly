@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../database/db');
-const { isLoggato } = require('../middleware/authMiddleware');
+const { isLoggato, isGestore } = require('../middleware/authMiddleware');
 
 router.post('/', isLoggato, async (req, res) => {
     const { id_posto, targa, note, inizio, fine, prezzo_totale, codice_disabilita } = req.body;
@@ -103,10 +103,7 @@ router.post('/', isLoggato, async (req, res) => {
 });
 
 // Recupero le prenotazioni dell'utente loggato (in prenotazioni.js)
-router.get('/', async (req, res) => {
-    if (!req.session.utente || !req.session.utente.id) {
-        return res.status(401).json({ success: false, error: 'Non autorizzato' });
-    }
+router.get('/', isLoggato, async (req, res) => {
 
     const utenteId = req.session.utente.id;
 
@@ -167,10 +164,7 @@ router.get('/', async (req, res) => {
 });
 
 // annullamento prenotazione
-router.put('/:codice/annulla', async (req, res) => {
-    if (!req.session.utente || !req.session.utente.id) {
-        return res.status(401).json({ success: false, error: 'Non autorizzato' });
-    }
+router.put('/:codice/annulla', isLoggato, async (req, res) => {
 
     try {
         const codicePrenotazione = req.params.codice;
@@ -254,7 +248,7 @@ router.put('/:codice/annulla', async (req, res) => {
     }
 });
 
-router.get('/:codice/anteprima-annullamento', async (req, res) => {
+router.get('/:codice/anteprima-annullamento', isLoggato, async (req, res) => {
     try {
         const prenotazione = await db.oneOrNone(`
             SELECT p.PrezzoTotale,
@@ -309,15 +303,10 @@ router.get('/:codice/anteprima-annullamento', async (req, res) => {
 });
 
 // recupera lo storico delle prenotazioni del gestore loggato
-router.get('/prenotazioni-gestore', async (req, res) => {
+router.get('/prenotazioni-gestore', isGestore, async (req, res) => {
     try {
-        const utenteLoggato = req.session?.utente;
-        
-        if (!utenteLoggato || utenteLoggato.ruolo !== 'GESTORE') {
-            return res.status(401).json({ error: 'Accesso negato' });
-        }
-        
-        const idGestore = utenteLoggato.id;
+
+        const idGestore = req.session.utente.id;
         
         const query = `
             SELECT 

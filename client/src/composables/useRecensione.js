@@ -77,7 +77,6 @@ export function useRecensione() {
   const inviaRecensione = async () => {
     const payload = {
       id_prenotazione: selectedBookingForReview.value.id_prenotazione,
-      id_utente: selectedBookingForReview.value.id_utente,
       id_garage: selectedBookingForReview.value.id_garage,
       voto_generale: recensioneForm.value.votoGenerale,
       voto_posizione: recensioneForm.value.posizione,
