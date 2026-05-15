@@ -85,14 +85,14 @@ const chiudiFoto = () => {
 const tariffePerVeicolo = computed(() => {
     const g = garageStore.currentGarage;
     if (!g) return {};
-    
+
     const tariffe = {};
     if (g.tariffamoto) tariffe['MOTO'] = Number(g.tariffamoto);
     if (g.tariffaauto) tariffe['AUTO'] = Number(g.tariffaauto);
     if (g.tariffafurgone) tariffe['FURGONE'] = Number(g.tariffafurgone);
-    
+
     if (!tariffe['AUTO'] && g.tariffabase) tariffe['AUTO'] = Number(g.tariffabase);
-    
+
     return tariffe;
 });
 
@@ -216,7 +216,7 @@ const gestisciPrenotazione = async () => {
         }
 
         await aggiornaMappa()
-        
+
         messaggio.value = { tipo: 'success', testo: `Prenotazione avvenuta con successo! Il tuo codice è: ${res.prenotazione.codiceprenotazione}` }
         postoSelezionato.value = null
         targa.value = ''
@@ -283,7 +283,7 @@ watch(paginaRecensioniCorrente, () => {
         <Header />
 
         <main v-if="garageStore.isLoading" class="msg-box">Caricamento...</main>
-        
+
         <main v-else class="main-content">
             <section class="basic-hero">
                 <div class="hero-top">
@@ -292,7 +292,8 @@ watch(paginaRecensioniCorrente, () => {
                         <p class="descrizione">{{ garageStore.currentGarage?.descrizione }}</p>
                         <div class="badge-row">
                             <div class="badge">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
                                     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                                     <circle cx="12" cy="10" r="3" />
                                 </svg>
@@ -300,7 +301,8 @@ watch(paginaRecensioniCorrente, () => {
                             </div>
 
                             <div class="badge" v-if="garageStore.currentGarage?.is24h">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <circle cx="12" cy="12" r="10"></circle>
                                     <polyline points="12 6 12 12 16 14"></polyline>
                                 </svg>
@@ -308,18 +310,21 @@ watch(paginaRecensioniCorrente, () => {
                             </div>
 
                             <div class="badge" v-else>
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
                                     <circle cx="12" cy="12" r="10" />
                                     <polyline points="12 6 12 12 16 14" />
                                 </svg>
-                                {{ garageStore.currentGarage?.orarioapertura.substring(0, 5) }} - {{ garageStore.currentGarage?.orariochiusura.substring(0,5) }}
+                                {{ garageStore.currentGarage?.orarioapertura.substring(0, 5) }} - {{
+                                    garageStore.currentGarage?.orariochiusura.substring(0, 5) }}
                             </div>
-                            
+
                             <div class="badge" v-if="garageStore.currentGarage?.altezzamassima">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M12 22V5"/>
-                                    <path d="M7 10l5-5 5 5"/>
-                                    <line x1="4" y1="2" x2="20" y2="2"/>
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 22V5" />
+                                    <path d="M7 10l5-5 5 5" />
+                                    <line x1="4" y1="2" x2="20" y2="2" />
                                 </svg>
                                 Max {{ garageStore.currentGarage?.altezzamassima }}m
                             </div>
@@ -328,20 +333,23 @@ watch(paginaRecensioniCorrente, () => {
 
                     <div class="hero-right">
                         <div class="prezzo-label">Tariffe a partire da:</div>
-                        
+
                         <div class="price-line" v-if="tariffePerVeicolo['MOTO']">
                             <span class="v-tipo">Moto</span>
-                            <span class="prezzo-valore-small">€{{ tariffePerVeicolo['MOTO'].toFixed(2) }}<span>/h</span></span>
+                            <span class="prezzo-valore-small">€{{ tariffePerVeicolo['MOTO'].toFixed(2)
+                            }}<span>/h</span></span>
                         </div>
-                        
+
                         <div class="price-line" v-if="tariffePerVeicolo['AUTO']">
                             <span class="v-tipo">Auto</span>
-                            <span class="prezzo-valore-small">€{{ tariffePerVeicolo['AUTO'].toFixed(2) }}<span>/h</span></span>
+                            <span class="prezzo-valore-small">€{{ tariffePerVeicolo['AUTO'].toFixed(2)
+                            }}<span>/h</span></span>
                         </div>
-                        
+
                         <div class="price-line" v-if="tariffePerVeicolo['FURGONE']">
                             <span class="v-tipo">Furgone</span>
-                            <span class="prezzo-valore-small">€{{ tariffePerVeicolo['FURGONE'].toFixed(2) }}<span>/h</span></span>
+                            <span class="prezzo-valore-small">€{{ tariffePerVeicolo['FURGONE'].toFixed(2)
+                            }}<span>/h</span></span>
                         </div>
 
                         <div class="special-rates-container" v-if="sovrapprezzoElettrica || scontoDisabili">
@@ -360,14 +368,8 @@ watch(paginaRecensioniCorrente, () => {
 
             <section class="gallery-section" v-if="fotoGarage.length > 0">
                 <div class="gallery-track">
-                    <img 
-                        v-for="(url, index) in fotoGarage" 
-                        :key="index" 
-                        :src="url" 
-                        alt="Foto garage" 
-                        class="gallery-img"
-                        @click="apriFoto(url)"
-                    >
+                    <img v-for="(url, index) in fotoGarage" :key="index" :src="url" alt="Foto garage"
+                        class="gallery-img" @click="apriFoto(url)">
                 </div>
             </section>
 
@@ -377,21 +379,146 @@ watch(paginaRecensioniCorrente, () => {
             </div>
 
             <div class="layout-grid">
-                <div class="card">
-                    <div class="card-header">
-                        <h2>Planimetria</h2>
+
+                <div class="left-column">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>Planimetria</h2>
+                        </div>
+                        <div class="card-body">
+                            <PlanimetriaGarage :posti="garageStore.posti"
+                                :mappaTestuale="garageStore.currentGarage?.mappatestuale"
+                                :selectedId="postoSelezionato?.id_posto" :isAnteprima="!isMapConfirmed"
+                                @select="(p) => postoSelezionato = p"
+                                @error="(msg) => messaggio = { tipo: 'error', testo: msg }" />
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <PlanimetriaGarage :posti="garageStore.posti"
-                            :mappaTestuale="garageStore.currentGarage?.mappatestuale"
-                            :selectedId="postoSelezionato?.id_posto"
-                            :isAnteprima="!isMapConfirmed"
-                            @select="(p) => postoSelezionato = p"
-                            @error="(msg) => messaggio = { tipo: 'error', testo: msg }" />
-                    </div>
+
+                    <section class="reviews-section card" v-if="garageStore.currentGarage">
+                        <div class="card-header">
+                            <h2>Recensioni</h2>
+                        </div>
+                        <div class="card-body">
+
+                            <div class="reviews-top-row">
+                                <div class="overall-rating-header">
+                                    <h2 class="rating-number">{{ Number(garageStore.currentGarage.mediagenerale).toFixed(2) }}</h2>
+
+                                    <div class="average-stars">
+                                        <i v-for="i in 5" :key="i" class="bi" :class="[
+                                            garageStore.currentGarage.mediagenerale >= i ? 'bi-star-fill star--on' :
+                                                garageStore.currentGarage.mediagenerale >= i - 0.5 ? 'bi-star-half star--on' :
+                                                    'bi-star star--off'
+                                        ]">
+                                        </i>
+                                    </div>
+
+                                    <span class="reviews-count">
+                                        {{ garageStore.recensioni.length }} recensioni
+                                    </span>
+                                </div>
+
+                                <div class="rating-ladder" v-if="garageStore.recensioni.length > 0">
+                                    <div v-for="star in 5" :key="star" class="ladder-row">
+                                        <span class="ladder-num">{{ 6 - star }}</span>
+                                        <div class="ladder-bar-bg">
+                                            <div class="ladder-bar-fill"
+                                                :style="{ width: distribuzioneVoti[6 - star] + '%' }">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr class="reviews-divider">
+
+                            <div v-if="garageStore.recensioni.length > 0">
+                                
+                                <div class="categories-grid">
+                                    <div class="category-item">
+                                        <span class="cat-label"><i class="bi bi-geo-alt"></i> Posizione</span>
+                                        <span class="cat-val">{{ Number(garageStore.currentGarage.mediaposizione).toFixed(1) }}</span>
+                                    </div>
+                                    <div class="category-item">
+                                        <span class="cat-label"><i class="bi bi-tag"></i> Prezzo</span>
+                                        <span class="cat-val">{{ Number(garageStore.currentGarage.mediaprezzo).toFixed(1) }}</span>
+                                    </div>
+                                    <div class="category-item">
+                                        <span class="cat-label"><i class="bi bi-stars"></i> Pulizia</span>
+                                        <span class="cat-val">{{ Number(garageStore.currentGarage.mediapulizia).toFixed(1) }}</span>
+                                    </div>
+                                    <div class="category-item">
+                                        <span class="cat-label"><i class="bi bi-car-front"></i> Spazio di manovra</span>
+                                        <span class="cat-val">{{ Number(garageStore.currentGarage.mediaspazio).toFixed(1) }}</span>
+                                    </div>
+                                    <div class="category-item">
+                                        <span class="cat-label"><i class="bi bi-shield-check"></i> Sicurezza</span>
+                                        <span class="cat-val">{{ Number(garageStore.currentGarage.mediasicurezza).toFixed(1) }}</span>
+                                    </div>
+                                </div>
+
+                                <div class="user-comments-section mt-5 pt-4 border-top">
+                                    <div class="reviews-wrapper">
+                                        <div class="comments-grid">
+                                            <div v-for="(recensione, index) in recensioniPaginate" :key="index"
+                                                class="comment-card">
+                                                <div class="comment-header">
+                                                    <div class="user-avatar">
+                                                        <img v-if="recensione.fotoprofilo_url"
+                                                            :src="recensione.fotoprofilo_url" alt="User avatar">
+                                                        <span v-else>{{ recensione.nome.charAt(0).toUpperCase()
+                                                        }}</span>
+                                                    </div>
+
+                                                    <div class="user-info">
+                                                        <h4 class="user-name">{{ recensione.nome }} {{
+                                                            recensione.inizialecognome }}.</h4>
+                                                    </div>
+                                                </div>
+
+                                                <div class="comment-meta">
+                                                    <div class="small-stars">
+                                                        <i v-for="star in 5" :key="'s' + star" class="bi"
+                                                            :class="star <= Math.round(recensione.votogenerale) ? 'bi-star-fill star--on' : 'bi-star star--off'">
+                                                        </i>
+                                                    </div>
+                                                    <span class="meta-dot">·</span>
+                                                    <span class="comment-date">{{
+                                                        formattaDataRecensione(recensione.datacreazione) }}</span>
+                                                </div>
+
+                                                <p class="comment-text"
+                                                    :class="{ 'comment-text--expanded': commentiEspansi.has(index) }"
+                                                    v-if="recensione.commento">{{ recensione.commento }}</p>
+                                                <p class="comment-text text-muted fst-italic" v-else></p>
+
+                                                <button v-if="recensione.commento && recensione.commento.length > 180"
+                                                    class="mostra-altro-btn" @click="toggleCommento(index)">
+                                                    {{ commentiEspansi.has(index) ? 'Mostra meno' : 'Mostra altro' }}
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div class="pagination-wrapper mt-5 d-flex justify-content-center"
+                                            v-if="garageStore.recensioni.length > 0">
+                                            <Pagination compact v-model:paginaCorrente="paginaRecensioniCorrente"
+                                                v-model:elementiPerPagina="recensioniPerPagina"
+                                                :totaleElementi="garageStore.recensioni.length" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            <div v-else class="empty-reviews text-center py-4 text-muted">
+                                Nessuna recensione presente al momento. Sii il primo a prenotare e recensire!
+                            </div>
+
+                        </div>
+                    </section>
                 </div>
 
-                <aside class="card">
+                <aside class="card sticky-aside">
                     <div class="card-header">
                         <h2>Orari sosta</h2>
                     </div>
@@ -429,7 +556,8 @@ watch(paginaRecensioniCorrente, () => {
 
                             <div class="form-group" v-if="postoSelezionato.isdisabili">
                                 <label>Codice Contrassegno CUDE</label>
-                                <input type="text" v-model="codiceDisabilita" @input="formattaCude" placeholder="Es. IT-1234567" required>
+                                <input type="text" v-model="codiceDisabilita" @input="formattaCude"
+                                    placeholder="Es. IT-1234567" required>
                                 <small v-if="codiceDisabilita.length > 0 && !isCudeValido" class="error-text">
                                     Formato non valido.
                                 </small>
@@ -458,20 +586,24 @@ watch(paginaRecensioniCorrente, () => {
                                     <span>€ {{ prezzoTotale }}</span>
                                 </div>
                             </div>
-                            <div class="policy-box">
-                                <div class="policy-header">
+                            <details class="policy-box">
+                                <summary class="policy-header">
                                     <i class="bi bi-info-circle-fill"></i>
                                     <strong>Politica di annullamento</strong>
-                                </div>
+                                </summary>
+
                                 <ul class="policy-list">
-                                    <li><strong>Rimborso del 100%</strong> per disdette effettuate con almeno 12 ore di preavviso, o per ripensamenti entro 15 minuti dalla prenotazione.</li>
-                                    <li><strong>Rimborso del 50%</strong> per le cancellazioni effettuate a meno di 12 ore dall'arrivo.</li>
+                                    <li><strong>Rimborso del 100%</strong> per disdette effettuate con almeno 12 ore di
+                                        preavviso, o per ripensamenti entro 15 minuti dalla prenotazione.</li>
+                                    <li><strong>Rimborso del 50%</strong> per le cancellazioni effettuate a meno di 12
+                                        ore dall'arrivo.</li>
                                     <li><strong>Non rimborsabile</strong> se la sosta è già iniziata.</li>
                                 </ul>
-                            </div>
+                            </details>
                         </div>
 
-                        <button class="btn fill" :disabled="!isMapConfirmed || !postoSelezionato || !targa || !isTargaValida || (postoSelezionato.isdisabili && !isCudeValido) || isPrenotando"
+                        <button class="btn fill"
+                            :disabled="!isMapConfirmed || !postoSelezionato || !targa || !isTargaValida || (postoSelezionato.isdisabili && !isCudeValido) || isPrenotando"
                             @click="gestisciPrenotazione">
                             <span v-if="isPrenotando"><i class="bi bi-hourglass-split"></i> Elaborazione...</span>
                             <span v-else>Prenota ora</span>
@@ -480,129 +612,6 @@ watch(paginaRecensioniCorrente, () => {
                     </div>
                 </aside>
             </div>
-            
-            <section class="reviews-section card" v-if="garageStore.currentGarage">
-                <div class="card-body">
-
-                    <div class="overall-rating-header">
-                        <h2 class="rating-number">{{ Number(garageStore.currentGarage.mediagenerale).toFixed(2) }}</h2>
-
-                        <div class="average-stars">
-                            <i v-for="i in 5" :key="i" class="bi" :class="[
-                                garageStore.currentGarage.mediagenerale >= i ? 'bi-star-fill star--on' :
-                                    garageStore.currentGarage.mediagenerale >= i - 0.5 ? 'bi-star-half star--on' :
-                                        'bi-star star--off'
-                            ]">
-                            </i>
-                        </div>
-
-                        <span class="reviews-count">
-                            {{ garageStore.recensioni.length }} recensioni
-                        </span>
-                    </div>
-
-                    <hr class="reviews-divider">
-
-                    <div v-if="garageStore.recensioni.length > 0">
-
-                        <div class="reviews-breakdown">
-                            <div class="rating-ladder">
-                                <div v-for="star in 5" :key="star" class="ladder-row">
-                                    <span class="ladder-num">{{ 6 - star }}</span>
-                                    <div class="ladder-bar-bg">
-                                        <div class="ladder-bar-fill"
-                                            :style="{ width: distribuzioneVoti[6 - star] + '%' }">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="categories-grid">
-                                <div class="category-item">
-                                    <span class="cat-label"><i class="bi bi-geo-alt"></i> Posizione</span>
-                                    <span class="cat-val">{{ Number(garageStore.currentGarage.mediaposizione).toFixed(1)
-                                    }}</span>
-                                </div>
-                                <div class="category-item">
-                                    <span class="cat-label"><i class="bi bi-tag"></i> Prezzo</span>
-                                    <span class="cat-val">{{ Number(garageStore.currentGarage.mediaprezzo).toFixed(1)
-                                    }}</span>
-                                </div>
-                                <div class="category-item">
-                                    <span class="cat-label"><i class="bi bi-stars"></i> Pulizia</span>
-                                    <span class="cat-val">{{ Number(garageStore.currentGarage.mediapulizia).toFixed(1)
-                                    }}</span>
-                                </div>
-                                <div class="category-item">
-                                    <span class="cat-label"><i class="bi bi-car-front"></i> Spazio di manovra</span>
-                                    <span class="cat-val">{{ Number(garageStore.currentGarage.mediaspazio).toFixed(1)
-                                    }}</span>
-                                </div>
-                                <div class="category-item">
-                                    <span class="cat-label"><i class="bi bi-shield-check"></i> Sicurezza</span>
-                                    <span class="cat-val">{{ Number(garageStore.currentGarage.mediasicurezza).toFixed(1)
-                                    }}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="user-comments-section mt-5 pt-4 border-top">
-                            <div class="reviews-wrapper">
-                                <div class="comments-grid">
-                                    <div v-for="(recensione, index) in recensioniPaginate" :key="index" class="comment-card">
-                                        <div class="comment-header">
-                                            <div class="user-avatar">
-                                                <img v-if="recensione.fotoprofilo_url" :src="recensione.fotoprofilo_url"
-                                                    alt="User avatar">
-                                                <span v-else>{{ recensione.nome.charAt(0).toUpperCase() }}</span>
-                                            </div>
-
-                                            <div class="user-info">
-                                                <h4 class="user-name">{{ recensione.nome }} {{ recensione.inizialecognome }}.</h4>
-                                            </div>
-                                        </div>
-
-                                        <div class="comment-meta">
-                                            <div class="small-stars">
-                                                <i v-for="star in 5" :key="'s' + star" class="bi"
-                                                    :class="star <= Math.round(recensione.votogenerale) ? 'bi-star-fill star--on' : 'bi-star star--off'">
-                                                </i>
-                                            </div>
-                                            <span class="meta-dot">·</span>
-                                            <span class="comment-date">{{ formattaDataRecensione(recensione.datacreazione) }}</span>
-                                        </div>
-
-                                        <p class="comment-text"
-                                            :class="{ 'comment-text--expanded': commentiEspansi.has(index) }"
-                                            v-if="recensione.commento">{{ recensione.commento }}</p>
-                                        <p class="comment-text text-muted fst-italic" v-else></p>
-
-                                        <button v-if="recensione.commento && recensione.commento.length > 180"
-                                            class="mostra-altro-btn" @click="toggleCommento(index)">
-                                            {{ commentiEspansi.has(index) ? 'Mostra meno' : 'Mostra altro' }}
-                                        </button>
-                                    </div>
-                                </div>
-                                
-                                <div class="pagination-wrapper mt-5 d-flex justify-content-center" v-if="garageStore.recensioni.length > 0">
-                                    <Pagination
-                                        compact
-                                        v-model:paginaCorrente="paginaRecensioniCorrente"
-                                        v-model:elementiPerPagina="recensioniPerPagina"
-                                        :totaleElementi="garageStore.recensioni.length"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
-
-                    <div v-else class="empty-reviews text-center py-4 text-muted">
-                        Nessuna recensione presente al momento. Sii il primo a prenotare e recensire!
-                    </div>
-
-                </div>
-            </section>
         </main>
 
         <div v-if="fotoIngrandita" class="photo-modal" @click="chiudiFoto">
@@ -617,7 +626,6 @@ watch(paginaRecensioniCorrente, () => {
 </template>
 
 <style scoped>
-
 /* AGGIUNTA STILI PER LA GALLERIA */
 .gallery-section {
     max-width: 1200px;
@@ -630,7 +638,7 @@ watch(paginaRecensioniCorrente, () => {
     gap: 16px;
     overflow-x: auto;
     padding-bottom: 12px;
-    scrollbar-width: thin; 
+    scrollbar-width: thin;
 }
 
 .gallery-track::-webkit-scrollbar {
@@ -658,15 +666,6 @@ watch(paginaRecensioniCorrente, () => {
     transform: translateY(-2px);
 }
 
-@media (max-width: 800px) {
-    .gallery-section {
-        padding: 0 16px;
-    }
-    .gallery-img {
-        height: 180px;
-        min-width: 240px;
-    }
-}
 
 /* STILI PER IL MODAL FOTO */
 .photo-modal {
@@ -687,7 +686,7 @@ watch(paginaRecensioniCorrente, () => {
     max-width: 90%;
     max-height: 90vh;
     border-radius: 8px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     object-fit: contain;
 }
 
@@ -789,8 +788,8 @@ watch(paginaRecensioniCorrente, () => {
     padding-top: 4px;
     display: flex;
     flex-direction: column;
-    align-items: flex-end; 
-    gap: 8px; 
+    align-items: flex-end;
+    gap: 8px;
 }
 
 .prezzo-label {
@@ -804,7 +803,7 @@ watch(paginaRecensioniCorrente, () => {
 .price-line {
     display: flex;
     align-items: center;
-    gap: 15px; 
+    gap: 15px;
 }
 
 .v-tipo {
@@ -826,16 +825,6 @@ watch(paginaRecensioniCorrente, () => {
     font-size: 0.8rem;
     font-weight: 400;
     opacity: 0.5;
-}
-
-@media (max-width: 600px) {
-    .hero-right {
-        align-items: flex-start; 
-        text-align: left;
-    }
-    .prezzo-valore-small {
-        text-align: left;
-    }
 }
 
 .alert {
@@ -883,13 +872,6 @@ watch(paginaRecensioniCorrente, () => {
     margin: 20px auto;
     padding: 0 32px 48px;
     align-items: start;
-}
-
-@media (max-width: 800px) {
-    .layout-grid {
-        grid-template-columns: 1fr;
-        padding: 0 16px 32px;
-    }
 }
 
 .card {
@@ -1070,33 +1052,47 @@ watch(paginaRecensioniCorrente, () => {
 }
 
 .reviews-section {
-    max-width: 1200px;
-    margin: 0 auto 40px;
-    width: calc(100% - 64px);
+    width: 100%;
+    margin: 0;
 }
 
 .reviews-section .card-body {
-    padding: 32px 48px;
+    padding: 32px;
+}
+
+.reviews-top-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 80px; 
+    margin-bottom: 32px;
+    padding: 16px 16px;
+    background-color: #FAFAFA;
+    border-radius: 10px;
+    border: 0.5px solid var(--border-light);
 }
 
 .overall-rating-header {
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-bottom: 24px;
+    min-width: 150px;
 }
 
 .overall-rating-header h2.rating-number {
-    font-size: 4.5rem;
+    font-size: 3.5rem;
     font-weight: 800;
     color: var(--text-dark);
     margin: 0 0 4px 0;
     line-height: 1;
     letter-spacing: -0.05em;
+    text-align: center;
 }
 
 .average-stars {
     display: flex;
+    justify-content: center;
     gap: 6px;
     margin-bottom: 12px;
 }
@@ -1115,15 +1111,6 @@ watch(paginaRecensioniCorrente, () => {
     color: #dde3ed;
 }
 
-.overall-rating-header h2 {
-    font-size: 4rem;
-    font-weight: 800;
-    color: var(--text-dark);
-    margin: 0;
-    line-height: 1.1;
-    letter-spacing: -0.04em;
-}
-
 .reviews-count {
     font-size: 1.1rem;
     font-weight: 600;
@@ -1136,17 +1123,12 @@ watch(paginaRecensioniCorrente, () => {
     margin: 0 0 32px 0;
 }
 
-.reviews-breakdown {
-    display: flex;
-    gap: 60px;
-    align-items: flex-start;
-}
-
 .rating-ladder {
-    flex: 0 0 300px;
+    width: 100%; 
+    max-width: 280px; 
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
 }
 
 .ladder-row {
@@ -1178,17 +1160,18 @@ watch(paginaRecensioniCorrente, () => {
 }
 
 .categories-grid {
-    flex-grow: 1;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 24px 32px;
+    /* Forza esattamente 5 colonne della stessa larghezza */
+    grid-template-columns: repeat(5, 1fr); 
+    gap: 16px; /* Spazio ridotto tra gli elementi per farli entrare tutti */
+    width: 100%;
 }
 
 .category-item {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    padding-left: 20px;
+    padding-left: 16px; /* Padding leggermente ridotto */
     border-left: 1px solid #f1f5f9;
 }
 
@@ -1219,7 +1202,7 @@ watch(paginaRecensioniCorrente, () => {
 
 .comments-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 32px 48px;
     align-content: start;
 }
@@ -1228,6 +1211,12 @@ watch(paginaRecensioniCorrente, () => {
     display: flex;
     flex-direction: column;
     min-width: 0;
+    background-color: #fafafa; 
+    border: 1px solid #e2e8f0; 
+    border-radius: 16px;       
+    padding: 24px;             
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+
 }
 
 .comment-header {
@@ -1346,7 +1335,7 @@ watch(paginaRecensioniCorrente, () => {
 .special-line {
     display: flex;
     align-items: center;
-    justify-content: flex-end; 
+    justify-content: flex-end;
     gap: 15px;
     width: 100%;
 }
@@ -1369,7 +1358,6 @@ watch(paginaRecensioniCorrente, () => {
     display: flex;
     align-items: center;
     gap: 6px;
-    margin-bottom: 8px;
     font-size: 0.85rem;
 }
 
@@ -1409,18 +1397,18 @@ watch(paginaRecensioniCorrente, () => {
     min-height: 420px;
 }
 
-@media (max-width: 800px) {
-    .special-line {
-        justify-content: flex-start; 
-    }
-    
-    .comments-grid {
-        grid-template-columns: 1fr;
-        gap: 24px;
-    }
-
-    .reviews-wrapper {
-        min-height: 780px; 
-    }
+.left-column {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-width: 0;
+    /* Previene sbavature e rotture del grid su schermi piccoli */
 }
+
+.sticky-aside {
+    position: sticky;
+    top: 100px;
+    height: max-content;
+}
+
 </style>
