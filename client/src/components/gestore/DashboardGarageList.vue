@@ -92,7 +92,7 @@ defineEmits(['modifica'])
 .page-header h1 {
     font-size: 1.8rem;
     font-weight: 700;
-    color: var(--deep-blue, #4a0400);
+    color: var(--deep-blue, #00204A);
     letter-spacing: -0.5px;
     margin: 0 0 4px;
     font-family: 'Inter',sans-serif;
