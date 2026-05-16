@@ -343,7 +343,7 @@ const chartDataRevenuePerGarage = computed(() => ({
 }
 
 .stats-filters__date {
-    width: 140px;
+    width: 180px;
 }
 
 /* Cards */
