@@ -24,6 +24,7 @@ const hoveredGarageId = ref(null)
 const searchLocation = ref('')
 const checkIn = ref('')
 const checkOut = ref('')
+const searchError = ref('')
 
 const mapContainer = ref(null)
 const fullMapContainer = ref(null)
@@ -114,9 +115,10 @@ watch(searchLocation, () => {
 })
 
 watch([checkIn, checkOut], async ([newIn, newOut]) => {
+    searchError.value = ''
     if ((newIn && newOut) || (!newIn && !newOut)) {
         if (newIn && newOut && new Date(newIn) >= new Date(newOut)) {
-            alert("La data di check-out deve essere successiva a quella di check-in")
+            searchError.value = "La data di check-out deve essere successiva a quella di check-in"
             return
         }
         await fetchGarages(newIn, newOut)
@@ -319,7 +321,11 @@ const handleSuggestionSelected = (place) => {
         <section class="search-area">
             <div class="search-container">
                 <SearchBar v-model:location="searchLocation" v-model:checkIn="checkIn" v-model:checkOut="checkOut"
+                    :hasDateError="!!searchError"
                     @suggestion-selected="handleSuggestionSelected" />
+                <div v-if="searchError" class="alert error mt-3 mb-0 text-center" style="max-width: 1000px; margin: 0 auto;">
+                    {{ searchError }}
+                </div>
             </div>
         </section>
 

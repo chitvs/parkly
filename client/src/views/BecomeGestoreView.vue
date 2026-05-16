@@ -105,16 +105,7 @@ const confirmUpgrade = async () => {
 }
 
 .alert {
-    padding: 12px 16px;
-    border-radius: 8px;
-    font-size: 0.9rem;
     text-align: left;
-}
-
-.alert.error {
-    background: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
 }
 
 .btn-primary {

@@ -30,6 +30,7 @@ const localGarage = ref({
     orarioapertura: '08:00', orariochiusura: '20:00', is24h: false
 })
 const erroriValidazione = ref({})
+const mapInteractionError = ref('')
 
 // Gestione selezione foto
 const fotoSelezionate = ref([])
@@ -87,9 +88,12 @@ const handleAggiungiPosto = () => {
     const codiceAttuale = nuovoPosto.value.codice
 
     const res = aggiungiPostoConfigurato()
+    mapInteractionError.value = ''
 
     if (res && !res.success) {
         errorePosto.value = res.error 
+        mapInteractionError.value = res.error
+
     } else {
         errorePosto.value = ''
 
@@ -111,8 +115,10 @@ const handleCellaClick = (r, c) => {
     const strumentoUtilizzato = strumentoAttivo.value
 
     const res = clickCella(r, c)
+    mapInteractionError.value = ''
     
     if (res && !res.success) {
+        mapInteractionError.value = res.error
         alert(res.error) 
         return 
     }
@@ -452,6 +458,11 @@ const inviaDati = () => {
                 <div class="section-header">
                     <h2>Crea i Posti Auto</h2>
                 </div>
+                
+                <div v-if="mapInteractionError" class="alert error text-center mx-auto mb-3" style="max-width: 600px;">
+                    {{ mapInteractionError }}
+                </div>
+
                 <div class="posto-creator">
                     <div class="form-group">
                         <label class="form-label">Codice</label>

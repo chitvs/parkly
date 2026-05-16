@@ -18,6 +18,7 @@ import IconMessage from '../icons/IconMessage.vue'
 const filtroStato = ref('') // '' = Tutte, 'ATTIVA', 'CONCLUSA', 'ANNULLATA'
 const filtroGarage = ref('') // '' = Tutti, oppure l'id_garage
 const ordinamento = ref('creazione_desc') // default: data creazione più recente
+const pageMessage = ref(null)
 
 // variabili per la paginazione
 const paginaCorrente = ref(1)
@@ -40,7 +41,8 @@ const {
   apriModifica,
   chiudiModale,
   inviaRecensione,
-  eliminaRecensione
+  eliminaRecensione,
+  reviewError
 } = useRecensione()
 
 // Stato per gestire la chat aperta 
@@ -89,7 +91,7 @@ const caricaPrenotazioni = async () => {
   if (response.success) {
     bookings.value = response.data
   } else {
-    alert(response.error || "Impossibile caricare le prenotazioni")
+    pageMessage.value = { tipo: 'error', testo: response.error || "Impossibile caricare le prenotazioni" }
   }
   isLoading.value = false
 }
@@ -230,9 +232,11 @@ const handleConfirmCancel = async () => {
   if (response.success) {
     bookingToCancel.value.stato = 'ANNULLATA'
     showCancelModal.value = false
-    alert(`Prenotazione annullata. Rimborsati: €${infoAnnullamento.rimborso.toFixed(2)}`)
+    pageMessage.value = { tipo: 'success', testo: `Prenotazione annullata. Rimborsati: €${infoAnnullamento.rimborso.toFixed(2)}` }
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   } else {
-    alert(response.error || "Errore durante l'annullamento")
+    pageMessage.value = { tipo: 'error', testo: response.error || "Errore durante l'annullamento" }
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 }
 
@@ -290,6 +294,10 @@ const chiudiChat = () => {
     <Header />
 
     <main class="container py-5 flex-grow-1">
+      <div v-if="pageMessage" :class="['alert', pageMessage.tipo, 'mb-4']">
+        {{ pageMessage.testo }}
+      </div>
+
       <div class="row mb-4">
         <div class="col-12 text-center text-md-start">
           <h2 class="fw-bold title-color">Le Tue Prenotazioni</h2>
@@ -482,6 +490,10 @@ const chiudiChat = () => {
               <button v-if="currentStep < 3" class="close-btn" @click="chiudiModale" aria-label="Chiudi">
                 <i class="bi bi-x"></i>
               </button>
+            </div>
+
+            <div v-if="reviewError" class="alert error mx-4 mt-3 mb-0 text-start">
+              {{ reviewError }}
             </div>
 
             <div v-if="currentStep === 1" class="review-body">

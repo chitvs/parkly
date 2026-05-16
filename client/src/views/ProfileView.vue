@@ -25,6 +25,10 @@ const formData = reactive({ nome: '', cognome: '', nomeUtente: '', email: '', te
 const pwdCurrent = ref('')
 const pwdNew = ref('')
 const pwdConfirm = ref('')
+const pwdError = ref(false)
+const pwdGeneralError = ref('')
+const pwdSuccessMessage = ref('')
+const profileMessage = ref(null)
 const modalPwdElement = ref(null)
 let modalPwdInstance = null
 
@@ -55,7 +59,7 @@ onMounted(async () => {
     originalData.value = { ...datiDalServer }
     Object.assign(formData, datiDalServer)
   } else {
-    alert(response.error || "Impossibile caricare il profilo")
+    profileMessage.value = { tipo: 'error', testo: response.error || "Impossibile caricare il profilo" }
   }
 })
 
@@ -80,16 +84,18 @@ const handleSave = async () => {
     const response = await authStore.updateProfile(formData)
     if (response.success) {
       originalData.value = { ...formData }
-      alert("Modifiche salvate con successo!")
+      profileMessage.value = { tipo: 'success', testo: "Modifiche salvate con successo!" }
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     } else {
-      alert(response.error || "Errore durante il salvataggio dei dati.")
+      profileMessage.value = { tipo: 'error', testo: response.error || "Errore durante il salvataggio dei dati." }
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     }
   } catch (error) {
-    alert("Errore imprevisto.")
+    profileMessage.value = { tipo: 'error', testo: "Errore imprevisto." }
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 }
 
-//salvo la nuova foto profilo
 //salvo la nuova foto profilo
 const handleFileUpload = async (event) => {
   const file = event.target.files[0];
@@ -103,15 +109,18 @@ const handleFileUpload = async (event) => {
     const result = await authStore.uploadAvatar(data);
 
     if (result.success) {
-      // Aggiorna solo le variabili locali del form, lo store ha già aggiornato il localStorage e i dati globali
       formData.fotoProfilo_URL = result.url;
       originalData.value.fotoProfilo_URL = result.url;
-      alert("Foto profilo aggiornata!");
+      if (authStore.utente) {
+        authStore.utente.fotoProfilo_URL = result.url;
+        localStorage.setItem('utente', JSON.stringify(authStore.utente)); 
+      }
+      profileMessage.value = { tipo: 'success', testo: "Foto profilo aggiornata!" };
     } else {
-      alert(result.error || "Errore durante il caricamento.");
+      profileMessage.value = { tipo: 'error', testo: result.error };
     }
   } catch (err) {
-    alert("Errore imprevisto.");
+    profileMessage.value = { tipo: 'error', testo: "Errore durante il caricamento dell'immagine." };
   }
 }
 
@@ -124,10 +133,10 @@ const handleDeleteAccount = async () => {
   if (confermato) {
     const response = await authStore.deleteAccount();
     if (response.success) {
-      alert("Account eliminato con successo. Ci dispiace vederti andare via!");
       router.push('/'); // Rimanda alla home
     } else {
-      alert(response.error || "Errore durante l'eliminazione dell'account.");
+      profileMessage.value = { tipo: 'error', testo: response.error || "Errore durante l'eliminazione dell'account." };
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     }
   }
 };
@@ -170,25 +179,34 @@ const closePwdModal = () => {
 
 // --- LOGICA CAMBIO PASSWORD ---
 const submitChangePassword = async () => {
+  pwdError.value = false;
+  pwdGeneralError.value = '';
+  pwdSuccessMessage.value = '';
+
   if (pwdNew.value !== pwdConfirm.value) {
-    alert("Le nuove password non corrispondono!");
+    pwdError.value = true;
     return;
   }
 
   const response = await authStore.changePassword(pwdCurrent.value, pwdNew.value);
 
   if (response.success) {
-    alert("Password cambiata con successo!");
+    pwdSuccessMessage.value = "Password cambiata con successo!";
     
-    // Chiudi il modal in modo sicuro
-    await closePwdModal();
-    
-    // Pulisci i campi
-    pwdCurrent.value = '';
-    pwdNew.value = '';
-    pwdConfirm.value = '';
+    // Attendi un attimo prima di chiudere il modal per mostrare il messaggio
+    setTimeout(async () => {
+      // Chiudi il modal in modo sicuro
+      await closePwdModal();
+      
+      // Pulisci i campi
+      pwdCurrent.value = '';
+      pwdNew.value = '';
+      pwdConfirm.value = '';
+      pwdSuccessMessage.value = '';
+      pwdGeneralError.value = '';
+    }, 1500);
   } else {
-    alert(response.error || "Errore durante il cambio password.");
+    pwdGeneralError.value = response.error || "Errore durante il cambio password.";
   }
 }
 </script>
@@ -200,6 +218,10 @@ const submitChangePassword = async () => {
     <main class="container py-5 flex-grow-1">
       <div class="row justify-content-center">
         <div class="col-12 col-md-8 col-lg-6">
+
+          <div v-if="profileMessage" :class="['alert', profileMessage.tipo, 'mb-4']">
+            {{ profileMessage.testo }}
+          </div>
           
           <h2 class="fw-bold mb-1 title-color text-center">Il tuo Profilo</h2>
           <p class="text-muted mb-4 text-center">Modifica le tue informazioni personali</p>
@@ -297,6 +319,10 @@ const submitChangePassword = async () => {
           <div class="modal-body px-4 pb-5">
             <p class="text-muted text-center mb-4">Inserisci la tua password attuale per poterne impostare una nuova.</p>
             
+            <div v-if="pwdGeneralError" class="alert error mb-4 text-start">
+              {{ pwdGeneralError }}
+            </div>
+
             <form @submit.prevent="submitChangePassword">
               <div class="mb-3">
                 <div class="input-group password-group">
@@ -319,7 +345,7 @@ const submitChangePassword = async () => {
               </div>
               
               <div class="mb-3 mt-4">
-                <div class="input-group password-group">
+                <div class="input-group password-group" :class="{ 'is-invalid-group': pwdError }">
                   <input
                     :type="showNewPwd ? 'text' : 'password'"
                     class="form-control password-field"
@@ -338,8 +364,8 @@ const submitChangePassword = async () => {
                 </div>
               </div>
               
-              <div class="mb-4">
-                <div class="input-group password-group">
+              <div class="mb-2">
+                <div class="input-group password-group" :class="{ 'is-invalid-group': pwdError }">
                   <input
                     :type="showConfirmPwd ? 'text' : 'password'"
                     class="form-control password-field"
@@ -356,6 +382,14 @@ const submitChangePassword = async () => {
                     <img :src="showConfirmPwd ? eyeClosedUrl : eyeUrl" class="password-icon" />
                   </button>
                 </div>
+              </div>
+              
+              <div v-if="pwdError" class="mb-3">
+                <small class="text-danger ms-1">Le password non corrispondono!</small>
+              </div>
+
+              <div v-if="pwdSuccessMessage" class="alert success mt-3 mb-0">
+                {{ pwdSuccessMessage }}
               </div>
 
               <div class="d-grid mt-4">

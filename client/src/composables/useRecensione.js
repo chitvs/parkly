@@ -6,7 +6,8 @@ export function useRecensione() {
   const showReviewModal = ref(false)
   const currentStep = ref(1)
   const selectedBookingForReview = ref(null)
-  const isEditing = ref(false) 
+  const isEditing = ref(false)
+  const reviewError = ref('')
 
   // 2. Dati del form
   const recensioneForm = ref({
@@ -30,6 +31,7 @@ export function useRecensione() {
 
   // 4. Azioni
   const iniziaRecensione = (booking, starValue) => {
+    reviewError.value = ''
     selectedBookingForReview.value = booking
     isEditing.value = false
     
@@ -45,6 +47,7 @@ export function useRecensione() {
 
   // Apre la modale pre-compilando i dati
   const apriModifica = async (booking) => {
+    reviewError.value = ''
     selectedBookingForReview.value = booking
     isEditing.value = true
     currentStep.value = 1
@@ -65,8 +68,7 @@ export function useRecensione() {
         sicurezza: rec.votosicurezza
       }
     } else {
-      alert("Impossibile caricare i dati della recensione.")
-      chiudiModale()
+      reviewError.value = "Impossibile caricare i dati della recensione."
     }
   }
 
@@ -75,6 +77,7 @@ export function useRecensione() {
   }
 
   const inviaRecensione = async () => {
+    reviewError.value = ''
     const payload = {
       id_prenotazione: selectedBookingForReview.value.id_prenotazione,
       id_garage: selectedBookingForReview.value.id_garage,
@@ -95,15 +98,16 @@ export function useRecensione() {
     if (response.success) {
       currentStep.value = 3
     } else {
-      alert(response.error || "Si è verificato un errore durante l'invio della recensione.")
+      reviewError.value = response.error || "Si è verificato un errore durante l'invio della recensione."
     }
   }
 
   // Elimina la recensione corrente
   const eliminaRecensione = async () => {
-    const conferma = confirm("Sei sicuro di voler eliminare definitivamente questa recensione?")
+    const conferma = window.confirm("Sei sicuro di voler eliminare definitivamente questa recensione?")
     if (!conferma) return false
 
+    reviewError.value = ''
     const { id_prenotazione, id_utente, id_garage } = selectedBookingForReview.value
     const response = await recensioniStore.deleteReview(id_prenotazione, id_utente, id_garage)
 
@@ -111,7 +115,7 @@ export function useRecensione() {
       chiudiModale()
       return true
     } else {
-      alert(response.error || "Errore durante l'eliminazione.")
+      reviewError.value = response.error || "Errore durante l'eliminazione."
       return false
     }
   }
@@ -127,6 +131,7 @@ export function useRecensione() {
     apriModifica, 
     chiudiModale,
     inviaRecensione,
-    eliminaRecensione
+    eliminaRecensione,
+    reviewError
   }
 }

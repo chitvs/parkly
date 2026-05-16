@@ -18,12 +18,19 @@ const password = ref('')
 const passwordConfirm = ref('')
 const isPasswordVisible1 = ref(false)
 const isPasswordVisible2 = ref(false)
+const passwordError = ref(false)
+const generalError = ref('')
+const successMessage = ref('')
 
 const router = useRouter()
 
 const handleRegister = async () => {
+  passwordError.value = false
+  generalError.value = ''
+  successMessage.value = ''
+
   if (password.value !== passwordConfirm.value) {
-    alert('Le password non corrispondono!')
+    passwordError.value = true
     return
   }
 
@@ -41,10 +48,12 @@ const handleRegister = async () => {
 
   if (data.success) {
     console.log('Registrazione e login automatico riusciti')
-    alert('Registrazione avvenuta con successo.')
-    router.push('/')
+    successMessage.value = 'Registrazione avvenuta con successo.'
+    setTimeout(() => {
+      router.push('/')
+    }, 1500)
   } else {
-    alert(data.error || 'Errore durante la registrazione')
+    generalError.value = data.error || 'Errore durante la registrazione'
   }
 }
 </script>
@@ -79,6 +88,13 @@ const handleRegister = async () => {
 
               <!-- Divisore -->
               <hr class="custom-divider mb-4" />
+
+              <div v-if="generalError" class="alert error mb-4">
+                {{ generalError }}
+              </div>
+              <div v-if="successMessage" class="alert success mb-4">
+                {{ successMessage }}
+              </div>
 
               <form @submit.prevent="handleRegister">
                 <!-- Dati Personali -->
@@ -116,7 +132,7 @@ const handleRegister = async () => {
 
                 <div class="row g-3 mb-4">
                   <div class="col-md-6">
-                    <div class="input-group password-group">
+                    <div class="input-group password-group" :class="{ 'is-invalid-group': passwordError }">
                       <input :type="isPasswordVisible1 ? 'text' : 'password'" class="form-control password-field" id="password" placeholder="Password" v-model="password" required />
                       <button class="btn toggle-password-btn" type="button" @click="isPasswordVisible1 = !isPasswordVisible1" tabindex="-1">
                         <img :src="isPasswordVisible1 ? eyeClosedUrl : eyeUrl" class="password-icon" alt="Toggle Password" />
@@ -124,12 +140,15 @@ const handleRegister = async () => {
                     </div>
                   </div>
                   <div class="col-md-6">
-                    <div class="input-group password-group">
+                    <div class="input-group password-group" :class="{ 'is-invalid-group': passwordError }">
                       <input :type="isPasswordVisible2 ? 'text' : 'password'" class="form-control password-field" id="passwordConfirm" placeholder="Ripeti Password" v-model="passwordConfirm" required />
                       <button class="btn toggle-password-btn" type="button" @click="isPasswordVisible2 = !isPasswordVisible2" tabindex="-1">
                         <img :src="isPasswordVisible2 ? eyeClosedUrl : eyeUrl" class="password-icon" alt="Toggle Password" />
                       </button>
                     </div>
+                  </div>
+                  <div v-if="passwordError" class="col-12 mt-1">
+                    <small class="text-danger ms-1">Le password non corrispondono!</small>
                   </div>
                 </div>
 
