@@ -32,7 +32,7 @@ const isMenuOpen = ref(false)
 const isPasswordVisible = ref(false)
 
 watch([loginIdentificatore, loginPassword], ([newId, newPwd]) => {
-  if (newId === '' && newPwd === '') {
+  if ((newId === '' && newPwd === '') || newPwd==='') {
     loginError.value = ''
   }
 })

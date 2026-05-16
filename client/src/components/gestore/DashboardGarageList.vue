@@ -1,7 +1,9 @@
 <script setup>
+import { ref, computed, watch } from 'vue'
 import { RouterLink } from 'vue-router'
+import Pagination from '../Pagination.vue' 
 
-defineProps({
+const props = defineProps({
     mieiGarage: {
         type: Array,
         required: true
@@ -9,6 +11,23 @@ defineProps({
 })
 
 defineEmits(['modifica'])
+
+// Logica paginazione
+const paginaCorrente = ref(1)
+const elementiPerPagina = ref(5)
+
+const mieiGaragePaginati = computed(() => {
+    const inizio = (paginaCorrente.value - 1) * elementiPerPagina.value
+    return props.mieiGarage.slice(inizio, inizio + elementiPerPagina.value)
+})
+
+const scrollInAlto = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+watch(() => props.mieiGarage, () => {
+    paginaCorrente.value = 1
+}, { deep: true })
 </script>
 
 <template>
@@ -32,7 +51,7 @@ defineEmits(['modifica'])
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="garage in mieiGarage" :key="garage.id_garage">
+                    <tr v-for="garage in mieiGaragePaginati" :key="garage.id_garage">
                         <td class="td-muted">#{{ garage.id_garage }}</td>
                         <td class="td-bold">
                             <div class="d-flex align-items-center gap-2">
@@ -59,6 +78,14 @@ defineEmits(['modifica'])
                     </tr>
                 </tbody>
             </table>
+        </div> 
+        <div class="pagination-container mt-4" v-if="mieiGarage.length > 0">
+            <Pagination 
+                v-model:paginaCorrente="paginaCorrente" 
+                v-model:elementiPerPagina="elementiPerPagina"
+                :totaleElementi="mieiGarage.length" 
+                @cambio-pagina="scrollInAlto"
+            />
         </div>
     </section>
 </template>
@@ -212,5 +239,8 @@ defineEmits(['modifica'])
 .badge--red {
     background: #FDEDEC;
     color: #C0392B;
+}
+.mt-4 {
+    margin-top: 1.5rem;
 }
 </style>
