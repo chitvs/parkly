@@ -80,14 +80,57 @@ const handleCercaZona = async () => {
     } else { erroriValidazione.value.coordinate = res.error }
 }
 
+const inputCodicePosto = ref(null)
+const errorePosto = ref('') 
+
 const handleAggiungiPosto = () => {
+    const codiceAttuale = nuovoPosto.value.codice
+
     const res = aggiungiPostoConfigurato()
-    if (res && !res.success) alert(res.error)
+
+    if (res && !res.success) {
+        errorePosto.value = res.error 
+    } else {
+        errorePosto.value = ''
+
+        const match = codiceAttuale.match(/^([a-zA-Z\s\-_]+)(\d+)$/)
+        if (match) {
+            const prefisso = match[1]
+            const numero = parseInt(match[2], 10)
+            const padding = match[2].length 
+            nuovoPosto.value.codice = `${prefisso}${String(numero + 1).padStart(padding, '0')}`
+        }
+
+        if (inputCodicePosto.value) {
+            inputCodicePosto.value.focus()
+        }
+    }
 }
 
 const handleCellaClick = (r, c) => {
+    const strumentoUtilizzato = strumentoAttivo.value
+
     const res = clickCella(r, c)
-    if (res && !res.success) alert(res.error)
+    
+    if (res && !res.success) {
+        alert(res.error) 
+        return 
+    }
+
+    if (strumentoUtilizzato && strumentoUtilizzato !== 'GOMMA') {
+        const indiceAttuale = postiConfigurati.value.findIndex(p => p.codice === strumentoUtilizzato.codice)
+        
+        if (indiceAttuale !== -1) {
+            for (let i = indiceAttuale + 1; i < postiConfigurati.value.length; i++) {
+                const prossimoPosto = postiConfigurati.value[i]
+                
+                if (!codiciPosizionati.value.has(prossimoPosto.codice)) {
+                    selezionaStrumento(prossimoPosto)
+                    break
+                }
+            }
+        }
+    }
 }
 
 const validaForm = () => {
@@ -126,7 +169,7 @@ const validaForm = () => {
     }
 
     if (!g.latitudine || !g.longitudine) errori.coordinate = 'Clicca sulla mappa per catturare le coordinate esatte.'
-    
+
     // Validazione tariffe
     if (!g.tariffabase || g.tariffabase <= 0) errori.tariffabase = 'La tariffa auto è obbligatoria e > 0.'
 
@@ -154,6 +197,44 @@ const validaForm = () => {
 
     erroriValidazione.value = errori
     return Object.keys(errori).length === 0
+}
+
+const verificaRidimensionamento = (tipo) => {
+    const nuovoValore = dimensioniMappa.value[tipo]
+
+    const righeAttuali = griglia.value.length
+    const colonneAttuali = righeAttuali > 0 ? griglia.value[0].length : 0
+    let occupato = false
+
+    if (tipo === 'righe' && nuovoValore < righeAttuali) {
+        for (let r = nuovoValore; r < righeAttuali; r++) {
+            for (let c = 0; c < colonneAttuali; c++) {
+                if (griglia.value[r] && griglia.value[r][c]) {
+                    occupato = true
+                    break
+                }
+            }
+            if (occupato) break
+        }
+    }
+    else if (tipo === 'colonne' && nuovoValore < colonneAttuali) {
+        for (let r = 0; r < righeAttuali; r++) {
+            for (let c = nuovoValore; c < colonneAttuali; c++) {
+                if (griglia.value[r] && griglia.value[r][c]) {
+                    occupato = true
+                    break
+                }
+            }
+            if (occupato) break
+        }
+    }
+
+    if (occupato) {
+        alert("Impossibile ridurre le dimensioni: l'area da rimuovere contiene dei posti. Usa prima lo strumento Gomma per cancellarli.")
+        dimensioniMappa.value[tipo] = tipo === 'righe' ? righeAttuali : colonneAttuali
+    } else {
+        ridimensionaGriglia()
+    }
 }
 
 const inviaDati = () => {
@@ -209,7 +290,8 @@ const inviaDati = () => {
                         <label class="form-label">Civico*</label>
                         <input type="text" :class="['form-input', { 'input-error': erroriValidazione.civico }]"
                             v-model="localGarage.civico" placeholder="Es. 10">
-                        <span v-if="erroriValidazione.civico" class="form-error-text">{{ erroriValidazione.civico }}</span>
+                        <span v-if="erroriValidazione.civico" class="form-error-text">{{ erroriValidazione.civico
+                        }}</span>
                     </div>
                 </div>
 
@@ -218,7 +300,7 @@ const inviaDati = () => {
                         <label class="form-label">CAP*</label>
                         <!-- Forza solo numeri e massimo 5 caratteri -->
                         <input type="text" :class="['form-input', { 'input-error': erroriValidazione.cap }]"
-                            v-model="localGarage.cap" 
+                            v-model="localGarage.cap"
                             @input="localGarage.cap = localGarage.cap.replace(/\D/g, '').slice(0, 5)"
                             placeholder="Es. 00100">
                         <span v-if="erroriValidazione.cap" class="form-error-text">{{ erroriValidazione.cap }}</span>
@@ -227,19 +309,20 @@ const inviaDati = () => {
                         <label class="form-label">Città*</label>
                         <!-- impedisce l'inserimento di numeri -->
                         <input type="text" :class="['form-input', { 'input-error': erroriValidazione.citta }]"
-                            v-model="localGarage.citta" 
-                            @input="localGarage.citta = localGarage.citta.replace(/\d/g, '')"
-                            placeholder="Es. Roma">
-                        <span v-if="erroriValidazione.citta" class="form-error-text">{{ erroriValidazione.citta }}</span>
+                            v-model="localGarage.citta"
+                            @input="localGarage.citta = localGarage.citta.replace(/\d/g, '')" placeholder="Es. Roma">
+                        <span v-if="erroriValidazione.citta" class="form-error-text">{{ erroriValidazione.citta
+                        }}</span>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Provincia (Sigla)*</label>
                         <!-- Forza maiuscolo, solo lettere e massimo 2 caratteri -->
                         <input type="text" :class="['form-input', { 'input-error': erroriValidazione.provincia }]"
-                            v-model="localGarage.provincia" 
+                            v-model="localGarage.provincia"
                             @input="localGarage.provincia = localGarage.provincia.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 2)"
                             placeholder="Es. RM">
-                        <span v-if="erroriValidazione.provincia" class="form-error-text">{{ erroriValidazione.provincia }}</span>
+                        <span v-if="erroriValidazione.provincia" class="form-error-text">{{ erroriValidazione.provincia
+                        }}</span>
                     </div>
                 </div>
 
@@ -286,15 +369,10 @@ const inviaDati = () => {
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">Foto del Garage (Max 10)</label>
-                        <input 
-                            type="file" 
-                            multiple 
-                            accept="image/*" 
-                            class="form-input" 
-                            style="padding: 10px;" 
-                            @change="handleFotoSelezionate"
-                        >
-                        <span class="form-hint">Puoi selezionare più immagini contemporaneamente (es. tenendo premuto CTRL o CMD).</span>
+                        <input type="file" multiple accept="image/*" class="form-input" style="padding: 10px;"
+                            @change="handleFotoSelezionate">
+                        <span class="form-hint">Puoi selezionare più immagini contemporaneamente (es. tenendo premuto
+                            CTRL o CMD).</span>
                     </div>
                 </div>
 
@@ -307,21 +385,24 @@ const inviaDati = () => {
                         <input type="number" step="0.50" min="0"
                             :class="['form-input', { 'input-error': erroriValidazione.tariffabase }]"
                             v-model="localGarage.tariffabase" placeholder="Es. 2.50">
-                        <span v-if="erroriValidazione.tariffabase" class="form-error-text">{{ erroriValidazione.tariffabase }}</span>
+                        <span v-if="erroriValidazione.tariffabase" class="form-error-text">{{
+                            erroriValidazione.tariffabase }}</span>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Tariffa Moto (€/h)</label>
                         <input type="number" step="0.50" min="0"
                             :class="['form-input', { 'input-error': erroriValidazione.tariffamoto }]"
                             v-model="localGarage.tariffamoto" placeholder="Opzionale">
-                        <span v-if="erroriValidazione.tariffamoto" class="form-error-text">{{ erroriValidazione.tariffamoto }}</span>
+                        <span v-if="erroriValidazione.tariffamoto" class="form-error-text">{{
+                            erroriValidazione.tariffamoto }}</span>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Tariffa Furgone (€/h)</label>
                         <input type="number" step="0.50" min="0"
                             :class="['form-input', { 'input-error': erroriValidazione.tariffafurgone }]"
                             v-model="localGarage.tariffafurgone" placeholder="Opzionale">
-                        <span v-if="erroriValidazione.tariffafurgone" class="form-error-text">{{ erroriValidazione.tariffafurgone }}</span>
+                        <span v-if="erroriValidazione.tariffafurgone" class="form-error-text">{{
+                            erroriValidazione.tariffafurgone }}</span>
                     </div>
                 </div>
 
@@ -331,14 +412,16 @@ const inviaDati = () => {
                         <input type="number" step="0.50" min="0"
                             :class="['form-input', { 'input-error': erroriValidazione.sovrapprezzoelettrica }]"
                             v-model="localGarage.sovrapprezzoelettrica" placeholder="Es. 2.00">
-                        <span v-if="erroriValidazione.sovrapprezzoelettrica" class="form-error-text">{{ erroriValidazione.sovrapprezzoelettrica }}</span>
+                        <span v-if="erroriValidazione.sovrapprezzoelettrica" class="form-error-text">{{
+                            erroriValidazione.sovrapprezzoelettrica }}</span>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Sconto Disabili (-€/h)</label>
                         <input type="number" step="0.50" min="0"
                             :class="['form-input', { 'input-error': erroriValidazione.scontodisabili }]"
                             v-model="localGarage.scontodisabili" placeholder="Es. 1.00">
-                        <span v-if="erroriValidazione.scontodisabili" class="form-error-text">{{ erroriValidazione.scontodisabili }}</span>
+                        <span v-if="erroriValidazione.scontodisabili" class="form-error-text">{{
+                            erroriValidazione.scontodisabili }}</span>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Altezza Massima (m)</label>
@@ -373,8 +456,12 @@ const inviaDati = () => {
                     <div class="form-group">
                         <label class="form-label">Codice</label>
                         <input type="text" class="form-input" v-model="nuovoPosto.codice" placeholder="Es. A01"
-                            @input="autoCompilaPosto" @keyup.enter="handleAggiungiPosto">
+                            ref="inputCodicePosto" @input="autoCompilaPosto" @keyup.enter="handleAggiungiPosto">
                     </div>
+                    <span v-if="errorePosto" class="form-error-text"
+                        style="grid-column: 1 / -1; margin-top: -10px; margin-bottom: 10px;">
+                        {{ errorePosto }}
+                    </span>
                     <div class="form-group">
                         <label class="form-label">Veicolo</label>
                         <select class="form-input" v-model="nuovoPosto.tipo">
@@ -397,8 +484,13 @@ const inviaDati = () => {
                 </div>
 
                 <div class="posti-list vertical-grid" v-if="postiConfigurati.length > 0">
-                    <div v-for="(posto, index) in postiConfigurati" :key="index" class="posto-card">
+                    <div v-for="(posto, index) in postiConfigurati" :key="index" class="posto-card"
+                        :style="codiciPosizionati.has(posto.codice) ? 'border-left: 4px solid #2ecc71;' : 'border-left: 4px solid #e74c3c;'">
+
                         <div class="posto-info">
+                            <span style="font-size: 0.7rem; color: #777;">
+                                <i class="bi"></i>
+                            </span>
                             <span class="posto-codice">{{ posto.codice }}</span>
                             <span class="posto-tipo">{{ posto.tipo }}</span>
                             <div class="posto-icons">
@@ -430,12 +522,12 @@ const inviaDati = () => {
                     <div class="form-group">
                         <label class="form-label">Larghezza (Unità)</label>
                         <input type="number" class="form-input" v-model.number="dimensioniMappa.colonne"
-                            @change="ridimensionaGriglia" min="1" max="30">
+                            @change="verificaRidimensionamento('colonne')" min="1" max="30">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Altezza (Unità)</label>
                         <input type="number" class="form-input" v-model.number="dimensioniMappa.righe"
-                            @change="ridimensionaGriglia" min="1" max="30">
+                            @change="verificaRidimensionamento('righe')" min="1" max="30">
                     </div>
                 </div>
 
@@ -443,8 +535,7 @@ const inviaDati = () => {
                     <div class="tavolozza">
                         <span class="tavolozza-label">Strumento attivo:</span>
                         <button type="button" class="tool-btn btn-gomma"
-                            :class="{ active: strumentoAttivo === 'GOMMA' }"
-                            @click="strumentoAttivo = 'GOMMA'">
+                            :class="{ active: strumentoAttivo === 'GOMMA' }" @click="strumentoAttivo = 'GOMMA'">
                             <i class="bi bi-eraser"></i>
                             Gomma</button>
                         <button type="button" v-for="posto in postiConfigurati" :key="posto.codice" class="tool-btn"
@@ -458,7 +549,7 @@ const inviaDati = () => {
                 <div class="canvas-wrapper d-flex justify-content-center w-100">
                     <div class="canvas-griglia"
                         :style="{ gridTemplateColumns: `repeat(${dimensioniMappa.colonne}, 35px)` }">
-                        <template v-for="(riga, r) in griglia" :key="'r-'+r">
+                        <template v-for="(riga, r) in griglia" :key="'r-' + r">
                             <div v-for="(cella, c) in riga" :key="'c-' + r + '-' + c" class="cella-canvas"
                                 :class="{ occupata: cella, root: cella?.isRoot }" @click="handleCellaClick(r, c)">
                                 <span v-if="cella?.isRoot">{{ cella.codice }}</span>
@@ -490,7 +581,6 @@ const inviaDati = () => {
 </template>
 
 <style scoped>
-
 /* Ripristino esatto del CSS originale della form */
 .vista {
     animation: fadeIn 0.25s ease;
