@@ -337,19 +337,19 @@ watch(paginaRecensioniCorrente, () => {
                         <div class="price-line" v-if="tariffePerVeicolo['MOTO']">
                             <span class="v-tipo">Moto</span>
                             <span class="prezzo-valore-small">€{{ tariffePerVeicolo['MOTO'].toFixed(2)
-                            }}<span>/h</span></span>
+                                }}<span>/h</span></span>
                         </div>
 
                         <div class="price-line" v-if="tariffePerVeicolo['AUTO']">
                             <span class="v-tipo">Auto</span>
                             <span class="prezzo-valore-small">€{{ tariffePerVeicolo['AUTO'].toFixed(2)
-                            }}<span>/h</span></span>
+                                }}<span>/h</span></span>
                         </div>
 
                         <div class="price-line" v-if="tariffePerVeicolo['FURGONE']">
                             <span class="v-tipo">Furgone</span>
                             <span class="prezzo-valore-small">€{{ tariffePerVeicolo['FURGONE'].toFixed(2)
-                            }}<span>/h</span></span>
+                                }}<span>/h</span></span>
                         </div>
 
                         <div class="special-rates-container" v-if="sovrapprezzoElettrica || scontoDisabili">
@@ -400,60 +400,66 @@ watch(paginaRecensioniCorrente, () => {
                         </div>
                         <div class="card-body">
 
-                            <div class="reviews-top-row">
-                                <div class="overall-rating-header">
-                                    <h2 class="rating-number">{{ Number(garageStore.currentGarage.mediagenerale).toFixed(2) }}</h2>
+                            <div v-if="garageStore.recensioni.length > 0">
 
-                                    <div class="average-stars">
-                                        <i v-for="i in 5" :key="i" class="bi" :class="[
-                                            garageStore.currentGarage.mediagenerale >= i ? 'bi-star-fill star--on' :
-                                                garageStore.currentGarage.mediagenerale >= i - 0.5 ? 'bi-star-half star--on' :
-                                                    'bi-star star--off'
-                                        ]">
-                                        </i>
+                                <div class="reviews-top-row">
+                                    <div class="overall-rating-header">
+                                        <h2 class="rating-number">{{
+                                            Number(garageStore.currentGarage.mediagenerale).toFixed(2) }}</h2>
+
+                                        <div class="average-stars">
+                                            <i v-for="i in 5" :key="i" class="bi" :class="[
+                                                garageStore.currentGarage.mediagenerale >= i ? 'bi-star-fill star--on' :
+                                                    garageStore.currentGarage.mediagenerale >= i - 0.5 ? 'bi-star-half star--on' :
+                                                        'bi-star star--off'
+                                            ]">
+                                            </i>
+                                        </div>
+
+                                        <span class="reviews-count">
+                                            {{ garageStore.recensioni.length }} recensioni
+                                        </span>
                                     </div>
 
-                                    <span class="reviews-count">
-                                        {{ garageStore.recensioni.length }} recensioni
-                                    </span>
-                                </div>
-
-                                <div class="rating-ladder" v-if="garageStore.recensioni.length > 0">
-                                    <div v-for="star in 5" :key="star" class="ladder-row">
-                                        <span class="ladder-num">{{ 6 - star }}</span>
-                                        <div class="ladder-bar-bg">
-                                            <div class="ladder-bar-fill"
-                                                :style="{ width: distribuzioneVoti[6 - star] + '%' }">
+                                    <div class="rating-ladder">
+                                        <div v-for="star in 5" :key="star" class="ladder-row">
+                                            <span class="ladder-num">{{ 6 - star }}</span>
+                                            <div class="ladder-bar-bg">
+                                                <div class="ladder-bar-fill"
+                                                    :style="{ width: distribuzioneVoti[6 - star] + '%' }">
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <hr class="reviews-divider">
+                                <hr class="reviews-divider">
 
-                            <div v-if="garageStore.recensioni.length > 0">
-                                
                                 <div class="categories-grid">
                                     <div class="category-item">
                                         <span class="cat-label"><i class="bi bi-geo-alt"></i> Posizione</span>
-                                        <span class="cat-val">{{ Number(garageStore.currentGarage.mediaposizione).toFixed(1) }}</span>
+                                        <span class="cat-val">{{
+                                            Number(garageStore.currentGarage.mediaposizione).toFixed(1) }}</span>
                                     </div>
                                     <div class="category-item">
                                         <span class="cat-label"><i class="bi bi-tag"></i> Prezzo</span>
-                                        <span class="cat-val">{{ Number(garageStore.currentGarage.mediaprezzo).toFixed(1) }}</span>
+                                        <span class="cat-val">{{
+                                            Number(garageStore.currentGarage.mediaprezzo).toFixed(1) }}</span>
                                     </div>
                                     <div class="category-item">
                                         <span class="cat-label"><i class="bi bi-stars"></i> Pulizia</span>
-                                        <span class="cat-val">{{ Number(garageStore.currentGarage.mediapulizia).toFixed(1) }}</span>
+                                        <span class="cat-val">{{
+                                            Number(garageStore.currentGarage.mediapulizia).toFixed(1) }}</span>
                                     </div>
                                     <div class="category-item">
                                         <span class="cat-label"><i class="bi bi-car-front"></i> Spazio di manovra</span>
-                                        <span class="cat-val">{{ Number(garageStore.currentGarage.mediaspazio).toFixed(1) }}</span>
+                                        <span class="cat-val">{{
+                                            Number(garageStore.currentGarage.mediaspazio).toFixed(1) }}</span>
                                     </div>
                                     <div class="category-item">
                                         <span class="cat-label"><i class="bi bi-shield-check"></i> Sicurezza</span>
-                                        <span class="cat-val">{{ Number(garageStore.currentGarage.mediasicurezza).toFixed(1) }}</span>
+                                        <span class="cat-val">{{
+                                            Number(garageStore.currentGarage.mediasicurezza).toFixed(1) }}</span>
                                     </div>
                                 </div>
 
@@ -467,7 +473,7 @@ watch(paginaRecensioniCorrente, () => {
                                                         <img v-if="recensione.fotoprofilo_url"
                                                             :src="recensione.fotoprofilo_url" alt="User avatar">
                                                         <span v-else>{{ recensione.nome.charAt(0).toUpperCase()
-                                                        }}</span>
+                                                            }}</span>
                                                     </div>
 
                                                     <div class="user-info">
@@ -499,8 +505,7 @@ watch(paginaRecensioniCorrente, () => {
                                             </div>
                                         </div>
 
-                                        <div class="pagination-wrapper mt-5 d-flex justify-content-center"
-                                            v-if="garageStore.recensioni.length > 0">
+                                        <div class="pagination-wrapper mt-5 d-flex justify-content-center">
                                             <Pagination compact v-model:paginaCorrente="paginaRecensioniCorrente"
                                                 v-model:elementiPerPagina="recensioniPerPagina"
                                                 :totaleElementi="garageStore.recensioni.length" />
@@ -510,8 +515,10 @@ watch(paginaRecensioniCorrente, () => {
 
                             </div>
 
-                            <div v-else class="empty-reviews text-center py-4 text-muted">
-                                Nessuna recensione presente al momento. Sii il primo a prenotare e recensire!
+                            <div v-else class="empty-reviews text-center py-5 text-muted">
+                                <i class="bi bi-chat-left-dots"
+                                    style="font-size: 2.5rem; color: #cbd5e1; display: block; "></i>
+                                Nessuna recensione presente al momento.<br>Sii il primo a recensire!
                             </div>
 
                         </div>
@@ -1065,7 +1072,7 @@ watch(paginaRecensioniCorrente, () => {
     justify-content: center;
     align-items: center;
     flex-wrap: wrap;
-    gap: 80px; 
+    gap: 80px;
     margin-bottom: 32px;
     padding: 16px 16px;
     background-color: #FAFAFA;
@@ -1124,8 +1131,8 @@ watch(paginaRecensioniCorrente, () => {
 }
 
 .rating-ladder {
-    width: 100%; 
-    max-width: 280px; 
+    width: 100%;
+    max-width: 280px;
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -1161,37 +1168,44 @@ watch(paginaRecensioniCorrente, () => {
 
 .categories-grid {
     display: grid;
-    /* Forza esattamente 5 colonne della stessa larghezza */
-    grid-template-columns: repeat(5, 1fr); 
-    gap: 16px; /* Spazio ridotto tra gli elementi per farli entrare tutti */
+    grid-template-columns: repeat(5, 1fr);
     width: 100%;
 }
 
 .category-item {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    padding-left: 16px; /* Padding leggermente ridotto */
     border-left: 1px solid #f1f5f9;
+    height: 100%;
+    text-align: center;
+}
+
+.category-item:first-child {
+    border-left: none;
 }
 
 .cat-label {
     font-size: 0.85rem;
     color: #64748b;
+    line-height: 1.3;
     display: flex;
-    align-items: center;
-    gap: 8px;
+    align-items: center;      
+    justify-content: center;  
+    gap: 6px;
 }
 
 .cat-label i {
     font-size: 1.1rem;
     color: var(--text-dark);
+    text-align: center;
 }
 
 .cat-val {
     font-size: 1.4rem;
     font-weight: 700;
     color: var(--text-dark);
+    margin-top: auto; 
+    text-align: center;
 }
 
 .user-comments-section {
@@ -1211,10 +1225,10 @@ watch(paginaRecensioniCorrente, () => {
     display: flex;
     flex-direction: column;
     min-width: 0;
-    background-color: #fafafa; 
-    border: 1px solid #e2e8f0; 
-    border-radius: 16px;       
-    padding: 24px;             
+    background-color: #fafafa;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 24px;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 
 }
@@ -1410,5 +1424,4 @@ watch(paginaRecensioniCorrente, () => {
     top: 100px;
     height: max-content;
 }
-
 </style>

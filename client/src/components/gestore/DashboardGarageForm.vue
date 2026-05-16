@@ -430,12 +430,12 @@ const inviaDati = () => {
                     <div class="form-group">
                         <label class="form-label">Larghezza (Unità)</label>
                         <input type="number" class="form-input" v-model.number="dimensioniMappa.colonne"
-                            @change="ridimensionaGriglia" min="2" max="30">
+                            @change="ridimensionaGriglia" min="1" max="30">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Altezza (Unità)</label>
                         <input type="number" class="form-input" v-model.number="dimensioniMappa.righe"
-                            @change="ridimensionaGriglia" min="2" max="30">
+                            @change="ridimensionaGriglia" min="1" max="30">
                     </div>
                 </div>
 
