@@ -415,7 +415,7 @@ const formattaDataLeggibile = (dataIso) => {
         <div class="modal-content parkly-modal">
           <div class="modal-header border-0">
             <h5 class="modal-title modal-title-text" id="infoModalLabel">
-              <i class="bi bi-info-circle me-2"></i>Guida alla pubblicazione
+              <i class="bi bi-info-circle me-2"></i> Guida alla pubblicazione
             </h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
@@ -845,17 +845,7 @@ const formattaDataLeggibile = (dataIso) => {
   }
 }
 
-.parkly-modal {
-  border-radius: 24px;
-  border: none;
-  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.2);
-}
 
-.modal-title-text {
-  font-weight: 700;
-  color: #00408a;
-  font-size: 1.3rem;
-}
 
 .info-list {
   padding-left: 20px;
@@ -951,30 +941,7 @@ const formattaDataLeggibile = (dataIso) => {
   opacity: 0;
 }
 
-.review-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(2, 8, 23, 0.55);
-  backdrop-filter: blur(5px) saturate(130%);
-  -webkit-backdrop-filter: blur(5px) saturate(130%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10500;
-  padding: 1.25rem;
-}
 
-.review-modal {
-  background: #ffffff;
-  width: 100%;
-  max-width: 480px;
-  border-radius: 28px;
-  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.2), 0 8px 24px rgba(0, 0, 0, 0.06);
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
 
 .review-topbar {
   display: flex;
@@ -1032,19 +999,7 @@ const formattaDataLeggibile = (dataIso) => {
   margin-bottom: 1rem;
 }
 
-.modal-title {
-  font-size: 1.45rem;
-  font-weight: 800;
-  color: #0f172a;
-  margin-bottom: 0.35rem;
-}
 
-.modal-sub {
-  font-size: 0.88rem;
-  color: #64748b;
-  margin-bottom: 1.1rem;
-  line-height: 1.4;
-}
 
 .field-label {
   display: flex;
@@ -1079,39 +1034,6 @@ const formattaDataLeggibile = (dataIso) => {
   outline: none;
 }
 
-.cta-btn {
-  padding: 14px 24px;
-  color: #fff;
-  border: none;
-  border-radius: 14px;
-  font-size: 0.92rem;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-}
-
-.cta-btn:disabled {
-  opacity: 0.38;
-  cursor: not-allowed;
-}
-
-.cta-btn--ghost {
-  background: transparent;
-  color: #00408A;
-  border: 1.5px solid rgba(0, 64, 138, 0.18);
-}
-
-.cta-btn--danger {
-  background: #dc3545;
-}
-
-.cta-btn--danger:hover:not(:disabled) {
-  background: #c82333;
-  box-shadow: 0 8px 24px rgba(220, 53, 69, 0.3);
-}
 
 .max-h-150 {
   max-height: 150px;

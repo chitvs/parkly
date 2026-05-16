@@ -265,48 +265,6 @@ const handleRegister = async () => {
   outline: none;
 }
 
-.password-group {
-  border: 1px solid #e0e0e0;
-  border-radius: 12px;
-  overflow: hidden;
-  background-color: #f8fafc;
-  transition: all 0.2s ease;
-  height: 52px;
-}
-
-.password-group:focus-within {
-  border-color: #00408a;
-  box-shadow: 0 0 0 3px rgba(0, 64, 138, 0.1);
-  background-color: #ffffff;
-}
-
-.password-field {
-  border: none !important;
-  box-shadow: none !important;
-  background: transparent !important;
-  font-size: 15px;
-  padding: 10px 18px;
-  height: 100%;
-}
-
-.toggle-password-btn {
-  border: none !important;
-  box-shadow: none !important;
-  background: transparent !important;
-  align-items: center;
-  padding: 0.5rem;
-}
-
-.password-icon {
-  width: 20px;
-  height: 20px;
-  opacity: 0.6;
-  transition: opacity 0.2s;
-}
-
-.toggle-password-btn:hover .password-icon {
-  opacity: 0.9;
-}
 
 .register-btn.btn-primary,
 .register-btn {

@@ -1,0 +1,235 @@
+/* ==========================================================================
+   PARKLY UNIFIED MODALS & POPUPS
+   ========================================================================== */
+
+/* 1. OVERLAY E BACKDROP (Bootstrap + Custom) */
+.modal-backdrop.show {
+  opacity: 0.55 !important;
+  backdrop-filter: blur(5px);
+}
+
+.review-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 8, 23, 0.55);
+  backdrop-filter: blur(5px) saturate(130%);
+  -webkit-backdrop-filter: blur(5px) saturate(130%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10500; /* Alto per coprire tutto */
+  padding: 1.25rem;
+}
+
+/* 2. CONTAINER DEL MODAL */
+.parkly-modal, 
+.review-modal {
+  background: #ffffff;
+  border-radius: 24px;
+  border: none;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.2), 0 8px 24px rgba(0, 0, 0, 0.06);
+  font-family: 'Inter', -apple-system, sans-serif;
+  overflow: hidden;
+}
+
+.review-modal {
+  width: 100%;
+  max-width: 448px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 3. TIPOGRAFIA (Titoli e Sottotitoli) */
+.modal-title-text, 
+.modal-title {
+  font-weight: 800; /* bold*/
+  color: #00408a; /* Blu Parkly */
+  font-size: 1.5rem;
+  margin-bottom: 0.35rem;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.modal-sub {
+  font-size: 0.88rem;
+  color: #64748b;
+  margin-bottom: 1.1rem;
+  line-height: 1.55;
+}
+
+/* 4. BOTTONE DI CHIUSURA UNIFICATO */
+.btn-close, 
+.close-btn {
+  width: 32px;
+  height: 32px;
+  background-color: #f1f5f9;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #64748b;
+  opacity: 1;
+  border: none;
+  transition: background 0.2s, color 0.2s;
+  padding: 0; /* Reset per Bootstrap */
+  margin: 0;
+}
+
+.btn-close:hover, 
+.close-btn:hover {
+  background-color: #e2e8f0;
+  color: #0f172a;
+}
+
+/* 5. INPUTS E TEXTAREA NEI MODAL */
+.modal-input, 
+.review-textarea {
+  width: 100%;
+  height: 52px;
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
+  background-color: #f8fafc;
+  padding: 10px 18px;
+  font-size: 15px;
+  font-family: inherit;
+  color: #2c3e50;
+  transition: all 0.25s ease;
+}
+
+.review-textarea {
+  height: auto;
+  min-height: 80px;
+  resize: none;
+}
+
+.modal-input:focus, 
+.review-textarea:focus {
+  background-color: #ffffff;
+  border-color: #00408a;
+  box-shadow: 0 0 0 3px rgba(0, 64, 138, 0.1);
+  outline: none;
+}
+
+/* 6. GRUPPO PASSWORD GLOBALE */
+.password-group {
+  display: flex;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  overflow: hidden;
+  background-color: #f8fafc;
+  height: 52px;
+  transition: all 0.25s ease;
+}
+
+.password-group:focus-within {
+  background-color: #ffffff;
+  border-color: #00408a;
+  box-shadow: 0 0 0 3px rgba(0, 64, 138, 0.1);
+}
+
+.password-field {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  font-size: 15px;
+  padding: 10px 18px;
+  height: 100%;
+  flex-grow: 1;
+}
+
+.password-field:focus {
+  outline: none;
+}
+
+.toggle-password-btn {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 15px;
+}
+
+.password-icon {
+  width: 20px;
+  height: 20px;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.toggle-password-btn:hover .password-icon {
+  opacity: 0.9;
+}
+
+/* 7. BOTTONI CALL TO ACTION (CTA) */
+.modal-submit-btn, 
+.cta-btn {
+  width: 100%;
+  height: 52px; /* Altezza fissa coerente con gli input */
+  padding: 0 24px;
+  background-color: #00408A;
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  transition: all 0.22s ease;
+}
+
+.modal-submit-btn:hover:not(:disabled), 
+.cta-btn:hover:not(:disabled) {
+  background-color: #003070;
+  box-shadow: 0 6px 20px rgba(0, 64, 138, 0.25);
+  transform: translateY(-1px);
+}
+
+.modal-submit-btn:active:not(:disabled), 
+.cta-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.cta-btn--ghost {
+  background: transparent;
+  color: #00408A;
+  border: 1.5px solid rgba(0, 64, 138, 0.18);
+}
+
+.cta-btn--ghost:hover {
+  background: rgba(0, 64, 138, 0.05);
+  border-color: rgba(0, 64, 138, 0.35);
+  color: #00408A;
+}
+
+.cta-btn--danger {
+  background-color: #dc3545;
+}
+
+.cta-btn--danger:hover:not(:disabled) {
+  background-color: #c82333;
+  box-shadow: 0 6px 20px rgba(220, 53, 69, 0.25);
+}
+
+.cta-btn--danger-ghost {
+  background: transparent;
+  color: #dc3545;
+  border: 1.5px solid rgba(220, 53, 69, 0.2);
+}
+
+.cta-btn--danger-ghost:hover:not(:disabled) {
+  background: #dc3545;
+  color: #ffffff;
+}
+
+.cta-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

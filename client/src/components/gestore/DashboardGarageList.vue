@@ -90,16 +90,17 @@ defineEmits(['modifica'])
 }
 
 .page-header h1 {
-    font-size: 1.6rem;
-    font-weight: 700;
+    font-size: 1.8rem;
+    font-weight: 600;
     color: var(--deep-blue, #00204A);
     letter-spacing: -0.5px;
     margin: 0 0 4px;
+    font-family: 'Inter',sans-serif;
 }
 
 .subtitle {
     font-size: 0.875rem;
-    color: #888;
+    color: #64748b;
     margin: 0;
 }
 

@@ -610,9 +610,10 @@ const inviaDati = () => {
 .page-header h1 {
     font-size: 1.6rem;
     font-weight: 700;
-    color: var(--deep-blue, #00204A);
+    color:  #00408A;
     letter-spacing: -0.5px;
     margin: 0 0 4px;
+    font-family: 'Inter', sans-serif;
 }
 
 .section-header {
@@ -620,9 +621,10 @@ const inviaDati = () => {
 }
 
 .section-header h2 {
-    font-size: 1rem;
+    font-size: 1.1rem;
     font-weight: 600;
-    color: var(--deep-blue, #00204A);
+    color: #00408a;
+    font-family: 'Inter', sans-serif;
 }
 
 .form-card {
@@ -665,15 +667,15 @@ const inviaDati = () => {
 }
 
 .form-input {
-    height: 48px;
+    height: 52px;
     border: 0.5px solid #E0E0E0;
-    border-radius: 8px;
-    padding: 0 14px;
-    font-size: 0.9rem;
+    border-radius: 12px;
+    padding: 0 18px;
+    font-size: 15px;
     color: #222;
     background: #FAFAFA;
     outline: none;
-    font-family: inherit;
+    font-family: 'Inter', sans-serif;
     transition: border-color 0.15s, background 0.15s;
     width: 100%;
     box-sizing: border-box;
@@ -727,13 +729,13 @@ const inviaDati = () => {
     background: #0066CC;
     color: #fff;
     border: none;
-    border-radius: 8px;
-    height: 48px;
+    border-radius: 12px;
+    height: 52px;
     padding: 0 32px;
     font-size: 0.9rem;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
-    font-family: inherit;
+    font-family: 'Inter',sans-serif;
     transition: background 0.15s, transform 0.1s;
 }
 

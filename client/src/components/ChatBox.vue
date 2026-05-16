@@ -188,25 +188,26 @@ function etichettaGiorno(ts) {
 
 <style scoped>
 /* ── Variabili e Contenitore ── */
+
 .chatbox {
-  --c-primary: #0f4c81; /* Blu classico / scuro */
-  --c-primary-dark: #0a365c; /* Blu ancora più scuro per l'hover */
-  --c-bg: #ffffff; /* Sfondo del contenitore principale */
-  --c-surface: #f0f4f8; /* Sfondo area messaggi */
-  --c-border: #d1dce5; /* Colore dei bordi */
-  --c-text: #1e293b; /* Colore testo generale */
-  --c-muted: #64748b; /* Colore per orari e testi secondari */
-  --c-mio: #c0e0fe; /* Sfondo bolla dei messaggi inviati */
-  --c-loro: #ffffff; /* Sfondo bolla dei messaggi ricevuti*/
-  --c-mio-text: #0f4c81; /* Testo dei messaggi inviati*/
-  --radius: 12px;
+  --c-primary: #00408A; /* Blu Parkly */
+  --c-primary-dark: #003070; /* Blu scuro per l'hover, in linea con i bottoni */
+  --c-bg: #ffffff; 
+  --c-surface: #f8fafc; /* Allineato al grigetto chiaro dei modali */
+  --c-border: #e2e8f0; 
+  --c-text: #0f172a; 
+  --c-muted: #64748b; 
+  --c-mio: #e6f0fa; /* Un azzurro molto più delicato per le bolle chat */
+  --c-loro: #ffffff;
+  --c-mio-text: #00408A; 
+  --radius: 16px; /* Aumentato leggermente per riprendere lo stile arrotondato dei tuoi componenti */
 
   border: 1px solid var(--c-border);
   border-radius: var(--radius);
   background: var(--c-bg);
-  box-shadow: 0 4px 24px rgba(15, 76, 129, 0.12);
+  box-shadow: 0 10px 30px rgba(0, 64, 138, 0.15); /* Ombra più morbida e in tema "blu" */
   overflow: hidden;
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-family: 'Inter', -apple-system, sans-serif; /* <-- Sostituito Segoe UI con Inter */
 }
 
 /* Quando è abbassato, l'header ha più respiro */

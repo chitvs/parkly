@@ -674,6 +674,9 @@ html, body {
     cursor: pointer;
     padding: 0;
 }
+.reset-btn:hover{
+    text-decoration-line: underline;
+}
 
 .results-header {
     display: flex;
@@ -926,7 +929,7 @@ html, body {
     left: 20px;
     right: 20px;
     display: flex;
-    justify-content: space-between;
+    align-items: center;
     z-index: 1000;
     pointer-events: none;
 }
@@ -963,7 +966,13 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: transform 0.2s; 
 }
+.fs-close-circle:hover {
+    transform: scale(1.1);
+    background-color: #f8fafc;
+}
+
 
 .fs-panel-header {
     padding: 20px;
@@ -975,6 +984,8 @@ html, body {
     margin: 0;
     font-size: 1.1rem;
     color: white;
+    font-family: 'Inter',sans-serif;
+    font-weight: 600;
 }
 
 .fs-scroll-content {
@@ -1048,6 +1059,7 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: center;
+    margin-left: auto;
     margin-right: 10px;
     transition: transform 0.2s;
 }

@@ -219,7 +219,7 @@ const features = [
                         <p>Pubblica i tuoi posti su Parkly. Dashboard con occupazione in tempo reale, statistiche
                             mensili, pagamenti automatici.</p>
                     </div>
-                    <RouterLink to="/diventa-gestore" class="cta-btn">Diventa gestore</RouterLink>
+                    <RouterLink to="/diventa-gestore" class="home-cta-btn">Diventa gestore</RouterLink>
                 </div>
             </div>
 
@@ -600,22 +600,30 @@ const features = [
     line-height: 1.5;
 }
 
-.cta-btn {
+/* Sostituisci .cta-btn e .cta-btn:hover con questi: */
+
+.home-cta-btn {
     background: #ffffff;
     color: #00408a;
-    padding: 14px 28px;
+    padding: 0 28px;
+    height: 52px; 
     border-radius: 12px;
     font-weight: 700;
+    font-family: 'Inter', sans-serif;
     text-decoration: none;
     white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     transition: 0.2s;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
 
-.cta-btn:hover {
+.home-cta-btn:hover {
     background: #f8fafc;
     transform: translateY(-2px);
     box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    color: #00224a; /* Un blu leggermente più scuro al passaggio del mouse */
 }
 
 @media (max-width: 900px) {

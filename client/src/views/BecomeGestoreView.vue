@@ -48,7 +48,7 @@ const confirmUpgrade = async () => {
                     <div class="mb-4">
                         <img src="../assets/LogoParklyBlu.svg" style="height: 70px; width: auto;">
                     </div>
-                    <h3 class="mb-3" style="color: var(--deep-blue, #00204A);">Sei pronto a iniziare?</h3>
+                    <h3 class="mb-3" style="color: var(--deep-blue, #00204A); font-weight:600;">Sei pronto a iniziare?</h3>
                     <p class="text-muted mb-4" style="font-size: 0.95rem;">
                         L'operazione di upgrade è immediata. Potrai subito iniziare a inserire i tuoi parcheggi e
                         ricevere prenotazioni.
