@@ -903,16 +903,6 @@ const formattaDataLeggibile = (dataIso) => {
   cursor: pointer;
 }
 
-@media (max-width: 900px) {
-  .sidebar {
-    display: none;
-  }
-
-  .main-content {
-    padding: 24px 20px;
-  }
-}
-
 .overlay-fade-enter-active,
 .overlay-fade-leave-active {
   transition: opacity 0.35s ease;

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import Pagination from '../Pagination.vue'
 
 const props = defineProps({
@@ -22,7 +22,7 @@ const formatData = (iso) => {
 const statoBadge = (stato) =>
     stato === 'ATTIVA' ? 'badge--green' : stato === 'ANNULLATA' ? 'badge--red' : 'badge--gray'
 
-// logica paginazione
+// Logica paginazione
 const paginaCorrente = ref(1)
 const elementiPerPagina = ref(5)
 
@@ -38,6 +38,49 @@ const scrollInAlto = () => {
 watch(() => props.prenotazioni, () => {
     paginaCorrente.value = 1
 }, { deep: true })
+
+
+const tableCardRef = ref(null)
+const containerWidth = ref('100%')
+
+const colWidths = [150, 200, 110, 130, 130, 90, 110, 115]
+const spazioTotaleColonne = colWidths.reduce((acc, curr) => acc + curr, 0);
+let resizeObserver = null
+
+const calcolaLarghezzaScatti = () => {
+    if (!tableCardRef.value || !tableCardRef.value.parentElement) return
+    
+    const spazioDisponibile = tableCardRef.value.parentElement.clientWidth
+    let larghezzaOttimale = 0
+
+    for (const width of colWidths) {
+        if (larghezzaOttimale + width <= spazioDisponibile) {
+            larghezzaOttimale += width
+        } else {
+            break 
+        }
+    }
+
+    if (spazioDisponibile >= spazioTotaleColonne || larghezzaOttimale === 0) {
+        containerWidth.value = '100%'
+    } else {
+        containerWidth.value = `${larghezzaOttimale}px`
+    }
+}
+
+onMounted(() => {
+    if (tableCardRef.value && tableCardRef.value.parentElement) {
+        resizeObserver = new ResizeObserver(() => {
+            calcolaLarghezzaScatti()
+        })
+        resizeObserver.observe(tableCardRef.value.parentElement)
+    }
+    calcolaLarghezzaScatti()
+})
+
+onUnmounted(() => {
+    if (resizeObserver) resizeObserver.disconnect()
+})
 </script>
 
 <template>
@@ -49,7 +92,7 @@ watch(() => props.prenotazioni, () => {
             </div>
         </div>
 
-        <div class="table-card">
+        <div class="table-card" ref="tableCardRef" :style="{ width: containerWidth }">
             <table class="parkly-table">
                 <thead>
                     <tr>
@@ -73,7 +116,7 @@ watch(() => props.prenotazioni, () => {
                         <td class="td-bold td-blue">€ {{ p.prezzototale }}</td>
                         <td><span :class="['badge', statoBadge(p.stato)]">{{ p.stato }}</span></td>
                         <td>
-                            <button v-if="p.stato === 'ATTIVA'" @click="$emit('apri-chat', p)" class="btn-chat"
+                            <button :style="{ visibility: p.stato === 'ATTIVA' ? 'visible' : 'hidden' }" @click="$emit('apri-chat', p)" class="btn-chat"
                                 title="Scrivi al cliente">
                                 <span v-if="p.nonletti > 0" class="chat-notification-dot"></span>
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -113,7 +156,6 @@ watch(() => props.prenotazioni, () => {
         opacity: 0;
         transform: translateY(8px);
     }
-
     to {
         opacity: 1;
         transform: translateY(0);
@@ -121,8 +163,8 @@ watch(() => props.prenotazioni, () => {
 }
 
 .centered-container {
-    max-width: 960px;
-    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .page-header {
@@ -147,28 +189,51 @@ watch(() => props.prenotazioni, () => {
     background: #fff;
     border: 0.5px solid #E8E8E8;
     border-radius: 12px;
-    overflow: hidden;
+    overflow-x: auto; 
+    overflow-y: hidden; 
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    transition: width 0.1s ease-out; 
 }
 
 .parkly-table {
-    width: 100%;
+    width: max-content;
+    min-width: 100%;
     border-collapse: collapse;
     font-size: 0.875rem;
+    table-layout: fixed;
 }
+
+.parkly-table th:nth-child(1) { width: 150px; }  /* Codice */
+.parkly-table th:nth-child(2) { width: 200px; }  /* Garage */
+.parkly-table th:nth-child(3) { width: 110px; }  /* Targa */
+.parkly-table th:nth-child(4) { width: 130px; }  /* Inizio */
+.parkly-table th:nth-child(5) { width: 130px; }  /* Fine */
+.parkly-table th:nth-child(6) { width: 90px;  }  /* Importo */
+.parkly-table th:nth-child(7) { width: 110px; }  /* Stato */
+.parkly-table th:nth-child(8) { width: 115px; }  /* Chat */
 
 .parkly-table thead tr {
     background: #FAFAFA;
     border-bottom: 0.5px solid #EFEFEF;
 }
 
+.parkly-table th,
+.parkly-table td {
+    scroll-snap-align: start;
+}
+
 .parkly-table th {
-    padding: 12px 20px;
+    padding: 12px 16px;
     text-align: left;
     font-size: 0.7rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.07em;
     color: #aaa;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .parkly-table tbody tr {
@@ -185,8 +250,14 @@ watch(() => props.prenotazioni, () => {
 }
 
 .parkly-table td {
-    padding: 14px 20px;
+    padding: 14px 16px;
     color: #444;
+}
+
+.parkly-table td:nth-child(2) {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .td-muted {
@@ -247,7 +318,6 @@ watch(() => props.prenotazioni, () => {
     font-family: 'Courier New', monospace;
     color: #444;
     letter-spacing: 0.06em;
-    white-space: nowrap;
 }
 
 /* Bottoni Chat */
