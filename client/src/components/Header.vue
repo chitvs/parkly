@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import * as bootstrap from 'bootstrap'
 import logoUrl from '../assets/LogoParklyBlu.svg'
@@ -30,6 +30,12 @@ const loginPassword = ref('')
 const loginError = ref('')
 const isMenuOpen = ref(false)
 const isPasswordVisible = ref(false)
+
+watch([loginIdentificatore, loginPassword], ([newId, newPwd]) => {
+  if (newId === '' && newPwd === '') {
+    loginError.value = ''
+  }
+})
 
 const modalElement = ref(null)
 let modalInstance = null
