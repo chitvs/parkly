@@ -336,7 +336,7 @@ const chiudiChat = () => {
       <div v-else-if="bookings.length === 0" class="text-center py-5 empty-state">
         <img src="../assets/broken_car.png" alt="Nessuna prenotazione" width="120" class="mb-3 opacity-50" />
         <h4 class="fw-bold text-muted">Nessuna prenotazione trovata</h4>
-        <p class="text-muted">Non hai ancora effettuato nessuna prenotazione con noi.</p>
+        <p class="text-muted">Non hai ancora effettuato nessuna prenotazione su Parkly.</p>
         <router-link to="/ricerca" class="btn btn-primary mt-3 px-4 py-2">Trova Parcheggio</router-link>
       </div>
 

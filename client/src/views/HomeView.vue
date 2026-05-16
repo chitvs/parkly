@@ -107,19 +107,19 @@ const quickSearches = [
 ]
 
 const steps = [
-    { num: '01', icon: 'bi-geo-alt', title: 'Cerca', desc: 'Inserisci la destinazione e l\'orario. Vedi tutti i garage disponibili su mappa.' },
-    { num: '02', icon: 'bi-grid-3x3-gap', title: 'Scegli il posto', desc: 'Seleziona un garage e dalla planimetria interattiva il posto più adatto al tuo veicolo.' },
-    { num: '03', icon: 'bi-wallet2', title: 'Paga', desc: 'Addebito sul tuo portafoglio Parkly.' },
-    { num: '04', icon: 'bi-patch-check', title: 'Parcheggia', desc: 'Il posto è tuo. Ricevi il ticket, entra e parti tranquillo.' },
+    { num: '01', icon: 'bi-geo-alt', title: 'Cerca', desc: 'Inserisci la destinazione e l\'orario. Vedi tutti i garage disponibili sulla mappa.' },
+    { num: '02', icon: 'bi-grid-3x3-gap', title: 'Scegli il posto', desc: 'Seleziona un garage e dalla planimetria interattiva seleziona il posto più adatto al tuo veicolo.' },
+    { num: '03', icon: 'bi-wallet2', title: 'Paga', desc: 'Gestisci il tuo saldo sul tuo portafoglio Parkly.' },
+    { num: '04', icon: 'bi-patch-check', title: 'Parcheggia', desc: 'Il posto è tuo. Ricevi il ticket, entra e lascia il tuo veicolo in tutta tranqullità.' },
 ]
 
 const features = [
-    { icon: 'bi-map', title: 'Mappa interattiva', desc: 'Visualizza garage e disponibilità in tempo reale, filtrabili per tipo veicolo e servizi.' },
-    { icon: 'bi-lightning-charge', title: 'Prenotazione immediata', desc: 'Lock atomico sul posto: nessun doppio booking. Il tuo posto è garantito.' },
-    { icon: 'bi-credit-card', title: 'Portafoglio integrato', desc: 'Ricarica tra 5€ e 1000€. Ogni transazione registrata, rimborsi automatici.' },
-    { icon: 'bi-chat-dots', title: 'Chat con il gestore', desc: 'Messaggistica in tempo reale via Socket.IO, privata per ogni prenotazione.' },
+    { icon: 'bi-map', title: 'Mappa interattiva', desc: 'Visualizza garage e disponibilità in tempo reale, e filtra per tipo di veicolo e servizi.' },
+    { icon: 'bi-lightning-charge', title: 'Prenotazione immediata', desc: 'Il tuo posto viene bloccato all\'istante ed è garantito.' },
+    { icon: 'bi-credit-card', title: 'Portafoglio integrato', desc: 'Ricarica tra 5€ e 1000€. Ogni transazione viene registrata e i rimborsi sono automatici.' },
+    { icon: 'bi-chat-dots', title: 'Chat con il gestore', desc: 'Messaggistica in tempo reale,chat private tra cliente e gestore per ogni prenotazione.' },
     { icon: 'bi-ev-station', title: 'Ricarica elettrica', desc: 'Filtra i garage con colonnine EV. Parcheggi e ricarichi allo stesso tempo.' },
-    { icon: 'bi-shield-check', title: 'Recensioni verificate', desc: 'Solo prenotazioni completate possono generare una recensione.' },
+    { icon: 'bi-shield-check', title: 'Recensioni verificate', desc: 'Solo gli utenti con prenotazioni completate possono generare una recensione.' },
 ]
 </script>
 
@@ -131,7 +131,7 @@ const features = [
 
             <section class="hero-header">   
                 <div class="hero-text">
-                    <h1>Sostare non è mai stato così <span class="highlight">semplice</span>.</h1>
+                    <h1>Trovare parcheggio non è mai stato così <span class="highlight">semplice</span>.</h1>
                     <p>La piattaforma intelligente per prenotare il tuo posto auto con semplicità, chiarezza e velocità.</p>
                 </div>
             </section>
@@ -216,8 +216,8 @@ const features = [
                 <div class="cta">
                     <div class="cta-text">
                         <h2>Hai un garage? Lavora con noi.</h2>
-                        <p>Pubblica i tuoi posti su Parkly. Dashboard con occupazione in tempo reale, statistiche
-                            mensili, pagamenti automatici.</p>
+                        <p>Pubblica la tua attività su Parkly. Goditi Dashboard con occupazione in tempo reale, statistiche
+                            mensili e pagamenti automatici.</p>
                     </div>
                     <RouterLink to="/diventa-gestore" class="home-cta-btn">Diventa gestore</RouterLink>
                 </div>
