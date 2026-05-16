@@ -21,7 +21,7 @@ const postoSelezionato = ref(null)
 const messaggio = ref(null)
 const isMapConfirmed = ref(false)
 const isPrenotando = ref(false)
-const fotoIngrandita = ref(null)
+const indiceFotoAttiva = ref(null)
 
 // genera la data e ora attuale in formato locale ISO per bloccare le date passate nel calendario nativo
 const oggiIso = computed(() => {
@@ -29,15 +29,17 @@ const oggiIso = computed(() => {
     return (new Date(Date.now() - tzoffset)).toISOString().slice(0, 16);
 })
 
-const handleEscape = (e) => {
-    if (e.key === 'Escape' && fotoIngrandita.value) {
-        chiudiFoto()
+const handleKeydown = (e) => {
+    if (indiceFotoAttiva.value !== null) {
+        if (e.key === 'Escape') chiudiFoto()
+        if (e.key === 'ArrowRight') fotoSuccessiva()
+        if (e.key === 'ArrowLeft') fotoPrecedente()
     }
 }
 
 onMounted(async () => {
-    // listener per chiudere la foto con ESC
-    document.addEventListener('keydown', handleEscape)
+    // listener per utilizzare ESC e le frecce
+    document.addEventListener('keydown', handleKeydown)
 
     garageStore.clearGarageData()
     await garageStore.fetchGarage(Number(props.id))
@@ -57,7 +59,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
     // rimuovo il listener quando il componente viene distrutto
-    document.removeEventListener('keydown', handleEscape)
+    document.removeEventListener('keydown', handleKeydown)
 })
 
 watch([checkIn, checkOut], () => {
@@ -71,14 +73,26 @@ const fotoGarage = computed(() => {
     return garageStore.currentGarage?.foto_urls || []
 })
 
-const apriFoto = (url) => {
-    fotoIngrandita.value = url
+const apriFoto = (index) => {
+    indiceFotoAttiva.value = index
     document.body.style.overflow = 'hidden' // Blocca lo scroll della pagina
 }
 
 const chiudiFoto = () => {
-    fotoIngrandita.value = null
+    indiceFotoAttiva.value = null
     document.body.style.overflow = '' // Sblocca lo scroll
+}
+
+const fotoSuccessiva = () => {
+    if (indiceFotoAttiva.value === null || fotoGarage.value.length === 0) return
+    // passa alla foto successiva, tornando alla prima se siamo all'ultima
+    indiceFotoAttiva.value = (indiceFotoAttiva.value + 1) % fotoGarage.value.length
+}
+
+const fotoPrecedente = () => {
+    if (indiceFotoAttiva.value === null || fotoGarage.value.length === 0) return
+    // passa alla precedente, andando all'ultima se siamo alla prima
+    indiceFotoAttiva.value = (indiceFotoAttiva.value - 1 + fotoGarage.value.length) % fotoGarage.value.length
 }
 
 // leggiamo i prezzi base direttamente dal record del garage
@@ -369,7 +383,7 @@ watch(paginaRecensioniCorrente, () => {
             <section class="gallery-section" v-if="fotoGarage.length > 0">
                 <div class="gallery-track">
                     <img v-for="(url, index) in fotoGarage" :key="index" :src="url" alt="Foto garage"
-                        class="gallery-img" @click="apriFoto(url)">
+                        class="gallery-img" @click="apriFoto(index)">
                 </div>
             </section>
 
@@ -621,11 +635,24 @@ watch(paginaRecensioniCorrente, () => {
             </div>
         </main>
 
-        <div v-if="fotoIngrandita" class="photo-modal" @click="chiudiFoto">
-            <button class="close-photo-btn" @click="chiudiFoto">
+        <div v-if="indiceFotoAttiva !== null" class="photo-modal" @click="chiudiFoto">
+            
+            <button class="close-photo-btn" @click.stop="chiudiFoto">
                 <i class="bi bi-x-lg"></i>
             </button>
-            <img :src="fotoIngrandita" alt="Foto garage ingrandita" @click.stop>
+            
+            <!-- Bottone Precedente -->
+            <button v-if="fotoGarage.length > 1" class="nav-photo-btn prev-btn" @click.stop="fotoPrecedente">
+                <i class="bi bi-chevron-left"></i>
+            </button>
+            
+            <img :src="fotoGarage[indiceFotoAttiva]" alt="Foto garage ingrandita" @click.stop>
+            
+            <!-- Bottone Successivo -->
+            <button v-if="fotoGarage.length > 1" class="nav-photo-btn next-btn" @click.stop="fotoSuccessiva">
+                <i class="bi bi-chevron-right"></i>
+            </button>
+
         </div>
 
     </div>
@@ -1423,5 +1450,47 @@ watch(paginaRecensioniCorrente, () => {
     position: sticky;
     top: 100px;
     height: max-content;
+}
+
+/* Stili per i bottoni di navigazione della modale */
+.nav-photo-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: none;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    font-size: 1.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+    z-index: 10001;
+}
+
+.nav-photo-btn:hover {
+    background: rgba(255, 255, 255, 0.4);
+}
+
+.prev-btn {
+    left: 32px;
+}
+
+.next-btn {
+    right: 32px;
+}
+
+/* Nascondi i bottoni sui dispositivi mobili molto piccoli per non coprire l'immagine */
+@media (max-width: 600px) {
+    .nav-photo-btn {
+        width: 40px;
+        height: 40px;
+    }
+    .prev-btn { left: 16px; }
+    .next-btn { right: 16px; }
 }
 </style>
