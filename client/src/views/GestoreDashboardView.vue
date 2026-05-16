@@ -161,6 +161,7 @@ let infoModalInstance = null
 const openInfoModal = () => { if (infoModalInstance) infoModalInstance.show() }
 
 const showMaintenanceModal = ref(false)
+const maintenanceError = ref('')
 const postoDaGestire = ref(null)
 const manutenzioneData = ref({ inizio: '', fine: '', motivazione: '' })
 const currentMaintenanceStep = ref(1);
@@ -177,17 +178,20 @@ const apriGestionePosto = (posto) => {
 };
 
 const salvaManutenzione = async () => {
+  maintenanceError.value = ''
   const res = await garageStore.addMaintenance(postoDaGestire.value.id_garage, postoDaGestire.value.id_posto, manutenzioneData.value)
   if (res.success) {
     showMaintenanceModal.value = false
     messaggio.value = { tipo: 'success', testo: res.message }
+    window.scrollTo({ top: 0, behavior: 'smooth' })
     await garageStore.caricaDashboardGestore()
   } else {
-    alert(res.error)
+    maintenanceError.value = res.error
   }
 }
 
 const rimuoviManutenzione = async () => {
+  maintenanceError.value = ''
   const idManutenzione = postoDaGestire.value?.manutenzione?.id_manutenzione;
   if (!idManutenzione) return;
 
@@ -196,9 +200,10 @@ const rimuoviManutenzione = async () => {
   if (res.success) {
     showMaintenanceModal.value = false;
     messaggio.value = { tipo: 'success', testo: res.message };
+    window.scrollTo({ top: 0, behavior: 'smooth' })
     await garageStore.caricaDashboardGestore()
   } else {
-    alert(res.error);
+    maintenanceError.value = res.error;
   }
 };
 
@@ -392,6 +397,10 @@ const formattaDataLeggibile = (dataIso) => {
               <div v-else></div> <button class="close-btn" @click="showMaintenanceModal = false">
                 <i class="bi bi-x-lg"></i>
               </button>
+            </div>
+
+            <div v-if="maintenanceError" class="alert error mx-4 mt-3 mb-0 text-start">
+              {{ maintenanceError }}
             </div>
 
             <div v-if="postoDaGestire?.is_in_manutenzione" class="step-wrapper fade-in">
@@ -702,36 +711,7 @@ const formattaDataLeggibile = (dataIso) => {
   }
 }
 
-.alert {
-  padding: 12px 16px;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
 
-.alert.success {
-  background: #d4edda;
-  color: #155724;
-  border: 1px solid #c3e6cb;
-}
-
-.alert.error {
-  background: #f8d7da;
-  color: #721c24;
-  border: 1px solid #f5c6cb;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: inherit;
-  opacity: 0.4;
-  font-size: 1.1rem;
-  line-height: 1;
-}
 
 .chat-popup-container {
   position: fixed;

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import * as bootstrap from 'bootstrap'
 import logoUrl from '../assets/LogoParklyBlu.svg'
@@ -27,8 +27,15 @@ const isRegisterPage = computed(() => route.path === '/register')
 
 const loginIdentificatore = ref('')
 const loginPassword = ref('')
+const loginError = ref('')
 const isMenuOpen = ref(false)
 const isPasswordVisible = ref(false)
+
+watch([loginIdentificatore, loginPassword], ([newId, newPwd]) => {
+  if (newId === '' && newPwd === '') {
+    loginError.value = ''
+  }
+})
 
 const modalElement = ref(null)
 let modalInstance = null
@@ -61,6 +68,7 @@ const closeLoginModal = () => {
       () => {
         loginIdentificatore.value = ''
         loginPassword.value = ''
+        loginError.value = ''
         isPasswordVisible.value = false
 
         resolve()
@@ -73,12 +81,13 @@ const closeLoginModal = () => {
 }
 
 const handleLogin = async () => {
+  loginError.value = ''
   const data = await authStore.login(loginIdentificatore.value, loginPassword.value)
 
   if (data.success) {
     await closeLoginModal()
   } else {
-    alert('Errore: ' + (data.error || 'Credenziali non valide'))
+    loginError.value = data.error || 'Credenziali non valide'
   }
 }
 
@@ -199,13 +208,17 @@ const handleLogout = async () => {
           <img :src="logoUrl" alt="logo parkly" width="80" class="mb-4" />
           <h2 class="modal-title-text mb-4">Bentornato su Parkly</h2>
 
+          <div v-if="loginError" class="alert error mb-4 text-start">
+            {{ loginError }}
+          </div>
+
           <form @submit.prevent="handleLogin">
             <div class="mb-3">
-              <input type="text" class="form-control modal-input" placeholder="Email o Nome Utente"
+              <input type="text" class="form-control modal-input" :class="{ 'is-invalid-input': loginError }" placeholder="Email o Nome Utente"
                 v-model="loginIdentificatore" required />
             </div>
             <div class="mb-3">
-              <div class="input-group password-group">
+              <div class="input-group password-group" :class="{ 'is-invalid-group': loginError }">
                 <input :type="isPasswordVisible ? 'text' : 'password'" class="form-control password-field"
                   placeholder="Password" v-model="loginPassword" required />
                 <button class="btn toggle-password-btn" type="button" @click="isPasswordVisible = !isPasswordVisible"

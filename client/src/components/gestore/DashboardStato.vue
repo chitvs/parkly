@@ -157,6 +157,7 @@ const getOccClass = (pct) => {
 
 const planimetriaAperta = ref({})
 const filtriDate = ref({})
+const mapError = ref({})
 
 const formatForDatetimeLocal = (date) => {
     const tzOffset = date.getTimezoneOffset() * 60000;
@@ -203,8 +204,9 @@ const togglePlanimetria = (id) => {
 
 const onVerifica = (id) => {
     const filtro = filtriDate.value[id]
+    mapError.value[id] = false
     if (!filtro || !filtro.inizio || !filtro.fine) {
-        alert('Inserisci orario di inizio e di fine per aggiornare la mappa!')
+        mapError.value[id] = true
         return
     }
     emit('verifica-disponibilita', { inizio: filtro.inizio, fine: filtro.fine })
@@ -416,9 +418,9 @@ watch(sliderTime, (newTime) => {
                                     </button>
                                 </div>
                                 <div class="plan-filter-inputs d-flex gap-2">
-                                    <input type="datetime-local" class="form-input form-input--sm"
+                                    <input type="datetime-local" class="form-input form-input--sm" :class="{ 'is-invalid-input': mapError[garage.id_garage] }"
                                         v-model="filtriDate[garage.id_garage].inizio">
-                                    <input type="datetime-local" class="form-input form-input--sm"
+                                    <input type="datetime-local" class="form-input form-input--sm" :class="{ 'is-invalid-input': mapError[garage.id_garage] }"
                                         v-model="filtriDate[garage.id_garage].fine">
                                     <button class="btn-primary btn-primary--sm"
                                         :disabled="!filtriDate[garage.id_garage].inizio || !filtriDate[garage.id_garage].fine"
@@ -426,6 +428,7 @@ watch(sliderTime, (newTime) => {
                                         Aggiorna mappa
                                     </button>
                                 </div>
+                                <div v-if="mapError[garage.id_garage]" class="text-danger small mt-1">Inserisci orario di inizio e fine.</div>
                             </div>
                         </div>
                         <PlanimetriaGarage :posti="postiPerGarage[garage.id_garage] || []"
