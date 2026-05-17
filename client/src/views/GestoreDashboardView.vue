@@ -29,6 +29,7 @@ const staSalvando = ref(false)
 const messaggio = ref(null)
 const reRenderKey = ref(0)
 const isGarageDropdownOpen = ref(false)
+const isSidebarOpen = ref(false) // variabile per il menu mobile
 
 // Collegamenti ai dati dello Store
 const mieiGarage = computed(() => garageStore.mieiGarage || [])
@@ -252,6 +253,7 @@ onUnmounted(() => {
 
 watch(vistaAttiva, (newVal) => {
   messaggio.value = null
+  isSidebarOpen.value = false // chiude il menu mobile al cambio di vista
   if (newVal !== 'aggiungi') {
     idGarageInModifica.value = null
     garageInModifica.value = null
@@ -315,13 +317,27 @@ const formattaDataLeggibile = (dataIso) => {
     </div>
 
     <div v-else class="dashboard-layout">
-      <aside class="sidebar">
+      <!-- Overlay menu mobile -->
+      <div class="sidebar-overlay" :class="{ 'd-block': isSidebarOpen }" @click="isSidebarOpen = false"></div>
+
+      <!-- Barra mobile con hamburger -->
+      <div class="mobile-topbar d-md-none">
+        <button class="hamburger-btn" @click="isSidebarOpen = true">
+          <i class="bi bi-list fs-3"></i>
+        </button>
+        <span class="mobile-topbar-title">Area Gestore</span>
+      </div>
+
+      <aside :class="['sidebar', { 'sidebar-open': isSidebarOpen }]">
         <div class="sidebar-brand">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="3" y="3" width="18" height="18" rx="3" />
             <path d="M9 3v18M15 3v18M3 9h18M3 15h18" />
           </svg>
           <span>Area Gestore</span>
+          <button class="close-sidebar-btn d-md-none" @click="isSidebarOpen = false">
+            <i class="bi bi-x-lg"></i>
+          </button>
         </div>
 
         <nav class="sidebar-nav top-nav">
@@ -429,11 +445,9 @@ const formattaDataLeggibile = (dataIso) => {
               <li>Cerca il tuo indirizzo per avvicinarti, poi clicca sulla mappa interattiva per posizionare il pin
                 esattamente sopra il tuo garage.</li>
               <li>Configura la tipologia del posto (Auto, Moto, Furgone) e aggiungi servizi extra. Il codice verrà
-                generato
-                in automatico se lasciato vuoto.</li>
+                generato in automatico se lasciato vuoto.</li>
               <li>Una volta creati i posti, selezionali dalla tavolozza e clicca sulla griglia a scacchiera per
-                disegnare
-                visivamente il layout reale del garage.</li>
+                disegnare visivamente il layout reale del garage.</li>
             </ul>
           </div>
         </div>
@@ -473,8 +487,7 @@ const formattaDataLeggibile = (dataIso) => {
 
                 <div class="p-3 bg-light border rounded-3 mb-4">
                   <strong class="d-block mb-2 text-dark" style="font-size: 0.85rem; text-transform: uppercase;">Dettagli
-                    del
-                    blocco:</strong>
+                    del blocco:</strong>
                   <div class="d-flex justify-content-between mb-1 small">
                     <span class="text-muted">Inizio:</span>
                     <span class="fw-bold">{{ formattaDataLeggibile(postoDaGestire.manutenzione?.inizio) }}</span>
@@ -593,6 +606,49 @@ const formattaDataLeggibile = (dataIso) => {
 .dashboard-layout {
   display: flex;
   flex: 1;
+}
+
+/* Stili Mobile Header */
+.mobile-topbar {
+  display: none;
+  align-items: center;
+  gap: 16px;
+  background-color: var(--deep-blue, #00204A);
+  color: white;
+  padding: 12px 20px;
+}
+
+.hamburger-btn {
+  background: none;
+  border: none;
+  color: white;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.mobile-topbar-title {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.close-sidebar-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  margin-left: auto;
+  font-size: 1.2rem;
+  padding: 4px;
+  cursor: pointer;
+}
+
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1040;
 }
 
 .access-denied {
@@ -797,8 +853,6 @@ const formattaDataLeggibile = (dataIso) => {
   }
 }
 
-
-
 .chat-popup-container {
   position: fixed;
   bottom: 24px;
@@ -818,14 +872,11 @@ const formattaDataLeggibile = (dataIso) => {
     opacity: 0;
     transform: translateY(20px);
   }
-
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
-
-
 
 .info-list {
   padding-left: 20px;
@@ -911,8 +962,6 @@ const formattaDataLeggibile = (dataIso) => {
   opacity: 0;
 }
 
-
-
 .review-topbar {
   display: flex;
   justify-content: space-between;
@@ -969,8 +1018,6 @@ const formattaDataLeggibile = (dataIso) => {
   margin-bottom: 1rem;
 }
 
-
-
 .field-label {
   display: flex;
   align-items: center;
@@ -1003,7 +1050,6 @@ const formattaDataLeggibile = (dataIso) => {
   resize: none;
   outline: none;
 }
-
 
 .max-h-150 {
   max-height: 150px;
@@ -1060,7 +1106,6 @@ const formattaDataLeggibile = (dataIso) => {
     opacity: 0;
     transform: translateX(10px);
   }
-
   to {
     opacity: 1;
     transform: translateX(0);
@@ -1160,5 +1205,35 @@ const formattaDataLeggibile = (dataIso) => {
 .garage-menu-item:hover {
   background-color: #e8eef8;
   color: #00408A;
+}
+
+/* MEDIA QUERIES PER MOBILE / TABLET */
+@media (max-width: 768px) {
+  .dashboard-layout {
+    flex-direction: column;
+  }
+  
+  .mobile-topbar {
+    display: flex;
+  }
+  
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: -280px; /* Nasconde la sidebar */
+    width: 280px;
+    height: 100vh;
+    z-index: 1050;
+    transition: left 0.3s ease-in-out;
+    padding-top: 16px;
+  }
+  
+  .sidebar.sidebar-open {
+    left: 0; /* Mostra la sidebar */
+  }
+
+  .main-content {
+    padding: 20px 16px;
+  }
 }
 </style>

@@ -240,16 +240,16 @@ const gestisciPrenotazione = async () => {
     }
 }
 
-const commentiEspansi = ref(new Set())
+const recensioneSelezionata = ref(null)
 
-const toggleCommento = (index) => {
-    const nuovoSet = new Set(commentiEspansi.value)
-    if (nuovoSet.has(index)) {
-        nuovoSet.delete(index)
-    } else {
-        nuovoSet.add(index)
-    }
-    commentiEspansi.value = nuovoSet
+const apriModalCommento = (recensione) => {
+    recensioneSelezionata.value = recensione
+    document.body.style.overflow = 'hidden'
+}
+
+const chiudiModalCommento = () => {
+    recensioneSelezionata.value = null
+    document.body.style.overflow = ''
 }
 
 const formattaDataRecensione = (dataString) => {
@@ -287,7 +287,7 @@ const recensioniPaginate = computed(() => {
 })
 
 watch(paginaRecensioniCorrente, () => {
-    commentiEspansi.value.clear()
+    chiudiModalCommento()
 })
 
 </script>
@@ -351,19 +351,19 @@ watch(paginaRecensioniCorrente, () => {
                         <div class="price-line" v-if="tariffePerVeicolo['MOTO']">
                             <span class="v-tipo">Moto</span>
                             <span class="prezzo-valore-small">€{{ tariffePerVeicolo['MOTO'].toFixed(2)
-                                }}<span>/h</span></span>
+                            }}<span>/h</span></span>
                         </div>
 
                         <div class="price-line" v-if="tariffePerVeicolo['AUTO']">
                             <span class="v-tipo">Auto</span>
                             <span class="prezzo-valore-small">€{{ tariffePerVeicolo['AUTO'].toFixed(2)
-                                }}<span>/h</span></span>
+                            }}<span>/h</span></span>
                         </div>
 
                         <div class="price-line" v-if="tariffePerVeicolo['FURGONE']">
                             <span class="v-tipo">Furgone</span>
                             <span class="prezzo-valore-small">€{{ tariffePerVeicolo['FURGONE'].toFixed(2)
-                                }}<span>/h</span></span>
+                            }}<span>/h</span></span>
                         </div>
 
                         <div class="special-rates-container" v-if="sovrapprezzoElettrica || scontoDisabili">
@@ -487,7 +487,7 @@ watch(paginaRecensioniCorrente, () => {
                                                         <img v-if="recensione.fotoprofilo_url"
                                                             :src="recensione.fotoprofilo_url" alt="User avatar">
                                                         <span v-else>{{ recensione.nome.charAt(0).toUpperCase()
-                                                            }}</span>
+                                                        }}</span>
                                                     </div>
 
                                                     <div class="user-info">
@@ -507,15 +507,20 @@ watch(paginaRecensioniCorrente, () => {
                                                         formattaDataRecensione(recensione.datacreazione) }}</span>
                                                 </div>
 
-                                                <p class="comment-text"
-                                                    :class="{ 'comment-text--expanded': commentiEspansi.has(index) }"
-                                                    v-if="recensione.commento">{{ recensione.commento }}</p>
+                                                <p class="comment-text" v-if="recensione.commento">{{
+                                                    recensione.commento }}</p>
                                                 <p class="comment-text text-muted fst-italic" v-else></p>
 
-                                                <button v-if="recensione.commento && recensione.commento.length > 180"
-                                                    class="mostra-altro-btn" @click="toggleCommento(index)">
-                                                    {{ commentiEspansi.has(index) ? 'Mostra meno' : 'Mostra altro' }}
-                                                </button>
+                                                <div class="action-slot">
+                                                    <button :style="{
+                                                        visibility: (
+                                                            recensione.commento &&
+                                                            (recensione.commento.length > 130 || recensione.commento.split('\n').length > 3)
+                                                        ) ? 'visible' : 'hidden'
+                                                    }" class="mostra-altro-btn" @click="apriModalCommento(recensione)">
+                                                        Leggi tutto
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
 
@@ -635,19 +640,62 @@ watch(paginaRecensioniCorrente, () => {
             </div>
         </main>
 
+        <!-- MODAL COMMENTO COMPLETO -->
+        <Teleport to="body">
+            <div v-if="recensioneSelezionata" class="review-overlay" @click.self="chiudiModalCommento">
+                <div class="review-modal">
+
+                    <!-- Header modal -->
+                    <div class="modal-header-row">
+                        <div class="modal-reviewer-info">
+                            <div class="user-avatar modal-avatar">
+                                <img v-if="recensioneSelezionata.fotoprofilo_url"
+                                    :src="recensioneSelezionata.fotoprofilo_url" alt="User avatar">
+                                <span v-else>{{ recensioneSelezionata.nome.charAt(0).toUpperCase() }}</span>
+                            </div>
+                            <div>
+                                <p class="modal-title-text">
+                                    {{ recensioneSelezionata.nome }} {{ recensioneSelezionata.inizialecognome }}.
+                                </p>
+                                <div class="modal-stars-row">
+                                    <div class="small-stars">
+                                        <i v-for="star in 5" :key="star" class="bi"
+                                            :class="star <= Math.round(recensioneSelezionata.votogenerale) ? 'bi-star-fill star--on' : 'bi-star star--off'">
+                                        </i>
+                                    </div>
+                                    <span class="meta-dot">·</span>
+                                    <span class="comment-date">{{
+                                        formattaDataRecensione(recensioneSelezionata.datacreazione) }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="close-btn" @click="chiudiModalCommento" aria-label="Chiudi">
+                            <i class="bi bi-x-lg" style="font-size: 0.85rem;"></i>
+                        </button>
+                    </div>
+
+                    <!-- Body modal: commento scrollabile -->
+                    <div class="modal-comment-body">
+                        <p class="modal-comment-text">{{ recensioneSelezionata.commento }}</p>
+                    </div>
+
+                </div>
+            </div>
+        </Teleport>
+
         <div v-if="indiceFotoAttiva !== null" class="photo-modal" @click="chiudiFoto">
-            
+
             <button class="close-photo-btn" @click.stop="chiudiFoto">
                 <i class="bi bi-x-lg"></i>
             </button>
-            
+
             <!-- Bottone Precedente -->
             <button v-if="fotoGarage.length > 1" class="nav-photo-btn prev-btn" @click.stop="fotoPrecedente">
                 <i class="bi bi-chevron-left"></i>
             </button>
-            
+
             <img :src="fotoGarage[indiceFotoAttiva]" alt="Foto garage ingrandita" @click.stop>
-            
+
             <!-- Bottone Successivo -->
             <button v-if="fotoGarage.length > 1" class="nav-photo-btn next-btn" @click.stop="fotoSuccessiva">
                 <i class="bi bi-chevron-right"></i>
@@ -1184,8 +1232,8 @@ watch(paginaRecensioniCorrente, () => {
     color: #64748b;
     line-height: 1.3;
     display: flex;
-    align-items: center;      
-    justify-content: center;  
+    align-items: center;
+    justify-content: center;
     gap: 6px;
 }
 
@@ -1199,7 +1247,7 @@ watch(paginaRecensioniCorrente, () => {
     font-size: 1.4rem;
     font-weight: 700;
     color: var(--text-dark);
-    margin-top: auto; 
+    margin-top: auto;
     text-align: center;
 }
 
@@ -1211,9 +1259,10 @@ watch(paginaRecensioniCorrente, () => {
 
 .comments-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
     gap: 32px 48px;
     align-content: start;
+    height: 100%;
 }
 
 .comment-card {
@@ -1221,9 +1270,9 @@ watch(paginaRecensioniCorrente, () => {
     flex-direction: column;
     min-width: 0;
     background-color: #fafafa;
-    border: 1px solid #e2e8f0;
-    border-radius: 16px;
-    padding: 24px;
+    border: 0.5px solid var(--border-light);
+    border-radius: 10px;
+    padding: 20px;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 
 }
@@ -1307,11 +1356,6 @@ watch(paginaRecensioniCorrente, () => {
     word-break: break-word;
 }
 
-.comment-text--expanded {
-    line-clamp: unset;
-    -webkit-line-clamp: unset;
-    overflow: visible;
-}
 
 .mostra-altro-btn {
     background: none;
@@ -1353,7 +1397,70 @@ watch(paginaRecensioniCorrente, () => {
     opacity: 0.7;
 }
 
-/* --- POLICY DI CANCELLAZIONE BOX --- */
+.modal-header-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 24px 24px 16px;
+    border-bottom: 1px solid #f1f5f9;
+    flex-shrink: 0;
+}
+
+.modal-reviewer-info {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+}
+
+.modal-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    color: #64748b;
+    font-weight: 700;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.modal-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.modal-reviewer-info .modal-title-text {
+    font-size: 1.1rem;
+    margin-bottom: 4px;
+}
+
+.modal-stars-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.modal-comment-body {
+    padding: 20px 24px 24px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.modal-comment-text {
+    font-size: 1rem;
+    line-height: 1.75;
+    color: #334155;
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
 .policy-box {
     background-color: #f0f7ff;
     border: 1px solid #cce3fd;
@@ -1403,7 +1510,7 @@ watch(paginaRecensioniCorrente, () => {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    min-height: 420px;
+    min-height: 625px;
 }
 
 .left-column {
@@ -1458,7 +1565,13 @@ watch(paginaRecensioniCorrente, () => {
         width: 40px;
         height: 40px;
     }
-    .prev-btn { left: 16px; }
-    .next-btn { right: 16px; }
+
+    .prev-btn {
+        left: 16px;
+    }
+
+    .next-btn {
+        right: 16px;
+    }
 }
 </style>

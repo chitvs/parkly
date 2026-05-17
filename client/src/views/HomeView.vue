@@ -16,6 +16,9 @@ const scrollContainer = ref(null)
 const canScrollLeft = ref(false)
 const canScrollRight = ref(true)
 
+// Gestione Alert
+const messaggio = ref(null)
+
 onMounted(() => {
     if ('scrollRestoration' in history) {
         history.scrollRestoration = 'manual'
@@ -42,19 +45,33 @@ const fetchRandomGarages = async () => {
                 nome: g.nome,
                 indirizzo: g.indirizzo,
                 tariffa: Number(g.tariffabase || 0).toFixed(2),
-                immagine: (g.foto_urls && g.foto_urls.length > 0) ? g.foto_urls[0] : 
-                          (g.Foto_URLs && g.Foto_URLs.length > 0) ? g.Foto_URLs[0] : null
+                immagine: (g.foto_urls && g.foto_urls.length > 0) ? g.foto_urls[0] :
+                    (g.Foto_URLs && g.Foto_URLs.length > 0) ? g.Foto_URLs[0] : null
             }))
 
             await nextTick()
             checkScrollBounds()
+        } else {
+            messaggio.value = { tipo: 'error', testo: 'Impossibile caricare i garage in evidenza.' }
         }
     } catch (error) {
         console.error("Errore nel caricamento dei garage in evidenza:", error)
+        messaggio.value = { tipo: 'error', testo: 'Errore di connessione durante il caricamento dei garage.' }
     }
 }
 
 const handleSearch = () => {
+    // Permettiamo la ricerca parziale. Controlliamo solo la coerenza se le date ci sono entrambe.
+    if (checkIn.value && checkOut.value) {
+        const dataIn = new Date(checkIn.value)
+        const dataOut = new Date(checkOut.value)
+        if (dataOut <= dataIn) {
+            messaggio.value = { tipo: 'error', testo: 'L\'orario di partenza deve essere successivo a quello di arrivo.' }
+            return
+        }
+    }
+
+    messaggio.value = null
     router.push({
         name: 'garage',
         query: {
@@ -71,6 +88,15 @@ const goToGarage = (id) => {
 
 const goQuick = (loc) => {
     router.push({ name: 'garage', query: { location: loc } })
+}
+
+const handleDiventaGestore = () => {
+    if (!authStore.utente) {
+        messaggio.value = { tipo: 'error', testo: 'Devi essere loggato per poter diventare un gestore.' }
+        return
+    }
+    // Il v-if sulla card nasconde già il bottone ai gestori, quindi qui basta reindirizzare
+    router.push('/diventa-gestore')
 }
 
 const scrollGallery = (direction) => {
@@ -91,10 +117,10 @@ const scrollGallery = (direction) => {
 
 const checkScrollBounds = () => {
     if (!scrollContainer.value) return;
-    
+
     const { scrollLeft, scrollWidth, clientWidth } = scrollContainer.value;
-    
-    canScrollLeft.value = scrollLeft > 2; 
+
+    canScrollLeft.value = scrollLeft > 2;
     canScrollRight.value = Math.ceil(scrollLeft + clientWidth) < scrollWidth - 2;
 }
 
@@ -127,12 +153,18 @@ const features = [
     <div class="home-wrapper">
         <Header />
 
+        <div v-if="messaggio" :class="['alert', messaggio.tipo, 'alert-fixed-top']">
+            {{ messaggio.testo }}
+            <button @click="messaggio = null" class="close-btn">x</button>
+        </div>
+
         <main class="main-content">
 
-            <section class="hero-header">   
+            <section class="hero-header">
                 <div class="hero-text">
                     <h1>Trovare parcheggio non è mai stato così <span class="highlight">semplice</span>.</h1>
-                    <p>La piattaforma intelligente per prenotare il tuo posto auto con semplicità, chiarezza e velocità.</p>
+                    <p>La piattaforma intelligente per prenotare il tuo posto auto con semplicità, chiarezza e velocità.
+                    </p>
                 </div>
             </section>
 
@@ -216,10 +248,10 @@ const features = [
                 <div class="cta">
                     <div class="cta-text">
                         <h2>Hai un garage? Lavora con noi.</h2>
-                        <p>Pubblica la tua attività su Parkly. Goditi Dashboard con occupazione in tempo reale, statistiche
-                            mensili e pagamenti automatici.</p>
+                        <p>Pubblica la tua attività su Parkly. Goditi Dashboard con occupazione in tempo reale,
+                            statistiche mensili e pagamenti automatici.</p>
                     </div>
-                    <RouterLink to="/diventa-gestore" class="home-cta-btn">Diventa gestore</RouterLink>
+                    <button @click="handleDiventaGestore" class="home-cta-btn">Diventa gestore</button>
                 </div>
             </div>
 
@@ -464,14 +496,14 @@ const features = [
     color: #00408a;
     font-size: 1.2rem;
     transition: all 0.2s ease;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 
 .nav-btn:hover:not(:disabled) {
     background: #eff6ff;
     border-color: #00408a;
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
 }
 
 .nav-btn:disabled {
@@ -488,14 +520,11 @@ const features = [
     position: relative;
     display: flex;
     gap: 24px;
-
     padding-bottom: 20px;
     overflow-x: auto;
-
     scroll-snap-type: x proximity;
     scroll-behavior: smooth;
     overscroll-behavior-x: contain;
-
     -ms-overflow-style: none;
     scrollbar-width: none;
 }
@@ -524,7 +553,7 @@ const features = [
 }
 
 .garage-card:hover {
-    box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
 }
 
 .garage-img-placeholder {
@@ -600,33 +629,32 @@ const features = [
     line-height: 1.5;
 }
 
-/* Sostituisci .cta-btn e .cta-btn:hover con questi: */
-
 .home-cta-btn {
     background: #ffffff;
     color: #00408a;
     padding: 0 28px;
-    height: 52px; 
+    height: 52px;
     border-radius: 12px;
     font-weight: 700;
     font-family: 'Inter', sans-serif;
-    text-decoration: none;
-    white-space: nowrap;
+    border: none;
+    cursor: pointer;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     transition: 0.2s;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .home-cta-btn:hover {
     background: #f8fafc;
     transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
-    color: #00224a; /* Un blu leggermente più scuro al passaggio del mouse */
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    color: #00224a;
 }
 
 @media (max-width: 900px) {
+
     .steps-grid,
     .features-grid {
         grid-template-columns: repeat(2, 1fr);
@@ -645,6 +673,7 @@ const features = [
 }
 
 @media (max-width: 600px) {
+
     .steps-grid,
     .features-grid {
         grid-template-columns: 1fr;

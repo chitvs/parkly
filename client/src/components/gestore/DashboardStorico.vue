@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import Pagination from '../Pagination.vue'
 
 const props = defineProps({
@@ -38,49 +38,6 @@ const scrollInAlto = () => {
 watch(() => props.prenotazioni, () => {
     paginaCorrente.value = 1
 }, { deep: true })
-
-
-const tableCardRef = ref(null)
-const containerWidth = ref('100%')
-
-const colWidths = [150, 200, 110, 130, 130, 90, 110, 115]
-const spazioTotaleColonne = colWidths.reduce((acc, curr) => acc + curr, 0);
-let resizeObserver = null
-
-const calcolaLarghezzaScatti = () => {
-    if (!tableCardRef.value || !tableCardRef.value.parentElement) return
-    
-    const spazioDisponibile = tableCardRef.value.parentElement.clientWidth
-    let larghezzaOttimale = 0
-
-    for (const width of colWidths) {
-        if (larghezzaOttimale + width <= spazioDisponibile) {
-            larghezzaOttimale += width
-        } else {
-            break 
-        }
-    }
-
-    if (spazioDisponibile >= spazioTotaleColonne || larghezzaOttimale === 0) {
-        containerWidth.value = '100%'
-    } else {
-        containerWidth.value = `${larghezzaOttimale}px`
-    }
-}
-
-onMounted(() => {
-    if (tableCardRef.value && tableCardRef.value.parentElement) {
-        resizeObserver = new ResizeObserver(() => {
-            calcolaLarghezzaScatti()
-        })
-        resizeObserver.observe(tableCardRef.value.parentElement)
-    }
-    calcolaLarghezzaScatti()
-})
-
-onUnmounted(() => {
-    if (resizeObserver) resizeObserver.disconnect()
-})
 </script>
 
 <template>
@@ -92,46 +49,48 @@ onUnmounted(() => {
             </div>
         </div>
 
-        <div class="table-card" ref="tableCardRef" :style="{ width: containerWidth }">
-            <table class="parkly-table">
-                <thead>
-                    <tr>
-                        <th>Codice</th>
-                        <th>Garage</th>
-                        <th>Targa</th>
-                        <th>Inizio</th>
-                        <th>Fine</th>
-                        <th>Importo</th>
-                        <th>Stato</th>
-                        <th>Chat</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="p in prenotazioniPaginate" :key="p.id_prenotazione">
-                        <td><span class="targa-badge">{{ p.codiceprenotazione }}</span></td>
-                        <td class="td-bold">{{ p.nome_garage }}</td>
-                        <td><span class="targa-badge">{{ p.targa }}</span></td>
-                        <td class="td-muted">{{ formatData(p.iniziososta) }}</td>
-                        <td class="td-muted">{{ formatData(p.finesosta) }}</td>
-                        <td class="td-bold td-blue">€ {{ p.prezzototale }}</td>
-                        <td><span :class="['badge', statoBadge(p.stato)]">{{ p.stato }}</span></td>
-                        <td>
-                            <button :style="{ visibility: p.stato === 'ATTIVA' ? 'visible' : 'hidden' }" @click="$emit('apri-chat', p)" class="btn-chat"
-                                title="Scrivi al cliente">
-                                <span v-if="p.nonletti > 0" class="chat-notification-dot"></span>
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                                </svg>
-                                Scrivi
-                            </button>
-                        </td>
-                    </tr>
-                    <tr v-if="prenotazioni.length === 0">
-                        <td colspan="8" class="td-empty">Nessuna prenotazione trovata.</td>
-                    </tr>
-                </tbody>
-            </table>
+        <div class="table-card">
+            <div class="table-responsive-container">
+                <table class="parkly-table">
+                    <thead>
+                        <tr>
+                            <th>Codice</th>
+                            <th>Garage</th>
+                            <th>Targa</th>
+                            <th>Inizio</th>
+                            <th>Fine</th>
+                            <th>Importo</th>
+                            <th>Stato</th>
+                            <th class="text-center">Chat</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="p in prenotazioniPaginate" :key="p.id_prenotazione">
+                            <td><span class="targa-badge">{{ p.codiceprenotazione }}</span></td>
+                            <td class="td-bold td-truncate" :title="p.nome_garage">{{ p.nome_garage }}</td>
+                            <td><span class="targa-badge">{{ p.targa }}</span></td>
+                            <td class="td-muted">{{ formatData(p.iniziososta) }}</td>
+                            <td class="td-muted">{{ formatData(p.finesosta) }}</td>
+                            <td class="td-bold td-blue">€ {{ Number(p.prezzototale).toFixed(2) }}</td>
+                            <td><span :class="['badge', statoBadge(p.stato)]">{{ p.stato }}</span></td>
+                            <td class="text-center">
+                                <button :style="{ visibility: p.stato === 'ATTIVA' ? 'visible' : 'hidden' }" @click="$emit('apri-chat', p)" class="btn-chat"
+                                    title="Scrivi al cliente">
+                                    <span v-if="p.nonletti > 0" class="chat-notification-dot"></span>
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                                    </svg>
+                                    Scrivi
+                                </button>
+                            </td>
+                        </tr>
+                        <tr v-if="prenotazioni.length === 0">
+                            <td colspan="8" class="td-empty">Nessuna prenotazione trovata.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <div class="pagination-container mt-4" v-if="prenotazioni.length > 0">
@@ -142,7 +101,6 @@ onUnmounted(() => {
                 @cambio-pagina="scrollInAlto"
             />
         </div>
-
     </section>
 </template>
 
@@ -152,18 +110,15 @@ onUnmounted(() => {
 }
 
 @keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(8px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .centered-container {
     width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
     box-sizing: border-box;
 }
 
@@ -187,57 +142,41 @@ onUnmounted(() => {
 
 .table-card {
     background: #fff;
-    border: 0.5px solid #E8E8E8;
+    border: 1px solid #E8E8E8;
     border-radius: 12px;
-    overflow-x: auto; 
-    overflow-y: hidden; 
-    scroll-snap-type: x mandatory;
-    scroll-behavior: smooth;
-    transition: width 0.1s ease-out; 
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+    overflow: hidden;
+}
+
+.table-responsive-container {
+    width: 100%;
+    overflow-x: auto;
 }
 
 .parkly-table {
-    width: max-content;
-    min-width: 100%;
+    width: 100%;
+    min-width: 850px; /* Impedisce il collasso delle colonne sui dispositivi mobili attivando lo scroll pulito */
     border-collapse: collapse;
     font-size: 0.875rem;
-    table-layout: fixed;
 }
-
-.parkly-table th:nth-child(1) { width: 150px; }  /* Codice */
-.parkly-table th:nth-child(2) { width: 200px; }  /* Garage */
-.parkly-table th:nth-child(3) { width: 110px; }  /* Targa */
-.parkly-table th:nth-child(4) { width: 130px; }  /* Inizio */
-.parkly-table th:nth-child(5) { width: 130px; }  /* Fine */
-.parkly-table th:nth-child(6) { width: 90px;  }  /* Importo */
-.parkly-table th:nth-child(7) { width: 110px; }  /* Stato */
-.parkly-table th:nth-child(8) { width: 115px; }  /* Chat */
 
 .parkly-table thead tr {
     background: #FAFAFA;
-    border-bottom: 0.5px solid #EFEFEF;
-}
-
-.parkly-table th,
-.parkly-table td {
-    scroll-snap-align: start;
+    border-bottom: 1px solid #EFEFEF;
 }
 
 .parkly-table th {
-    padding: 12px 16px;
+    padding: 14px 16px;
     text-align: left;
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.07em;
-    color: #aaa;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    letter-spacing: 0.05em;
+    color: #888;
 }
 
 .parkly-table tbody tr {
-    border-bottom: 0.5px solid #F5F5F5;
+    border-bottom: 1px solid #F5F5F5;
     transition: background 0.1s;
 }
 
@@ -252,17 +191,19 @@ onUnmounted(() => {
 .parkly-table td {
     padding: 14px 16px;
     color: #444;
+    vertical-align: middle;
 }
 
-.parkly-table td:nth-child(2) {
+.td-truncate {
+    max-width: 180px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .td-muted {
-    color: #bbb;
-    font-size: 0.8rem;
+    color: #777;
+    font-size: 0.85rem;
 }
 
 .td-bold {
@@ -276,15 +217,19 @@ onUnmounted(() => {
 
 .td-empty {
     text-align: center;
-    padding: 40px;
-    color: #ccc;
-    font-size: 0.85rem;
+    padding: 50px;
+    color: #999;
+    font-size: 0.9rem;
+}
+
+.text-center {
+    text-align: center !important;
 }
 
 /* Badges */
 .badge {
     display: inline-block;
-    padding: 3px 10px;
+    padding: 4px 12px;
     border-radius: 999px;
     font-size: 0.72rem;
     font-weight: 600;
@@ -310,7 +255,7 @@ onUnmounted(() => {
 .targa-badge {
     display: inline-block;
     background: #F5F5F5;
-    border: 0.5px solid #E0E0E0;
+    border: 1px solid #E0E0E0;
     border-radius: 4px;
     padding: 2px 8px;
     font-size: 0.78rem;
@@ -325,9 +270,10 @@ onUnmounted(() => {
     position: relative;
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    padding: 5px 12px;
-    border: 0.5px solid #0066CC;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border: 1px solid #0066CC;
     border-radius: 6px;
     background: #EBF3FF;
     color: #0066CC;
@@ -335,7 +281,7 @@ onUnmounted(() => {
     font-weight: 600;
     cursor: pointer;
     font-family: inherit;
-    transition: background 0.15s, color 0.15s;
+    transition: all 0.15s;
     white-space: nowrap;
 }
 
