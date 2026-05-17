@@ -1,18 +1,9 @@
-import { ref, computed, watch } from 'vue'
+import { computed } from 'vue'
 import { calculateDistance } from '../utils/distance.js'
 import { strategic_places } from '../constants/places.js'
 
-export function useSpatialSearch(searchLocation, garages, passaFiltriTecnici, raggioKm) {
-    const showExtendedResults = ref(false)
-
-    watch(searchLocation, () => {
-        showExtendedResults.value = false
-    })
-
-    watch(raggioKm, () => {
-        showExtendedResults.value = false
-    })
-
+export function useSpatialSearch(searchLocation, garages, passaFiltriTecnici, raggioKm, ordinamento, filterTipoVeicolo) {
+    
     const matchedPOI = computed(() => {
         const query = searchLocation.value.toLowerCase().trim()
         return query.length > 2
@@ -23,11 +14,26 @@ export function useSpatialSearch(searchLocation, garages, passaFiltriTecnici, ra
             : null
     })
 
+    const hasMoreResults = computed(() => {
+        const poi = matchedPOI.value
+        if (!poi) return false
+
+        const raggio = raggioKm?.value ?? 2
+        const raggioEsteso = Math.max(raggio + 3, 5)
+
+        // Verifica solo se ci sono parcheggi validi nella fascia "estesa"
+        return garages.value.some(g => {
+        const d = calculateDistance(poi.coords.lat, poi.coords.lng, g.latitudine, g.longitudine)
+        return d > raggio && d <= raggioEsteso && passaFiltriTecnici(g)
+    })
+
+        return far.length > 0
+    })
+
     const garagesFiltrati = computed(() => {
         const query = searchLocation.value.toLowerCase().trim()
         const poi = matchedPOI.value
         const raggio = raggioKm?.value ?? 2
-        const raggioEsteso = Math.max(raggio + 3, 5)
 
         const allProcessed = garages.value.map(g => {
             let referencePOI = null
@@ -55,44 +61,40 @@ export function useSpatialSearch(searchLocation, garages, passaFiltriTecnici, ra
             }
         })
 
+        let risultatiDaOrdinare = []
+
         if (poi) {
-            const near = allProcessed.filter(g => passaFiltriTecnici(g) && g.displayDistanceKM <= raggio)
-            const far = allProcessed.filter(g => passaFiltriTecnici(g) && g.displayDistanceKM > raggio && g.displayDistanceKM <= raggioEsteso)
-
-            const results = near.length > 0
-                ? (showExtendedResults.value ? [...near, ...far] : near)
-                : far
-
-            return results.sort((a, b) => a.displayDistanceKM - b.displayDistanceKM)
+            // LOGICA SEMPLIFICATA: prendiamo solo quelli dentro il raggio!
+            // (Se l'utente clicca "Mostra altri", il raggio si aggiornerà e questa computed si ricalcolerà da sola)
+            risultatiDaOrdinare = allProcessed.filter(g => passaFiltriTecnici(g) && g.displayDistanceKM <= raggio)
+        } else {
+            risultatiDaOrdinare = allProcessed.filter(g => {
+                const matchesSearch = g.nome.toLowerCase().includes(query) || g.indirizzo.toLowerCase().includes(query)
+                return matchesSearch && passaFiltriTecnici(g)
+            })
         }
 
-        return allProcessed.filter(g => {
-            const matchesSearch = g.nome.toLowerCase().includes(query) || g.indirizzo.toLowerCase().includes(query)
-            return matchesSearch && passaFiltriTecnici(g)
-        })
-    })
+        const getPriceForSort = (g) => {
+            if (filterTipoVeicolo?.value !== 'ALL' && g.tariffeVeicoli && g.tariffeVeicoli[filterTipoVeicolo?.value]) {
+                return Number(g.tariffeVeicoli[filterTipoVeicolo.value]);
+            }
+            return Number(g.tariffabase);
+        }
 
-    const hasMoreResults = computed(() => {
-        const poi = matchedPOI.value
-        if (!poi || showExtendedResults.value) return false
-
-        const raggio = raggioKm?.value ?? 2
-        const raggioEsteso = Math.max(raggio + 3, 5)
-
-        const near = garages.value.filter(g => {
-            const d = calculateDistance(poi.coords.lat, poi.coords.lng, g.latitudine, g.longitudine)
-            return d <= raggio && passaFiltriTecnici(g)
-        })
-        const far = garages.value.filter(g => {
-            const d = calculateDistance(poi.coords.lat, poi.coords.lng, g.latitudine, g.longitudine)
-            return d > raggio && d <= raggioEsteso && passaFiltriTecnici(g)
-        })
-
-        return near.length > 0 && far.length > 0
+        return risultatiDaOrdinare.sort((a, b) => {
+            if (ordinamento?.value === 'prezzo') {
+                return getPriceForSort(a) - getPriceForSort(b);
+            } else if (ordinamento?.value === 'recensioni') {
+                const mediaA = Number(a.mediagenerale) || 0;
+                const mediaB = Number(b.mediagenerale) || 0;
+                return mediaB - mediaA;
+            } else {
+                return (a.displayDistanceKM || 0) - (b.displayDistanceKM || 0);
+            }
+        });
     })
 
     return {
-        showExtendedResults,
         matchedPOI,
         garagesFiltrati,
         hasMoreResults

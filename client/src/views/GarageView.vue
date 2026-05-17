@@ -38,7 +38,7 @@ const { isLoading, garages, fetchGarages } = useGarages()
 
 const {
     filter24h, maxPrice, minHeight, filterCoperto,
-    filterElettrico, filterDisabili, filterTipoVeicolo, raggioKm,
+    filterElettrico, filterDisabili, filterTipoVeicolo, raggioKm, ordinamento,
     resetTechnicalFilters, passaFiltriTecnici
 } = useGarageFilters()
 
@@ -52,11 +52,24 @@ const getDisplayPrice = (garage) => {
 }
 
 const {
-    showExtendedResults,
     matchedPOI,
     garagesFiltrati,
     hasMoreResults
-} = useSpatialSearch(searchLocation, garages, passaFiltriTecnici, raggioKm)
+} = useSpatialSearch(searchLocation, garages, passaFiltriTecnici, raggioKm, ordinamento, filterTipoVeicolo)
+
+const espandiRaggio = () => {
+    // Imposta lo slider al raggio esteso
+    raggioKm.value = Math.max(raggioKm.value + 3, 5);
+}
+
+const isSortDropdownOpenMain = ref(false)
+const isSortDropdownOpenFS = ref(false)
+
+const getSortLabel = () => {
+    if (ordinamento.value === 'prezzo') return 'Prezzo'
+    if (ordinamento.value === 'recensioni') return 'Recensioni'
+    return 'Distanza'
+}
 
 const paginaCorrente = ref(1)
 const elementiPerPagina = ref(5)
@@ -96,7 +109,7 @@ const caricaAltriFS = () => {
 
 const scrollInAlto = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    
+
     document.documentElement.scrollTop = 0;
     document.body.scrollTop = 0;
 
@@ -125,10 +138,8 @@ watch([checkIn, checkOut], async ([newIn, newOut]) => {
     }
 })
 
-const isFiltering = ref(false)
 
 watch(garagesFiltrati, async (newGarages) => {
-    isFiltering.value = true
 
     paginaCorrente.value = 1
     elementiVisibiliFS.value = 6
@@ -142,7 +153,6 @@ watch(garagesFiltrati, async (newGarages) => {
 
     await nextTick()
 
-    isFiltering.value = false
 }, { deep: true })
 
 const handlePageChange = async () => {
@@ -321,9 +331,9 @@ const handleSuggestionSelected = (place) => {
         <section class="search-area">
             <div class="search-container">
                 <SearchBar v-model:location="searchLocation" v-model:checkIn="checkIn" v-model:checkOut="checkOut"
-                    :hasDateError="!!searchError"
-                    @suggestion-selected="handleSuggestionSelected" />
-                <div v-if="searchError" class="alert error mt-3 mb-0 text-center" style="max-width: 1000px; margin: 0 auto;">
+                    :hasDateError="!!searchError" @suggestion-selected="handleSuggestionSelected" />
+                <div v-if="searchError" class="alert error mt-3 mb-0 text-center"
+                    style="max-width: 1000px; margin: 0 auto;">
                     {{ searchError }}
                 </div>
             </div>
@@ -368,6 +378,33 @@ const handleSuggestionSelected = (place) => {
                                             <div class="fs-col-cards">
                                                 <div class="fs-panel-header">
                                                     <h3>{{ garagesFiltrati.length }} Risultati</h3>
+
+                                                    <div class="sort-dropdown-wrapper" style="min-width: 120px">
+                                                        <button class="sort-trigger sort-trigger-light"
+                                                            @click="isSortDropdownOpenFS = !isSortDropdownOpenFS">
+                                                            <span style="font-size: 0.8rem;"><strong>{{ getSortLabel()
+                                                                    }}</strong></span>
+                                                            <svg :class="['sort-chevron', { 'rotated': isSortDropdownOpenFS }]"
+                                                                viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                                stroke-width="2.5" stroke-linecap="round"
+                                                                stroke-linejoin="round">
+                                                                <polyline points="6 9 12 15 18 9" />
+                                                            </svg>
+                                                        </button>
+
+                                                        <ul v-if="isSortDropdownOpenFS"
+                                                            class="sort-menu sort-menu-right">
+                                                            <li><a class="sort-menu-item"
+                                                                    @click="ordinamento = 'distanza'; isSortDropdownOpenFS = false">Distanza
+                                                                </a></li>
+                                                            <li><a class="sort-menu-item"
+                                                                    @click="ordinamento = 'prezzo'; isSortDropdownOpenFS = false">Prezzo
+                                                                </a></li>
+                                                            <li><a class="sort-menu-item"
+                                                                    @click="ordinamento = 'recensioni'; isSortDropdownOpenFS = false">Recensioni
+                                                                </a></li>
+                                                        </ul>
+                                                    </div>
                                                 </div>
                                                 <div class="fs-scroll-content">
                                                     <div v-for="garage in garagesMostratiFS"
@@ -404,8 +441,7 @@ const handleSuggestionSelected = (place) => {
 
                                                     <div v-if="hasMoreResults" class="fs-extended-results-mini">
                                                         <p>Ci sono altri parcheggi oltre {{ raggioKm }}km</p>
-                                                        <button @click.stop="showExtendedResults = true"
-                                                            class="btn-show-more-mini">
+                                                        <button @click.stop="espandiRaggio" class="btn-show-more-mini">
                                                             Mostra altri
                                                         </button>
                                                     </div>
@@ -468,12 +504,43 @@ const handleSuggestionSelected = (place) => {
                 <template v-else>
                     <div class="results-header" v-if="garagesFiltrati.length > 0">
                         <h2 class="results-count">
-                            Risultati: <span>{{ garagesFiltrati.length }} parcheggi
-                                trovati.</span>
+                            Risultati: <span>{{ garagesFiltrati.length }} parcheggi trovati.</span>
                         </h2>
+
+                        <div class="sort-dropdown-wrapper">
+                            <button class="sort-trigger" @click="isSortDropdownOpenMain = !isSortDropdownOpenMain">
+                                <span>Ordina per: <strong>{{ getSortLabel() }}</strong></span>
+                                <svg :class="['sort-chevron', { 'rotated': isSortDropdownOpenMain }]"
+                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="6 9 12 15 18 9" />
+                                </svg>
+                            </button>
+
+                            <ul v-if="isSortDropdownOpenMain" class="sort-menu">
+                                <li>
+                                    <a class="sort-menu-item"
+                                        @click="ordinamento = 'distanza'; isSortDropdownOpenMain = false">
+                                        Distanza
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="sort-menu-item"
+                                        @click="ordinamento = 'prezzo'; isSortDropdownOpenMain = false">
+                                        Prezzo
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="sort-menu-item"
+                                        @click="ordinamento = 'recensioni'; isSortDropdownOpenMain = false">
+                                        Recensioni
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
                     </div>
 
-                    <div class="garage-list"  :style="{ minHeight: garageListMinHeight }" >
+                    <div class="garage-list" :style="{ minHeight: garageListMinHeight }">
                         <div v-for="garage in garagesPaginati" :key="garage.id_garage" class="garage-card"
                             @click="goToDetail(garage)">
 
@@ -481,7 +548,15 @@ const handleSuggestionSelected = (place) => {
                                 <img v-if="garage.foto_urls && garage.foto_urls.length > 0" :src="garage.foto_urls[0]"
                                     class="gcard-image" alt="Foto Garage" />
                                 <div v-else class="gcard-letter-box">{{ garage.nome.charAt(0) }}</div>
-                                <span v-if="garage.is24h" class="gcard-badge-top">24/7</span>
+                                <div class="gcard-badge-container">
+                                    <span v-if="Number(garage.mediagenerale) > 0" class="gcard-badge-rating">
+                                        {{ Number(garage.mediagenerale).toFixed(2) }}
+                                    </span>
+                                    <span v-else class="gcard-badge-new">
+                                        Nuovo
+                                    </span>
+                                    <span v-if="garage.is24h" class="gcard-badge-top">24/7</span>
+                                </div>
                             </div>
 
                             <div class="gcard-main">
@@ -541,15 +616,15 @@ const handleSuggestionSelected = (place) => {
                             <p class="extended-info">
                                 Ci sono altri parcheggi tra {{ raggioKm }}km e {{ Math.max(raggioKm + 3, 5) }}km...
                             </p>
-                            <button @click.stop="showExtendedResults = true" class="btn-show-more">
+                            <button @click.stop="espandiRaggio" class="btn-show-more">
                                 Visualizza altri parcheggi
                             </button>
                         </div>
 
                         <div v-if="garagesFiltrati.length > 0" class="mt-3 px-2 pagination-container">
                             <Pagination v-model:paginaCorrente="paginaCorrente"
-                                v-model:elementiPerPagina="elementiPerPagina" :totaleElementi="totaleElementiPaginazione"
-                                @cambio-pagina="handlePageChange" />
+                                v-model:elementiPerPagina="elementiPerPagina"
+                                :totaleElementi="totaleElementiPaginazione" @cambio-pagina="handlePageChange" />
                         </div>
 
                     </div>
@@ -561,7 +636,8 @@ const handleSuggestionSelected = (place) => {
 </template>
 
 <style scoped>
-html, body {
+html,
+body {
     overflow-anchor: none;
 }
 
@@ -603,7 +679,7 @@ html, body {
     position: sticky;
     top: 100px;
     height: fit-content;
-    align-self: flex-start; 
+    align-self: flex-start;
     height: max-content;
 }
 
@@ -680,7 +756,8 @@ html, body {
     cursor: pointer;
     padding: 0;
 }
-.reset-btn:hover{
+
+.reset-btn:hover {
     text-decoration-line: underline;
 }
 
@@ -688,12 +765,15 @@ html, body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 10px 0px;
 }
 
 .results-count {
     font-size: 1.4rem;
     font-weight: 700;
     color: #0f172a;
+    margin: 0;
+    line-height: 1;
 }
 
 .results-count span {
@@ -767,11 +847,34 @@ html, body {
     text-transform: uppercase;
 }
 
-.gcard-badge-top {
+.gcard-badge-container {
     position: absolute;
     top: 8px;
     left: 8px;
+    display: flex;
+    gap: 6px;
+}
+
+.gcard-badge-top {
     background: #008009;
+    color: white;
+    padding: 2px 6px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    border-radius: 4px;
+}
+
+.gcard-badge-rating {
+    background: #F59E0B;
+    color: white;
+    padding: 2px 6px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    border-radius: 4px;
+}
+
+.gcard-badge-new {
+    background: #006CE4;
     color: white;
     padding: 2px 6px;
     font-size: 0.65rem;
@@ -972,8 +1075,9 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: transform 0.2s; 
+    transition: transform 0.2s;
 }
+
 .fs-close-circle:hover {
     transform: scale(1.1);
     background-color: #f8fafc;
@@ -981,17 +1085,22 @@ html, body {
 
 
 .fs-panel-header {
-    padding: 20px;
+    padding: 0px 20px;
     border-bottom: 1px solid #f1f5f9;
     background: #00408A;
+    min-height: 64px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .fs-panel-header h3 {
     margin: 0;
     font-size: 1.1rem;
     color: white;
-    font-family: 'Inter',sans-serif;
+    font-family: 'Inter', sans-serif;
     font-weight: 600;
+    line-height: 1;
 }
 
 .fs-scroll-content {
@@ -1241,5 +1350,96 @@ html, body {
     100% {
         box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
     }
+}
+
+.sort-dropdown-wrapper {
+    position: relative;
+    min-width: 210px;
+}
+
+.sort-trigger {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: #ffffff;
+    color: #1e293b;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+}
+
+.sort-trigger-light {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.3);
+    padding: 6px 10px;
+    display: flex;
+    align-items: center;
+    line-height: 1;
+}
+
+.sort-trigger:hover {
+    border-color: #006ce4;
+    background-color: #f8fafc;
+}
+
+.sort-trigger-light:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: #ffffff;
+}
+
+.sort-chevron {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    color: currentColor;
+    transition: transform 0.2s ease;
+}
+
+.sort-chevron.rotated {
+    transform: rotate(180deg);
+}
+
+.sort-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 0.5rem;
+    list-style: none;
+    margin: 0;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    z-index: 200;
+}
+
+.sort-menu-right {
+    left: auto;
+    right: 0;
+    min-width: 200px;
+}
+
+.sort-menu-item {
+    display: block;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    color: #334155;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background-color 0.15s ease;
+    text-decoration: none;
+}
+
+.sort-menu-item:hover {
+    background-color: #f1f5f9;
+    color: #006ce4;
+    font-weight: 600;
 }
 </style>
