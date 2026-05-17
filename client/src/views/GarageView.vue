@@ -75,15 +75,13 @@ const paginaCorrente = ref(1)
 const elementiPerPagina = ref(5)
 
 const totaleElementiPaginazione = computed(() => {
-    return garagesFiltrati.value.length + (hasMoreResults.value ? 1 : 0)
+    return garagesFiltrati.value.length
 })
 
 const showExtendedResultsBlock = computed(() => {
     if (!hasMoreResults.value) return false
-    const indexVirtuale = garagesFiltrati.value.length
-    const inizio = (paginaCorrente.value - 1) * elementiPerPagina.value
-    const fine = inizio + elementiPerPagina.value
-    return indexVirtuale >= inizio && indexVirtuale < fine
+    const totalePagine = Math.ceil(totaleElementiPaginazione.value / elementiPerPagina.value) || 1
+    return paginaCorrente.value === totalePagine
 })
 
 const garagesPaginati = computed(() => {
@@ -558,12 +556,12 @@ const handleSuggestionSelected = (place) => {
                                 Visualizza altri parcheggi
                             </button>
                         </div>
+                    </div>
 
-                        <div v-if="garagesFiltrati.length > 0" class="mt-4 px-2 pagination-container">
-                            <Pagination v-model:paginaCorrente="paginaCorrente"
-                                v-model:elementiPerPagina="elementiPerPagina"
-                                :totaleElementi="totaleElementiPaginazione" @cambio-pagina="handlePageChange" />
-                        </div>
+                    <div v-if="garagesFiltrati.length > 0" class="mt-4 px-2 pagination-container">
+                        <Pagination v-model:paginaCorrente="paginaCorrente"
+                            v-model:elementiPerPagina="elementiPerPagina"
+                            :totaleElementi="totaleElementiPaginazione" @cambio-pagina="handlePageChange" />
                     </div>
                 </template>
             </main>
@@ -726,8 +724,7 @@ body {
 .garage-list {
     display: flex;
     flex-direction: column;
-    flex: 1;
-    min-height: 400px;
+    flex-grow: 1;
 }
 
 .garage-card {
@@ -1197,7 +1194,7 @@ body {
 }
 
 .pagination-container {
-    margin-top: 1.5rem !important;
+    margin-top: auto;
     background-color: transparent;
 }
 
