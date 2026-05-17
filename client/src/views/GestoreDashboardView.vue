@@ -335,7 +335,7 @@ const formattaDataLeggibile = (dataIso) => {
 
         <div class="sidebar-divider" v-if="showNavBottom"></div>
 
-        <div class="sidebar-filter">
+        <div class="sidebar-filter" v-if="showNavBottom">
           <span class="sidebar-filter-label">Garage</span>
 
           <div class="garage-dropdown-wrapper">
