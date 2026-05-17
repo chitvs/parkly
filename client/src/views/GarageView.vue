@@ -86,12 +86,6 @@ const showExtendedResultsBlock = computed(() => {
     return indexVirtuale >= inizio && indexVirtuale < fine
 })
 
-const garageListMinHeight = computed(() => {
-    const altezzaCard = 196 // 180px altezza card + 16px margin-bottom
-    const altezzaPaginazione = 90
-    return `${elementiPerPagina.value * altezzaCard + altezzaPaginazione}px`
-})
-
 const garagesPaginati = computed(() => {
     const inizio = (paginaCorrente.value - 1) * elementiPerPagina.value
     return garagesFiltrati.value.slice(inizio, inizio + elementiPerPagina.value)
@@ -109,7 +103,6 @@ const caricaAltriFS = () => {
 
 const scrollInAlto = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-
     document.documentElement.scrollTop = 0;
     document.body.scrollTop = 0;
 
@@ -138,9 +131,7 @@ watch([checkIn, checkOut], async ([newIn, newOut]) => {
     }
 })
 
-
 watch(garagesFiltrati, async (newGarages) => {
-
     paginaCorrente.value = 1
     elementiVisibiliFS.value = 6
 
@@ -150,9 +141,7 @@ watch(garagesFiltrati, async (newGarages) => {
         const marker = markersRefs[id]
         activeIds.includes(Number(id)) ? marker.addTo(fullMapInstance) : marker.remove()
     })
-
     await nextTick()
-
 }, { deep: true })
 
 const handlePageChange = async () => {
@@ -161,11 +150,9 @@ const handlePageChange = async () => {
 }
 
 onMounted(async () => {
-
     if ('scrollRestoration' in history) {
         history.scrollRestoration = 'manual';
     }
-
     window.scrollTo({ top: 0, behavior: 'instant' })
 
     if (route.query.location) searchLocation.value = route.query.location
@@ -194,7 +181,6 @@ const resetFilters = () => {
     checkIn.value = ''
     checkOut.value = ''
 }
-
 
 const setHover = (garage, active) => {
     Object.values(markersRefs).forEach(m => {
@@ -272,7 +258,6 @@ const openMapFullscreen = async () => {
         if (matchedPOI.value) {
             placeSearchMarker(matchedPOI.value.coords.lat, matchedPOI.value.coords.lng, matchedPOI.value.name)
         }
-
     }
 }
 
@@ -327,7 +312,6 @@ const handleSuggestionSelected = (place) => {
 <template>
     <Header />
     <div class="garage-wrapper">
-
         <section class="search-area">
             <div class="search-container">
                 <SearchBar v-model:location="searchLocation" v-model:checkIn="checkIn" v-model:checkOut="checkOut"
@@ -352,13 +336,10 @@ const handleSuggestionSelected = (place) => {
                             <Transition name="fs-fade">
                                 <div v-if="isMapFullscreen" class="fs-overlay">
                                     <div class="fs-body">
-
                                         <div class="fs-left-half">
-
                                             <div class="fs-col-filters">
                                                 <div class="fs-panel-header">
-                                                    <h3
-                                                        style="display: flex; justify-content: space-between; width: 100%;">
+                                                    <h3 style="display: flex; justify-content: space-between; width: 100%;">
                                                         Filtri
                                                         <button @click="resetFilters" class="reset-btn"
                                                             style="color: white;">Reset</button>
@@ -378,12 +359,10 @@ const handleSuggestionSelected = (place) => {
                                             <div class="fs-col-cards">
                                                 <div class="fs-panel-header">
                                                     <h3>{{ garagesFiltrati.length }} Risultati</h3>
-
                                                     <div class="sort-dropdown-wrapper" style="min-width: 120px">
                                                         <button class="sort-trigger sort-trigger-light"
                                                             @click="isSortDropdownOpenFS = !isSortDropdownOpenFS">
-                                                            <span style="font-size: 0.8rem;"><strong>{{ getSortLabel()
-                                                                    }}</strong></span>
+                                                            <span style="font-size: 0.8rem;"><strong>{{ getSortLabel() }}</strong></span>
                                                             <svg :class="['sort-chevron', { 'rotated': isSortDropdownOpenFS }]"
                                                                 viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                                                 stroke-width="2.5" stroke-linecap="round"
@@ -391,18 +370,10 @@ const handleSuggestionSelected = (place) => {
                                                                 <polyline points="6 9 12 15 18 9" />
                                                             </svg>
                                                         </button>
-
-                                                        <ul v-if="isSortDropdownOpenFS"
-                                                            class="sort-menu sort-menu-right">
-                                                            <li><a class="sort-menu-item"
-                                                                    @click="ordinamento = 'distanza'; isSortDropdownOpenFS = false">Distanza
-                                                                </a></li>
-                                                            <li><a class="sort-menu-item"
-                                                                    @click="ordinamento = 'prezzo'; isSortDropdownOpenFS = false">Prezzo
-                                                                </a></li>
-                                                            <li><a class="sort-menu-item"
-                                                                    @click="ordinamento = 'recensioni'; isSortDropdownOpenFS = false">Recensioni
-                                                                </a></li>
+                                                        <ul v-if="isSortDropdownOpenFS" class="sort-menu sort-menu-right">
+                                                            <li><a class="sort-menu-item" @click="ordinamento = 'distanza'; isSortDropdownOpenFS = false">Distanza</a></li>
+                                                            <li><a class="sort-menu-item" @click="ordinamento = 'prezzo'; isSortDropdownOpenFS = false">Prezzo</a></li>
+                                                            <li><a class="sort-menu-item" @click="ordinamento = 'recensioni'; isSortDropdownOpenFS = false">Recensioni</a></li>
                                                         </ul>
                                                     </div>
                                                 </div>
@@ -411,29 +382,23 @@ const handleSuggestionSelected = (place) => {
                                                         :key="'fs-' + garage.id_garage" class="fs-mini-card"
                                                         @mouseenter="setHover(garage, true)"
                                                         @click="selectGarage(garage)">
-
                                                         <div class="mini-thumb">
                                                             <img v-if="garage.foto_urls && garage.foto_urls.length > 0"
                                                                 :src="garage.foto_urls[0]" class="mini-image"
                                                                 alt="Foto Garage" />
-                                                            <div v-else class="gcard-letter-box">{{
-                                                                garage.nome.charAt(0) }}</div>
+                                                            <div v-else class="gcard-letter-box">{{ garage.nome.charAt(0) }}</div>
                                                         </div>
-
                                                         <div class="mini-details">
                                                             <h4>{{ garage.nome }}</h4>
                                                             <p>{{ garage.indirizzo.slice(0, 30) }}...</p>
                                                             <p v-if="garage.displayPOIName">
-                                                                a {{ garage.displayDistanceLabel }} da {{
-                                                                    garage.displayPOIName }}
+                                                                a {{ garage.displayDistanceLabel }} da {{ garage.displayPOIName }}
                                                             </p>
-                                                            <span class="mini-price">€{{ getDisplayPrice(garage)
-                                                            }}/ora</span>
+                                                            <span class="mini-price">€{{ getDisplayPrice(garage) }}/ora</span>
                                                         </div>
                                                     </div>
 
-                                                    <div v-if="elementiVisibiliFS < garagesFiltrati.length"
-                                                        class="load-more-container">
+                                                    <div v-if="elementiVisibiliFS < garagesFiltrati.length" class="load-more-container">
                                                         <button @click="caricaAltriFS" class="btn-load-more">
                                                             Mostra altri risultati
                                                         </button>
@@ -451,15 +416,13 @@ const handleSuggestionSelected = (place) => {
 
                                         <div class="fs-right-half">
                                             <div ref="fullMapContainer" class="fs-map-canvas"></div>
-
                                             <div class="fs-map-controls">
                                                 <div class="fs-floating-search">
                                                     <SearchBar v-model:location="searchLocation" :simple="true"
                                                         placeholder="Cerca sulla mappa..."
                                                         @suggestion-selected="handleSuggestionSelected" />
                                                 </div>
-                                                <button class="fs-reset-view" @click="resetMapView"
-                                                    title="Ripristina visuale">
+                                                <button class="fs-reset-view" @click="resetMapView" title="Ripristina visuale">
                                                     <span style="font-size: 1.2rem;"><img src="../assets/refresh.svg"
                                                             class="icon-card" alt="Pin"
                                                             style="transform:translateX(3px) translateY(-0.5px) scale(1.7)" /></span>
@@ -467,7 +430,6 @@ const handleSuggestionSelected = (place) => {
                                                 <button class="fs-close-circle" @click="closeMapFullscreen">✕</button>
                                             </div>
                                         </div>
-
                                     </div>
                                 </div>
                             </Transition>
@@ -480,7 +442,6 @@ const handleSuggestionSelected = (place) => {
                         <h3>Filtri</h3>
                         <button @click="resetFilters" class="reset-btn">Reset</button>
                     </div>
-
                     <GarageFilters v-model:filterTipoVeicolo="filterTipoVeicolo" v-model:maxPrice="maxPrice"
                         v-model:filter24h="filter24h" v-model:filterCoperto="filterCoperto"
                         v-model:filterElettrico="filterElettrico" v-model:filterDisabili="filterDisabili"
@@ -488,7 +449,7 @@ const handleSuggestionSelected = (place) => {
                 </div>
             </aside>
 
-            <main class="zone-results" :style="{ minHeight: garageListMinHeight }">
+            <main class="zone-results">
                 <div v-if="isLoading" class="loading-state text-center py-5">
                     <div class="spinner"></div>
                     <p>Caricamento parcheggi...</p>
@@ -498,7 +459,6 @@ const handleSuggestionSelected = (place) => {
                     <h2 class="results-count">
                         Risultati: <span>nessun parcheggio trovato.</span>
                     </h2>
-                    <!-- disattivare qui il filtro per ordinare le card -->
                 </div>
 
                 <template v-else>
@@ -518,29 +478,14 @@ const handleSuggestionSelected = (place) => {
                             </button>
 
                             <ul v-if="isSortDropdownOpenMain" class="sort-menu">
-                                <li>
-                                    <a class="sort-menu-item"
-                                        @click="ordinamento = 'distanza'; isSortDropdownOpenMain = false">
-                                        Distanza
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="sort-menu-item"
-                                        @click="ordinamento = 'prezzo'; isSortDropdownOpenMain = false">
-                                        Prezzo
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="sort-menu-item"
-                                        @click="ordinamento = 'recensioni'; isSortDropdownOpenMain = false">
-                                        Recensioni
-                                    </a>
-                                </li>
+                                <li><a class="sort-menu-item" @click="ordinamento = 'distanza'; isSortDropdownOpenMain = false">Distanza</a></li>
+                                <li><a class="sort-menu-item" @click="ordinamento = 'prezzo'; isSortDropdownOpenMain = false">Prezzo</a></li>
+                                <li><a class="sort-menu-item" @click="ordinamento = 'recensioni'; isSortDropdownOpenMain = false">Recensioni</a></li>
                             </ul>
                         </div>
                     </div>
 
-                    <div class="garage-list" :style="{ minHeight: garageListMinHeight }">
+                    <div class="garage-list">
                         <div v-for="garage in garagesPaginati" :key="garage.id_garage" class="garage-card"
                             @click="goToDetail(garage)">
 
@@ -552,9 +497,7 @@ const handleSuggestionSelected = (place) => {
                                     <span v-if="Number(garage.mediagenerale) > 0" class="gcard-badge-rating">
                                         {{ Number(garage.mediagenerale).toFixed(2) }}
                                     </span>
-                                    <span v-else class="gcard-badge-new">
-                                        Nuovo
-                                    </span>
+                                    <span v-else class="gcard-badge-new">Nuovo</span>
                                     <span v-if="garage.is24h" class="gcard-badge-top">24/7</span>
                                 </div>
                             </div>
@@ -576,12 +519,10 @@ const handleSuggestionSelected = (place) => {
                                 <div class="gcard-services">
                                     <span class="service-badge info">
                                         <img src="../assets/orologio.svg" class="icon-card" alt="Orario" />
-                                        {{ garage.is24h ? '24/7' : garage.orarioapertura.slice(0, 5) + ' - ' +
-                                            garage.orariochiusura.slice(0, 5) }}
+                                        {{ garage.is24h ? '24/7' : garage.orarioapertura.slice(0, 5) + ' - ' + garage.orariochiusura.slice(0, 5) }}
                                     </span>
                                     <span v-if="garage.altezzamassima" class="service-badge info">
-                                        <img src="../assets/altezza_massima.svg" class="icon-card"
-                                            alt="Altezza massima" />
+                                        <img src="../assets/altezza_massima.svg" class="icon-card" alt="Altezza massima" />
                                         Max: {{ garage.altezzamassima }}m
                                     </span>
                                     <span v-if="garage.hasCoperto" class="service-badge feature">
@@ -589,13 +530,11 @@ const handleSuggestionSelected = (place) => {
                                         Coperto
                                     </span>
                                     <span v-if="garage.hasElettrico" class="service-badge feature">
-                                        <img src="../assets/electricity.svg" class="icon-card"
-                                            alt="Ricarica elettrica" />
+                                        <img src="../assets/electricity.svg" class="icon-card" alt="Ricarica elettrica" />
                                         Ricarica
                                     </span>
                                     <span v-if="garage.hasDisabili" class="service-badge feature">
-                                        <img src="../assets/handicap.svg" class="icon-card"
-                                            alt="Accessibile disabili" />
+                                        <img src="../assets/handicap.svg" class="icon-card" alt="Accessibile disabili" />
                                         Disabili
                                     </span>
                                 </div>
@@ -604,8 +543,7 @@ const handleSuggestionSelected = (place) => {
                             <div class="gcard-right">
                                 <div class="gcard-price-block">
                                     <span class="price-label">
-                                        {{ filterTipoVeicolo === 'ALL' ? 'TARIFFA BASE' : 'TARIFFA ' + filterTipoVeicolo
-                                        }}
+                                        {{ filterTipoVeicolo === 'ALL' ? 'TARIFFA BASE' : 'TARIFFA ' + filterTipoVeicolo }}
                                     </span>
                                     <span class="price-value">€{{ getDisplayPrice(garage) }}/ora</span>
                                 </div>
@@ -621,12 +559,11 @@ const handleSuggestionSelected = (place) => {
                             </button>
                         </div>
 
-                        <div v-if="garagesFiltrati.length > 0" class="mt-3 px-2 pagination-container">
+                        <div v-if="garagesFiltrati.length > 0" class="mt-4 px-2 pagination-container">
                             <Pagination v-model:paginaCorrente="paginaCorrente"
                                 v-model:elementiPerPagina="elementiPerPagina"
                                 :totaleElementi="totaleElementiPaginazione" @cambio-pagina="handlePageChange" />
                         </div>
-
                     </div>
                 </template>
             </main>
@@ -678,9 +615,7 @@ body {
     gap: 1.5rem;
     position: sticky;
     top: 100px;
-    height: fit-content;
     align-self: flex-start;
-    height: max-content;
 }
 
 .zone-map {
@@ -786,14 +721,13 @@ body {
     flex: 1;
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
-    overflow-anchor: none;
 }
 
 .garage-list {
     display: flex;
     flex-direction: column;
     flex: 1;
+    min-height: 400px;
 }
 
 .garage-card {
@@ -822,10 +756,8 @@ body {
     justify-content: center;
     flex-shrink: 0;
     overflow: hidden;
-    /* IMPORTANTE PER MANTENERE IL BORDO DELLA CARD */
 }
 
-/* --- NUOVI STILI PER LE IMMAGINI --- */
 .gcard-image {
     width: 100%;
     height: 100%;
@@ -837,7 +769,6 @@ body {
     height: 100%;
     object-fit: cover;
     border-radius: 8px;
-    /* Per farla combaciare con i bordi arrotondati del quadratino */
 }
 
 .gcard-letter-box {
@@ -973,13 +904,8 @@ body {
 }
 
 @keyframes spin {
-    0% {
-        transform: rotate(0deg);
-    }
-
-    100% {
-        transform: rotate(360deg);
-    }
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
 /* FULLSCREEN */
@@ -1082,7 +1008,6 @@ body {
     transform: scale(1.1);
     background-color: #f8fafc;
 }
-
 
 .fs-panel-header {
     padding: 0px 20px;
@@ -1272,8 +1197,7 @@ body {
 }
 
 .pagination-container {
-    margin-top: auto !important;
-    margin-bottom: 0rem;
+    margin-top: 1.5rem !important;
     background-color: transparent;
 }
 
@@ -1339,17 +1263,9 @@ body {
 }
 
 @keyframes pulse-red {
-    0% {
-        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
-    }
-
-    70% {
-        box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
-    }
-
-    100% {
-        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
-    }
+    0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
 }
 
 .sort-dropdown-wrapper {
