@@ -5,6 +5,7 @@
     "server": "nodemon server/index.js",
     "client": "npm run dev --prefix client",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "dev_host": "concurrently \"npm run server\" \"npm run dev --prefix client -- --host\"",
     "db_reset": "cd server && node database/reset_db.js"
   },
   "type": "commonjs",
