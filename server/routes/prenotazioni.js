@@ -24,8 +24,23 @@ router.post('/', isLoggato, async (req, res) => {
                     g.Is24h, g.OrarioApertura, g.OrarioChiusura,
                     g.Nome AS nome_garage, g.ID_Gestore,
                     p.CodicePosto,
-                    ($2::timestamp::time >= g.OrarioApertura AND $2::timestamp::time <= g.OrarioChiusura) AS inizio_valido,
-                    ($3::timestamp::time >= g.OrarioApertura AND $3::timestamp::time <= g.OrarioChiusura) AS fine_valida
+                    
+                    -- Controllo INIZIO
+                    (CASE 
+                        WHEN g.OrarioApertura <= g.OrarioChiusura THEN 
+                            ($2::timestamp::time >= g.OrarioApertura AND $2::timestamp::time <= g.OrarioChiusura)
+                        ELSE 
+                            ($2::timestamp::time >= g.OrarioApertura OR $2::timestamp::time <= g.OrarioChiusura)
+                    END) AS inizio_valido,
+
+                    -- Controllo FINE
+                    (CASE 
+                        WHEN g.OrarioApertura <= g.OrarioChiusura THEN 
+                            ($3::timestamp::time >= g.OrarioApertura AND $3::timestamp::time <= g.OrarioChiusura)
+                        ELSE 
+                            ($3::timestamp::time >= g.OrarioApertura OR $3::timestamp::time <= g.OrarioChiusura)
+                    END) AS fine_valida
+
                 FROM Garage g
                 JOIN PostoAuto p ON g.ID_Garage = p.ID_Garage
                 WHERE p.ID_Posto = $1
