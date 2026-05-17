@@ -6,10 +6,11 @@ const props = defineProps({
     mappaTestuale: { type: String, default: '' },
     selectedId: Number,
     isAnteprima: { type: Boolean, default: false },
-    mostraErrori: { type: Boolean, default: true }
+    mostraErrori: { type: Boolean, default: true },
+    isGestoreMode: { type: Boolean, default: false }
 });
 
-const emit = defineEmits(['select', 'error']);
+const emit = defineEmits(['select', 'error', 'manage']);
 
 const getDatiPosto = (codice) => {
     return props.posti.find(p => p.codiceposto === codice);
@@ -44,7 +45,6 @@ const matrice = computed(() => {
     );
 });
 
-// numero totale di unità in larghezza
 const numUnitaColonne = computed(() => {
     if (matrice.value.length === 0) return {};
 
@@ -53,17 +53,14 @@ const numUnitaColonne = computed(() => {
     ));
 });
 
-// costruzione delle celle nella grid
 const celle = computed(() => {
     const risultato = [];
-    // occupate[colonnaUnita] = fino a quale riga è occupata da un rowspan
     const occupate = {};
 
     matrice.value.forEach((riga, r) => {
         let unitaCorrente = 1;
 
         riga.forEach((cella) => {
-            // salta le unità già occupate da rowspan di righe precedenti
             while (occupate[unitaCorrente] > r + 1) {
                 unitaCorrente++;
             }
@@ -108,11 +105,8 @@ const celle = computed(() => {
 const gridStyle = computed(() => {
     if (!matrice.value.length) return {};
 
-    // tutte le colonne sono 30px (unità moto).
-    // le auto (2x1) e furgoni (2x2) si spanneranno su 2 colonne = 60px + gap.
     const colonneTemplate = Array(numUnitaColonne.value).fill('30px').join(' ');
 
-    // se la riga ha almeno un posto reale 90px, altrimenti 60px
     const righeTemplate = matrice.value.map(riga => {
         const haPostiReali = riga.some(c => c.codice !== 'X');
         return haPostiReali ? '90px' : '60px';
@@ -139,7 +133,14 @@ const getClassePosto = (codice) => {
     if (props.isAnteprima) return 'anteprima';
 
     const posto = getDatiPosto(codice);
-    if (!posto) return 'non-configurato'; // se sta nella stringa ma non nel DB lancio un errore
+    if (!posto) return 'non-configurato';
+    
+    if (props.isGestoreMode) {
+        if (posto.is_in_manutenzione) return 'manutenzione'; 
+        if (posto.is_occupato) return 'occupato'; 
+        return 'gestione-attivo'; 
+    }
+
     if (props.selectedId === posto.id_posto) return 'selezionato';
     if (posto.is_occupato) return 'occupato';
     return 'libero';
@@ -150,7 +151,14 @@ const gestisciClick = (codice) => {
         emit('error', 'Seleziona prima le date di arrivo e partenza per selezionare un posto.');
         return;
     }
+    
     const posto = getDatiPosto(codice);
+
+    if (props.isGestoreMode) {
+        if (posto) emit('manage', posto); // Invia l'evento al padre invece di selezionarlo
+        return;
+    }
+
     if (posto && !posto.is_occupato) {
         emit('select', posto);
     }
@@ -158,13 +166,16 @@ const gestisciClick = (codice) => {
 </script>
 
 <template>
-    <div class="planimetria">
+    <div class="planimetria" :data-gestore="isGestoreMode">
 
         <!-- Legenda -->
         <div class="legenda-container">
             <div class="legenda">
                 <span class="box-legenda bianco"></span>Libero
                 <span class="box-legenda grigio-scuro"></span>Occupato
+                <template v-if="isGestoreMode">
+                    <span class="box-legenda arancione-tratteggio"></span>Manutenzione
+                </template>
                 <span class="box-legenda blu"></span> Selezionato
                 <span><img src="../assets/handicap.svg" class="box-legenda"></span>Disabili
                 <span><img src="../assets/electricity.svg" class="box-legenda"></span>Ricarica elettrica
@@ -267,6 +278,11 @@ img.box-legenda {
 .box-legenda.blu {
     background: #00408A;
     border-color: #042571;
+}
+
+.box-legenda.arancione-tratteggio {
+    background: #fff4e6;
+    border: 2px dashed #ff922b;
 }
 
 .mappa-container {
@@ -379,6 +395,12 @@ img.box-legenda {
     cursor: not-allowed;
 }
 
+.planimetria[data-gestore="true"] .occupato {
+    cursor: pointer;
+}
+.planimetria[data-gestore="true"] .occupato:hover {
+    filter: brightness(0.95);
+}
 .selezionato {
     background: #00408A !important;
     color: white !important;
@@ -397,5 +419,31 @@ img.box-legenda {
     background: red;
     opacity: 0.3;
     cursor: not-allowed;
+}
+
+.gestione-attivo {
+    background: #e8f5e9;
+    border: 2px dashed #28a745;
+    color: #28a745;
+    cursor: pointer;
+}
+
+.gestione-attivo:hover {
+    background: #c8e6c9;
+}
+
+.manutenzione {
+    background: #fff4e6; 
+    border: 2px dashed #ff922b !important;
+    color: #ff922b !important;
+    cursor: pointer;
+}
+
+.manutenzione:hover {
+    background: #ffe8cc;
+}
+
+.manutenzione strong::after {
+    font-size: 0.7rem;
 }
 </style>

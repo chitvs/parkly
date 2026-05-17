@@ -46,7 +46,7 @@ const confirmUpgrade = async () => {
 
                 <div class="form-card text-center p-5">
                     <div class="mb-4">
-                        <img src="../assets/Primo_logo_blu.svg" style="height: 70px; width: auto;">
+                        <img src="../assets/LogoParklyBlu.svg" style="height: 70px; width: auto;">
                     </div>
                     <h3 class="mb-3" style="color: var(--deep-blue, #00204A);">Sei pronto a iniziare?</h3>
                     <p class="text-muted mb-4" style="font-size: 0.95rem;">
@@ -102,16 +102,7 @@ const confirmUpgrade = async () => {
 }
 
 .alert {
-    padding: 12px 16px;
-    border-radius: 8px;
-    font-size: 0.9rem;
     text-align: left;
-}
-
-.alert.error {
-    background: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
 }
 
 .btn-primary {

@@ -9,7 +9,7 @@ CREATE TABLE Utente (
     Email VARCHAR(100) NOT NULL UNIQUE,
     PasswordHash VARCHAR(255) NOT NULL,
     Telefono VARCHAR(20),
-    DataRegistrazione TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    DataRegistrazione TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'Europe/Rome'),
     IsAttivo BOOLEAN DEFAULT TRUE,
     FotoProfilo_URL text DEFAULT NULL,
     Saldo DECIMAL(8, 2) NOT NULL DEFAULT 0.00
@@ -34,8 +34,10 @@ CREATE TABLE Garage (
     OrarioChiusura TIME NOT NULL,
     Is24h BOOLEAN DEFAULT FALSE,
     MappaTestuale TEXT,
+    NRighe INT NOT NULL,  
+    NColonne INT NOT NULL,
     IsAttivo BOOLEAN DEFAULT TRUE,  
-    DataCreazione TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    DataCreazione TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'Europe/Rome'),
     MediaGenerale DECIMAL(3,2) DEFAULT 0.00,
     MediaPosizione DECIMAL(3,2) DEFAULT 0.00,
     MediaPrezzo DECIMAL(3,2) DEFAULT 0.00,
@@ -43,6 +45,7 @@ CREATE TABLE Garage (
     MediaSpazio DECIMAL(3,2) DEFAULT 0.00,
     MediaSicurezza DECIMAL(3,2) DEFAULT 0.00,
     NumeroRecensioni INT DEFAULT 0,
+    Foto_URLs TEXT[],
     FOREIGN KEY (ID_Gestore) REFERENCES Utente(ID_Utente) ON DELETE CASCADE
 );
 
@@ -54,9 +57,22 @@ CREATE TABLE PostoAuto (
     TipoVeicolo VARCHAR(10) CHECK (TipoVeicolo IN ('AUTO', 'MOTO', 'FURGONE')) DEFAULT 'AUTO',
     IsDisabili BOOLEAN DEFAULT FALSE,
     IsElettrica BOOLEAN DEFAULT FALSE,  
-    IsCoperto BOOLEAN DEFAULT TRUE,    
+    IsCoperto BOOLEAN DEFAULT TRUE,
+    IsAttivo BOOLEAN DEFAULT TRUE,    
     FOREIGN KEY (ID_Garage) REFERENCES Garage(ID_Garage) ON DELETE CASCADE,
     UNIQUE(ID_Garage, CodicePosto)
+);
+
+-- MANUTENZIONE POSTO
+CREATE TABLE ManutenzionePosto (
+    ID_Manutenzione SERIAL PRIMARY KEY,
+    ID_Posto INT NOT NULL,
+    Inizio TIMESTAMP NOT NULL,
+    Fine TIMESTAMP NOT NULL,
+    Motivazione TEXT,
+    DataCreazione TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'Europe/Rome'),
+    FOREIGN KEY (ID_Posto) REFERENCES PostoAuto(ID_Posto) ON DELETE CASCADE,
+    CONSTRAINT CHK_DateManutenzione CHECK (Fine > Inizio)
 );
 
 -- PRENOTAZIONE
@@ -72,13 +88,13 @@ CREATE TABLE Prenotazione (
     FineSosta TIMESTAMP NOT NULL,
     PrezzoTotale DECIMAL(8, 2) NOT NULL,
     Stato VARCHAR(15) CHECK (Stato IN ('ATTIVA', 'ANNULLATA', 'CONCLUSA')) DEFAULT 'ATTIVA',
-    DataCreazione TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    DataCreazione TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'Europe/Rome'),
     FOREIGN KEY (ID_Utente) REFERENCES Utente(ID_Utente) ON DELETE CASCADE,
     FOREIGN KEY (ID_Posto) REFERENCES PostoAuto(ID_Posto) ON DELETE CASCADE,
     CONSTRAINT CHK_DateSosta CHECK (FineSosta > InizioSosta)
 );
+
 -- MESSAGGIO
- 
 CREATE TABLE Messaggio (
     ID_Messaggio SERIAL PRIMARY KEY,
     ID_Mittente INT NOT NULL,
@@ -86,7 +102,7 @@ CREATE TABLE Messaggio (
     ID_Prenotazione INT NOT NULL,
     Testo TEXT NOT NULL,
     Letto BOOLEAN DEFAULT FALSE,
-    DataInvio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    DataInvio TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'Europe/Rome'),
     FOREIGN KEY (ID_Mittente) REFERENCES Utente(ID_Utente) ON DELETE CASCADE,
     FOREIGN KEY (ID_Destinatario) REFERENCES Utente(ID_Utente) ON DELETE CASCADE,
     FOREIGN KEY (ID_Prenotazione) REFERENCES Prenotazione(ID_Prenotazione) ON DELETE CASCADE,
@@ -111,7 +127,7 @@ CREATE TABLE Recensione (
     VotoSpazio INT CHECK (VotoSpazio >= 1 AND VotoSpazio <= 5) NOT NULL,
     VotoSicurezza INT CHECK (VotoSicurezza >= 1 AND VotoSicurezza <= 5) NOT NULL,
     Commento TEXT,
-    DataCreazione TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    DataCreazione TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'Europe/Rome'),
     FOREIGN KEY (ID_Prenotazione) REFERENCES Prenotazione(ID_Prenotazione) ON DELETE CASCADE,
     FOREIGN KEY (ID_Utente) REFERENCES Utente(ID_Utente) ON DELETE CASCADE,
     FOREIGN KEY (ID_Garage) REFERENCES Garage(ID_Garage) ON DELETE CASCADE
@@ -121,11 +137,13 @@ CREATE TABLE Recensione (
 CREATE TABLE Transazione (
     ID_Transazione SERIAL PRIMARY KEY,
     ID_Utente INT NOT NULL,
-    Tipo VARCHAR(20) CHECK (Tipo IN ('RICARICA', 'PRENOTAZIONE', 'RIMBORSO')) NOT NULL,
+    ID_Prenotazione INT DEFAULT NULL,
+    Tipo VARCHAR(20) CHECK (Tipo IN ('RICARICA', 'PRENOTAZIONE', 'RIMBORSO', 'INCASSO_SOSPESO', 'INCASSO_COMPLETATO', 'PRELIEVO')) NOT NULL,
     Importo DECIMAL(8, 2) NOT NULL,
     Descrizione TEXT NOT NULL,
-    DataCreazione TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (ID_Utente) REFERENCES Utente(ID_Utente) ON DELETE CASCADE
+    DataCreazione TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'Europe/Rome'),
+    FOREIGN KEY (ID_Utente) REFERENCES Utente(ID_Utente) ON DELETE CASCADE,
+    FOREIGN KEY (ID_Prenotazione) REFERENCES Prenotazione(ID_Prenotazione) ON DELETE SET NULL
 );
 
 /*

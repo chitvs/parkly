@@ -8,7 +8,9 @@ const props = defineProps({
     filterCoperto: Boolean,
     filterElettrico: Boolean,
     filterDisabili: Boolean,
-    minHeight: Number
+    minHeight: Number,
+    raggioKm: { type: Number, default: 2 },
+    hasLocation: { type: Boolean, default: false }
 })
 
 const emit = defineEmits([
@@ -18,7 +20,8 @@ const emit = defineEmits([
     'update:filterCoperto',
     'update:filterElettrico',
     'update:filterDisabili',
-    'update:minHeight'
+    'update:minHeight',
+    'update:raggioKm'
 ])
 
 const tipoVeicolo = computed({
@@ -55,6 +58,11 @@ const altezza = computed({
     get: () => props.minHeight,
     set: val => emit('update:minHeight', Number(val))
 })
+
+const raggio = computed({
+    get: () => props.raggioKm,
+    set: val => emit('update:raggioKm', Number(val))
+})
 </script>
 
 <template>
@@ -79,6 +87,19 @@ const altezza = computed({
                 <span>€25</span>
             </div>
         </div>
+
+        <template v-if="hasLocation">
+            <hr class="filter-divider">
+
+            <div class="filter-group">
+                <label>Raggio di ricerca: <strong>{{ raggioKm }} km</strong></label>
+                <input type="range" v-model.number="raggio" min="0.5" max="10" step="0.5" class="slider">
+                <div class="range-labels">
+                    <span>0.5 km</span>
+                    <span>10 km</span>
+                </div>
+            </div>
+        </template>
 
         <hr class="filter-divider">
 
@@ -120,7 +141,6 @@ const altezza = computed({
         </div>
     </div>
 </template>
-
 
 <style scoped>
 .filter-group {

@@ -7,6 +7,7 @@ import 'bootstrap-icons/font/bootstrap-icons.css'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 import PlanimetriaGarage from '../components/PlanimetriaGarage.vue'
+import Pagination from '../components/Pagination.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -20,6 +21,7 @@ const postoSelezionato = ref(null)
 const messaggio = ref(null)
 const isMapConfirmed = ref(false)
 const isPrenotando = ref(false)
+const fotoIngrandita = ref(null)
 
 onMounted(async () => {
     garageStore.clearGarageData()
@@ -42,6 +44,22 @@ watch([checkIn, checkOut], () => {
     isMapConfirmed.value = false
     postoSelezionato.value = null
 })
+
+// Estrae le foto in modo sicuro
+const fotoGarage = computed(() => {
+    // Il database di solito restituisce i nomi delle colonne in minuscolo
+    return garageStore.currentGarage?.foto_urls || []
+})
+
+const apriFoto = (url) => {
+    fotoIngrandita.value = url
+    document.body.style.overflow = 'hidden' // Blocca lo scroll della pagina
+}
+
+const chiudiFoto = () => {
+    fotoIngrandita.value = null
+    document.body.style.overflow = '' // Sblocca lo scroll
+}
 
 // leggiamo i prezzi base direttamente dal record del garage
 const tariffePerVeicolo = computed(() => {
@@ -85,7 +103,7 @@ const formattaCude = () => {
 const isCudeValido = computed(() => {
     // se non abbiamo selezionato un posto per disabili, il campo è tecnicamente "valido" a prescindere
     if (!postoSelezionato.value?.isdisabili) return true;
-    
+
     // solo lettere maiuscole, numeri e trattini. Lunghezza da 5 a 20 caratteri.
     const regex = /^[A-Z0-9-]{5,20}$/;
     return regex.test(codiceDisabilita.value);
@@ -226,6 +244,18 @@ const distribuzioneVoti = computed(() => {
     return distrib
 })
 
+const recensioniPerPagina = ref(4)
+const paginaRecensioniCorrente = ref(1)
+
+const recensioniPaginate = computed(() => {
+    const inizio = (paginaRecensioniCorrente.value - 1) * recensioniPerPagina.value
+    return garageStore.recensioni.slice(inizio, inizio + recensioniPerPagina.value)
+})
+
+watch(paginaRecensioniCorrente, () => {
+    commentiEspansi.value.clear()
+})
+
 </script>
 
 <template>
@@ -242,8 +272,7 @@ const distribuzioneVoti = computed(() => {
                         <p class="descrizione">{{ garageStore.currentGarage?.descrizione }}</p>
                         <div class="badge-row">
                             <div class="badge">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                                     <circle cx="12" cy="10" r="3" />
                                 </svg>
@@ -259,14 +288,13 @@ const distribuzioneVoti = computed(() => {
                             </div>
 
                             <div class="badge" v-else>
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <circle cx="12" cy="12" r="10" />
                                     <polyline points="12 6 12 12 16 14" />
                                 </svg>
-                                {{ garageStore.currentGarage?.orarioapertura.substring(0, 5) }} - {{
-                                    garageStore.currentGarage?.orariochiusura.substring(0,5) }}
+                                {{ garageStore.currentGarage?.orarioapertura.substring(0, 5) }} - {{ garageStore.currentGarage?.orariochiusura.substring(0,5) }}
                             </div>
+                            
                             <div class="badge" v-if="garageStore.currentGarage?.altezzamassima">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M12 22V5"/>
@@ -297,19 +325,29 @@ const distribuzioneVoti = computed(() => {
                         </div>
 
                         <div class="special-rates-container" v-if="sovrapprezzoElettrica || scontoDisabili">
-                            
                             <div class="special-line ev-line" v-if="sovrapprezzoElettrica">
                                 <span class="v-tipo">Ricarica elettrica</span>
                                 <span class="prezzo-valore-small">+€{{ sovrapprezzoElettrica }}<span>/h</span></span>
                             </div>
-
                             <div class="special-line cude-line" v-if="scontoDisabili">
                                 <span class="v-tipo">Sconto Disabili</span>
                                 <span class="prezzo-valore-small">-€{{ scontoDisabili }}<span>/h</span></span>
                             </div>
-
                         </div>
                     </div>
+                </div>
+            </section>
+
+            <section class="gallery-section" v-if="fotoGarage.length > 0">
+                <div class="gallery-track">
+                    <img 
+                        v-for="(url, index) in fotoGarage" 
+                        :key="index" 
+                        :src="url" 
+                        alt="Foto garage" 
+                        class="gallery-img"
+                        @click="apriFoto(url)"
+                    >
                 </div>
             </section>
 
@@ -400,6 +438,17 @@ const distribuzioneVoti = computed(() => {
                                     <span>€ {{ prezzoTotale }}</span>
                                 </div>
                             </div>
+                            <div class="policy-box">
+                                <div class="policy-header">
+                                    <i class="bi bi-info-circle-fill"></i>
+                                    <strong>Politica di annullamento</strong>
+                                </div>
+                                <ul class="policy-list">
+                                    <li><strong>Rimborso del 100%</strong> per disdette effettuate con almeno 12 ore di preavviso, o per ripensamenti entro 15 minuti dalla prenotazione.</li>
+                                    <li><strong>Rimborso del 50%</strong> per le cancellazioni effettuate a meno di 12 ore dall'arrivo.</li>
+                                    <li><strong>Non rimborsabile</strong> se la sosta è già iniziata.</li>
+                                </ul>
+                            </div>
                         </div>
 
                         <button class="btn fill" :disabled="!isMapConfirmed || !postoSelezionato || !targa || !isTargaValida || (postoSelezionato.isdisabili && !isCudeValido)"
@@ -478,7 +527,7 @@ const distribuzioneVoti = computed(() => {
 
                         <div class="user-comments-section mt-5 pt-4 border-top">
                             <div class="comments-grid">
-                                <div v-for="(recensione, index) in garageStore.recensioni" :key="index"
+                                <div v-for="(recensione, index) in recensioniPaginate" :key="index"
                                     class="comment-card">
                                     <div class="comment-header">
                                         <div class="user-avatar">
@@ -515,6 +564,15 @@ const distribuzioneVoti = computed(() => {
                                     </button>
                                 </div>
                             </div>
+                            
+                            <div class="pagination-wrapper mt-5 d-flex justify-content-center" v-if="garageStore.recensioni.length > 0">
+                                <Pagination
+                                    compact
+                                    v-model:paginaCorrente="paginaRecensioniCorrente"
+                                    v-model:elementiPerPagina="recensioniPerPagina"
+                                    :totaleElementi="garageStore.recensioni.length"
+                                />
+                            </div>
                         </div>
 
                     </div>
@@ -526,11 +584,117 @@ const distribuzioneVoti = computed(() => {
                 </div>
             </section>
         </main>
+
+        <div v-if="fotoIngrandita" class="photo-modal" @click="chiudiFoto">
+            <button class="close-photo-btn" @click="chiudiFoto">
+                <i class="bi bi-x-lg"></i>
+            </button>
+            <img :src="fotoIngrandita" alt="Foto garage ingrandita" @click.stop>
+        </div>
+
     </div>
     <Footer />
 </template>
 
 <style scoped>
+
+/* AGGIUNTA STILI PER LA GALLERIA */
+.gallery-section {
+    max-width: 1200px;
+    margin: 24px auto 0;
+    padding: 0 32px;
+}
+
+.gallery-track {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    padding-bottom: 12px;
+    scrollbar-width: thin; 
+}
+
+.gallery-track::-webkit-scrollbar {
+    height: 8px;
+}
+
+.gallery-track::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 4px;
+}
+
+.gallery-img {
+    height: 220px;
+    width: auto;
+    min-width: 280px;
+    object-fit: cover;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    border: 0.5px solid var(--border-light, #e2e8f0);
+}
+
+.gallery-img:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
+}
+
+@media (max-width: 800px) {
+    .gallery-section {
+        padding: 0 16px;
+    }
+    .gallery-img {
+        height: 180px;
+        min-width: 240px;
+    }
+}
+
+/* STILI PER IL MODAL FOTO */
+.photo-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(5px);
+}
+
+.photo-modal img {
+    max-width: 90%;
+    max-height: 90vh;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    object-fit: contain;
+}
+
+.close-photo-btn {
+    position: absolute;
+    top: 24px;
+    right: 32px;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: none;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+    z-index: 10001;
+}
+
+.close-photo-btn:hover {
+    background: rgba(255, 255, 255, 0.4);
+}
+
+/* --- VECCHI STILI PRESERVATI --- */
 .page-container {
     background: var(--bg-light);
     min-height: 100vh;
@@ -657,38 +821,6 @@ const distribuzioneVoti = computed(() => {
 .alert {
     max-width: 1200px;
     margin: 16px auto 0;
-    padding: 12px 16px;
-    border-radius: 8px;
-    font-size: 0.85rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.alert.success {
-    background: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
-}
-
-.alert.error {
-    background: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
-}
-
-.close-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: inherit;
-    opacity: 0.4;
-    font-size: 1.1rem;
-    line-height: 1;
-}
-
-.close-btn:hover {
-    opacity: 0.8;
 }
 
 .layout-grid {
@@ -1168,6 +1300,53 @@ const distribuzioneVoti = computed(() => {
 
 .special-line .prezzo-valore-small span {
     opacity: 0.7;
+}
+
+/* --- POLICY DI CANCELLAZIONE BOX --- */
+.policy-box {
+    background-color: #f0f7ff;
+    border: 1px solid #cce3fd;
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 16px;
+    color: var(--primary-blue, #00408A);
+}
+
+.policy-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+    font-size: 0.85rem;
+}
+
+.policy-header i {
+    font-size: 1rem;
+}
+
+.policy-list {
+    margin: 0;
+    padding-left: 24px;
+    color: #475569;
+    font-size: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.policy-list li {
+    line-height: 1.4;
+}
+
+.policy-list li strong {
+    color: var(--text-dark, #333);
+}
+
+.pagination-wrapper {
+    margin-top: 3rem;
+    display: flex;
+    justify-content: center;
+    width: 100%;
 }
 
 @media (max-width: 600px) {
