@@ -10,8 +10,8 @@ INSERT INTO Utente (Ruolo, Nome, Cognome, NomeUtente, CodiceFiscale, Email, Pass
 ('CLIENTE', 'Simona', 'Reale', 'simonareale', 'RLESNO96H50H501H', 'simona.r@email.com', '$2b$10$wrEc8cgwi3KysvKawcYUgePJbVFHwJUlIuropNQwDHL7sDuX8DYui', '3400000004'),
 ('CLIENTE', 'Davide', 'Moro', 'davidemoro', 'MRODVD98L20H501I', 'davide.m@email.com', '$2b$10$nLxPdWaiThqojfaCZ5RgGeUq4viZBRg5.CO72k6uu3V1xFtAom6rm', '3400000005'),
 ('CLIENTE', 'Giada', 'Serra', 'giadaserra', 'SRRGDA99M45H501L', 'giada.s@email.com', '$2b$10$LXSwRxWPIl0wRboIgW4NSuF3LQ/A6CvyRpVj8QD0Cw/0uWkVwQ.ty', '3400000006'),
-('GESTORE', 'Marco', 'Bianchi', 'mbianchi_gest', 'BNCMRC90E01H501E', 'marco.b@garage.it', '$2b$10$WPKYQS3SIp5VEf4SKRKx3O5HVlY6XMOM1lle/fnGc2/ZKhek5VQu.', '3310000005'),
-('GESTORE', 'Laura', 'Rossi', 'lrossi_gest', 'RSSLRA88F41H501F', 'laura.r@garage.it', '$2b$10$lN6k5YY30hrFMFHedDL9v.UFgP9VoXScHZbRRk9HmwkLNqnpEJBR2', '3310000006')
+('GESTORE', 'Marco', 'Bianchi', 'mbianchi_gest', 'BNCMRC90E01H501E', 'marco.b@garage.it', '$2b$10$nZ9bYjU7by7KcUORwXeZQekeImuMKpUy2X/EldLu.O/ooTL1pAzCa', '3310000005'),
+('GESTORE', 'Laura', 'Rossi', 'lrossi_gest', 'RSSLRA88F41H501F', 'laura.r@garage.it', '$2b$10$JdwpOEyDJer849Ht8SLHiO2taYwYtlfI6TSk4xefq/1Ee.RfVa022', '3310000006')
 ON CONFLICT (CodiceFiscale) DO NOTHING;
 
 -- GARAGE
