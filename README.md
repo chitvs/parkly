@@ -29,6 +29,7 @@ Parkly è un'applicazione web full-stack per la gestione e la prenotazione di pa
   - [Il ruolo Gestore e la pubblicazione di un garage](#il-ruolo-gestore-e-la-pubblicazione-di-un-garage)
   - [Sistema di recensioni](#sistema-di-recensioni)
   - [Chat interattiva](#chat-interattiva)
+  - [Manutenzione dei posti auto](#manutenzione-dei-posti-auto)
 - [Viste](#viste)
 - [Installazione](#installazione)
   - [Prerequisiti](#prerequisiti)
@@ -75,7 +76,7 @@ parkly/
 
 ## Schema del database
 
-Il database è composto da sette tabelle. `Utente` è l'entità centrale: un utente con ruolo `GESTORE` può possedere uno o più `Garage`, ciascuno composto da più `PostoAuto`. Una `Prenotazione` associa un utente a un posto per un intervallo temporale definito e costituisce il presupposto per le entità dipendenti: `Messaggio`, `Recensione` e `Transazione`. Di seguito il diagramma E-R:
+Il database è composto da otto tabelle. `Utente` è l'entità centrale: un utente con ruolo `GESTORE` può possedere uno o più `Garage`, ciascuno composto da più `PostoAuto`. I posti possono essere temporaneamente esclusi dalla disponibilità tramite `ManutenzionePosto`. Una `Prenotazione` associa un utente a un posto per un intervallo temporale definito e costituisce il presupposto per le entità dipendenti: `Messaggio`, `Recensione` e `Transazione`. Di seguito il diagramma E-R:
 
 <p align="center">
   <img src="./client/src/assets/schema-database.svg" width="100%" alt="Diagramma E-R">
@@ -89,6 +90,7 @@ Il database è composto da sette tabelle. `Utente` è l'entità centrale: un ute
 - Chat in tempo reale tra cliente e gestore, contestualizzata alle prenotazioni attive.
 - Sistema di recensioni vincolate alle prenotazioni concluse.
 - Dashboard gestore con occupazione in tempo reale, statistiche mensili e planimetria interattiva del garage.
+- Gestione della manutenzione dei posti auto con esclusione automatica dalla disponibilità.
 
 ### Flusso di autenticazione
 
@@ -114,7 +116,7 @@ Gli utenti possono consultare lo storico completo delle proprie attività tramit
 
 ### Il ruolo Gestore e la pubblicazione di un garage
 
-La dashboard dedicata ai gestori permette di pubblicare nuovi garage su Parkly attraverso un flusso guidato in tre fasi. 
+La dashboard dedicata ai gestori permette di pubblicare nuovi garage su Parkly attraverso un flusso guidato in tre fasi.
 
 Nella prima fase viene definita la posizione del garage: partendo da un indirizzo, il sistema interroga un'API di geocodifica e genera delle coordinate, per garantire la massima precisione è permesso all'utente di affinare manualmente le coordinate tramite click diretto sulla mappa.
 
@@ -128,9 +130,13 @@ Al termine di una sosta, l'utente ha la possibilità di valutare la propria espe
 
 ### Chat interattiva
 
-Per facilitare la coordinazione tra utenti, Parkly integra un sistema di messaggistica in tempo reale basato su Socket.IO. 
+Per facilitare la coordinazione tra utenti, Parkly integra un sistema di messaggistica in tempo reale basato su Socket.IO.
 
 La chat è strettamente legata a una specifica prenotazione: il backend instrada i messaggi attraverso "room" private e verifica l'identità dei partecipanti prima di ogni invio.
+
+### Manutenzione dei posti auto
+
+I gestori possono segnalare periodi di indisponibilità per singoli posti auto, specificando un intervallo temporale. Durante questi intervalli, i posti coinvolti vengono automaticamente esclusi dai risultati di ricerca e non sono prenotabili. Il sistema verifica l'assenza di sovrapposizioni tra manutenzioni e prenotazioni esistenti prima di confermare la pianificazione.
 
 ## Viste
 
