@@ -351,19 +351,19 @@ watch(paginaRecensioniCorrente, () => {
                         <div class="price-line" v-if="tariffePerVeicolo['MOTO']">
                             <span class="v-tipo">Moto</span>
                             <span class="prezzo-valore-small">€{{ tariffePerVeicolo['MOTO'].toFixed(2)
-                                }}<span>/h</span></span>
+                            }}<span>/h</span></span>
                         </div>
 
                         <div class="price-line" v-if="tariffePerVeicolo['AUTO']">
                             <span class="v-tipo">Auto</span>
                             <span class="prezzo-valore-small">€{{ tariffePerVeicolo['AUTO'].toFixed(2)
-                                }}<span>/h</span></span>
+                            }}<span>/h</span></span>
                         </div>
 
                         <div class="price-line" v-if="tariffePerVeicolo['FURGONE']">
                             <span class="v-tipo">Furgone</span>
                             <span class="prezzo-valore-small">€{{ tariffePerVeicolo['FURGONE'].toFixed(2)
-                                }}<span>/h</span></span>
+                            }}<span>/h</span></span>
                         </div>
 
                         <div class="special-rates-container" v-if="sovrapprezzoElettrica || scontoDisabili">
@@ -487,7 +487,7 @@ watch(paginaRecensioniCorrente, () => {
                                                         <img v-if="recensione.fotoprofilo_url"
                                                             :src="recensione.fotoprofilo_url" alt="User avatar">
                                                         <span v-else>{{ recensione.nome.charAt(0).toUpperCase()
-                                                            }}</span>
+                                                        }}</span>
                                                     </div>
 
                                                     <div class="user-info">
@@ -512,9 +512,12 @@ watch(paginaRecensioniCorrente, () => {
                                                 <p class="comment-text text-muted fst-italic" v-else></p>
 
                                                 <div class="action-slot">
-                                                    <button
-                                                        :style="{ visibility: (recensione.commento && recensione.commento.length > 180) ? 'visible' : 'hidden' }"
-                                                        class="mostra-altro-btn" @click="apriModalCommento(recensione)">
+                                                    <button :style="{
+                                                        visibility: (
+                                                            recensione.commento &&
+                                                            (recensione.commento.length > 130 || recensione.commento.split('\n').length > 3)
+                                                        ) ? 'visible' : 'hidden'
+                                                    }" class="mostra-altro-btn" @click="apriModalCommento(recensione)">
                                                         Leggi tutto
                                                     </button>
                                                 </div>
