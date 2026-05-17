@@ -58,7 +58,7 @@ const confirmUpgrade = async () => {
                     </button>
 
                     <p class="text-muted mb-4 mt-3" style="font-size: 0.95rem;">
-                        L'operazione di upgrade è immediata. Potrai subito iniziare a inserire i tuoi parcheggi e
+                        Diventando un gestore potrai subito iniziare a inserire i tuoi parcheggi e
                         ricevere prenotazioni.
                     </p>
 

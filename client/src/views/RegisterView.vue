@@ -161,9 +161,7 @@ const handleRegister = async () => {
 
               <div class="text-center mt-4 pt-3 border-top">
                 <p class="small text-muted footer-text mb-0">
-                  Effettuando la registrazione accetti i
-                  <a href="#">Termini e Condizioni</a> e l'
-                  <a href="#">Informativa sulla Privacy</a>
+                  Effettuando la registrazione accetti i Termini e Condizioni e l'Informativa sulla Privacy di Parkly.
                 </p>
               </div>
             </div>
