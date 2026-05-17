@@ -9,7 +9,9 @@ INSERT INTO Utente (Ruolo, Nome, Cognome, NomeUtente, CodiceFiscale, Email, Pass
 ('CLIENTE', 'Paolo', 'Dessi', 'paolodessi', 'DSSPLA94G10H501G', 'paolo.d@email.com', '$2b$10$ISIhd1D5EU5GPKq3Tr2CIeAkJSATIDPfUSdBQoV05l14muNDSuOh2', '3400000003'),
 ('CLIENTE', 'Simona', 'Reale', 'simonareale', 'RLESNO96H50H501H', 'simona.r@email.com', '$2b$10$wrEc8cgwi3KysvKawcYUgePJbVFHwJUlIuropNQwDHL7sDuX8DYui', '3400000004'),
 ('CLIENTE', 'Davide', 'Moro', 'davidemoro', 'MRODVD98L20H501I', 'davide.m@email.com', '$2b$10$nLxPdWaiThqojfaCZ5RgGeUq4viZBRg5.CO72k6uu3V1xFtAom6rm', '3400000005'),
-('CLIENTE', 'Giada', 'Serra', 'giadaserra', 'SRRGDA99M45H501L', 'giada.s@email.com', '$2b$10$LXSwRxWPIl0wRboIgW4NSuF3LQ/A6CvyRpVj8QD0Cw/0uWkVwQ.ty', '3400000006')
+('CLIENTE', 'Giada', 'Serra', 'giadaserra', 'SRRGDA99M45H501L', 'giada.s@email.com', '$2b$10$LXSwRxWPIl0wRboIgW4NSuF3LQ/A6CvyRpVj8QD0Cw/0uWkVwQ.ty', '3400000006'),
+('GESTORE', 'Marco', 'Bianchi', 'mbianchi_gest', 'BNCMRC90E01H501E', 'marco.b@garage.it', '$2b$10$WPKYQS3SIp5VEf4SKRKx3O5HVlY6XMOM1lle/fnGc2/ZKhek5VQu.', '3310000005'),
+('GESTORE', 'Laura', 'Rossi', 'lrossi_gest', 'RSSLRA88F41H501F', 'laura.r@garage.it', '$2b$10$lN6k5YY30hrFMFHedDL9v.UFgP9VoXScHZbRRk9HmwkLNqnpEJBR2', '3310000006')
 ON CONFLICT (CodiceFiscale) DO NOTHING;
 
 -- GARAGE
@@ -24,7 +26,15 @@ INSERT INTO Garage (
 (3, 'San Giovanni 24/7 parking', 'Garage sotterraneo aperto ininterrottamente. Posizionato a ridosso delle Mura Aureliane e a meno di 50 metri dalla Metro A. Soluzione strategica per parcheggiare in sicurezza fuori dalla ZTL e muoversi liberamente verso il centro storico.', 'Via Appia Nuova, 45, Roma', 'Via Appia Nuova', '45', 'Roma', '00183', 'RM', 41.884100, 12.511300, 2.30, 4.00, NULL, NULL, 1.50, 2.50, '00:00:00', '23:59:59', TRUE, E'S01:2x1-S02:2x1-S03:2x1-S04:2x1-S05:2x1-S06:2x1-S07:2x1-S08:2x1-S09:2x1-S10:2x1\nX:20x1\nS11:2x1-S12:2x1-S13:2x1-S14:2x1-S15:2x1-S16:2x1-S17:2x1-S18:2x1-S19:2x1-S20:2x1', 3, 20, ARRAY['https://lqztwsihbvojhbiwkwfm.supabase.co/storage/v1/object/public/garage-photos/seed_garage_3_photo_1.jpg', 'https://lqztwsihbvojhbiwkwfm.supabase.co/storage/v1/object/public/garage-photos/seed_garage_3_photo_2.jpg', 'https://lqztwsihbvojhbiwkwfm.supabase.co/storage/v1/object/public/garage-photos/seed_garage_3_photo_3.jpg']::TEXT[]),
 (4, 'Ostiense 24/7 parking', 'Spazioso e ben illuminato, punto di riferimento per la movida tra Ostiense e il Gazometro. Essendo privo di limiti d''altezza stringenti all''ingresso, è particolarmente adatto a mezzi commerciali, minivan e furgoni da lavoro.', 'Via del Porto Fluviale, 5, Roma', 'Via del Porto Fluviale', '5', 'Roma', '00154', 'RM', 41.872450, 12.478900, 3.50, 3.50, NULL, 5.00, 1.50, 2.00, '00:00:00', '23:59:59', TRUE, E'K01:2x1-K02:2x1-X:2x1-K03:2x1-K04:2x1\nK05:2x1-K06:2x1-X:2x1-K07:2x1-K08:2x1\nX:10x1\nK09:2x1-K10:2x1-X:2x1-K11:2x1-K12:2x1\nK13:2x1-K14:2x1-X:2x1-K15:2x1-K16:2x1\nX:10x1\nK17:2x2-K18:2x2-K19:2x2-K20:2x2-K21:2x2\nX:10x1', 9, 10, ARRAY['https://lqztwsihbvojhbiwkwfm.supabase.co/storage/v1/object/public/garage-photos/seed_garage_4_photo_1.jpg', 'https://lqztwsihbvojhbiwkwfm.supabase.co/storage/v1/object/public/garage-photos/seed_garage_4_photo_2.jpg', 'https://lqztwsihbvojhbiwkwfm.supabase.co/storage/v1/object/public/garage-photos/seed_garage_4_photo_3.jpg']::TEXT[]),
 (1, 'Vaticano parking', 'Parcheggio di ultima generazione a due passi dal Colonnato di San Pietro. Accesso automatizzato con lettura ottica della targa. Stalli extralarge e postazioni di ricarica per mezzi elettrici a due o quattro ruote. Fondamentale per i turisti.', 'Via delle Fornaci, 20, Roma', 'Via delle Fornaci', '20', 'Roma', '00165', 'RM', 41.897300, 12.457800, 2.20, 5.50, 2.50, NULL, 2.00, 3.00, '06:00:00', '22:00:00', FALSE, E'V01:2x1-V02:2x1-V03:2x1-V04:2x1-X:2x1-V05:1x1-V06:1x1-V07:1x1-V08:1x1-V09:1x1-V10:1x1-V11:1x1-V12:1x1\nX:18x1\nV13:2x1-V14:2x1-V15:2x1-V16:2x1-X:2x1-V17:1x1-V18:1x1-V19:1x1-V20:1x1-V21:1x1-V22:1x1-V23:1x1-V24:1x1', 3, 18, ARRAY['https://lqztwsihbvojhbiwkwfm.supabase.co/storage/v1/object/public/garage-photos/seed_garage_5_photo_1.jpg', 'https://lqztwsihbvojhbiwkwfm.supabase.co/storage/v1/object/public/garage-photos/seed_garage_5_photo_2.jpg', 'https://lqztwsihbvojhbiwkwfm.supabase.co/storage/v1/object/public/garage-photos/seed_garage_5_photo_3.jpg']::TEXT[]),
-(2, 'Testaccio market garage', 'Comodo parcheggio multipiano nel cuore ruspante di Roma. Offre accesso rapido al mercato rionale di Testaccio e ai tipici locali notturni della zona. Servizio di portineria e telecamere di sicurezza su ogni livello.', 'Via Galvani, 30, Roma', 'Via Galvani', '30', 'Roma', '00153', 'RM', 41.878700, 12.477100, 2.40, 3.00, 2.00, 5.00, NULL, 1.50, '07:00:00', '02:00:00', FALSE, E'T01:2x2-T02:2x2-T03:2x2-X:2x1-T04:2x1-T05:2x1-T06:2x1-X:2x1-T07:1x1-T08:1x1-T09:1x1-T10:1x1\nX:2x1-T11:2x1-T12:2x1-T13:2x1-X:2x1-T14:1x1-T15:1x1-T16:1x1-T17:1x1\nX:20x1\nT18:2x2-T19:2x2-T20:2x2-X:2x1-T21:2x1-T22:2x1-T23:2x1-X:2x1-T24:1x1-T25:1x1-T26:1x1-T27:1x1\nX:2x1-T28:2x1-T29:2x1-T30:2x1-X:2x1-T31:2x1-T32:2x1\nX:20x1\nT33:2x1-T34:2x1-T35:2x1-T36:2x1-T37:2x1-T38:2x1-T39:2x1-T40:2x1-T41:2x1-T42:2x1', 9, 20, ARRAY['https://lqztwsihbvojhbiwkwfm.supabase.co/storage/v1/object/public/garage-photos/seed_garage_6_photo_1.jpg', 'https://lqztwsihbvojhbiwkwfm.supabase.co/storage/v1/object/public/garage-photos/seed_garage_6_photo_2.jpg', 'https://lqztwsihbvojhbiwkwfm.supabase.co/storage/v1/object/public/garage-photos/seed_garage_6_photo_3.jpg']::TEXT[]);
+(2, 'Testaccio market garage', 'Comodo parcheggio multipiano nel cuore ruspante di Roma. Offre accesso rapido al mercato rionale di Testaccio e ai tipici locali notturni della zona. Servizio di portineria e telecamere di sicurezza su ogni livello.', 'Via Galvani, 30, Roma', 'Via Galvani', '30', 'Roma', '00153', 'RM', 41.878700, 12.477100, 2.40, 3.00, 2.00, 5.00, NULL, 1.50, '07:00:00', '02:00:00', FALSE, E'T01:2x2-T02:2x2-T03:2x2-X:2x1-T04:2x1-T05:2x1-T06:2x1-X:2x1-T07:1x1-T08:1x1-T09:1x1-T10:1x1\nX:2x1-T11:2x1-T12:2x1-T13:2x1-X:2x1-T14:1x1-T15:1x1-T16:1x1-T17:1x1\nX:20x1\nT18:2x2-T19:2x2-T20:2x2-X:2x1-T21:2x1-T22:2x1-T23:2x1-X:2x1-T24:1x1-T25:1x1-T26:1x1-T27:1x1\nX:2x1-T28:2x1-T29:2x1-T30:2x1-X:2x1-T31:2x1-T32:2x1\nX:20x1\nT33:2x1-T34:2x1-T35:2x1-T36:2x1-T37:2x1-T38:2x1-T39:2x1-T40:2x1-T41:2x1-T42:2x1', 9, 20, ARRAY[]::TEXT[]),
+(3, 'Colosseo Imperial parking', 'A pochi passi dal Colosseo e dai Fori Imperiali, situato nel caratteristico rione Monti. Parcheggio sorvegliato con posti coperti, ideale per visite turistiche nel centro storico senza impazzire con la ZTL.', 'Via Cavour, 250, Roma', 'Via Cavour', '250', 'Roma', '00184', 'RM', 41.894451, 12.493323, 2.10, 6.00, 3.00, NULL, 2.00, 3.00, '06:30:00', '01:00:00', FALSE, E'C01:2x1-C02:2x1-C03:2x1-C04:2x1-C05:2x1-C06:2x1-C07:2x1-X:1x1\nX:15x1\nC08:2x1-C09:2x1-C10:2x1-C11:2x1-C12:2x1-C13:2x1-C14:2x1-X:1x1', 3, 15, ARRAY[]::TEXT[]),
+(4, 'Trastevere movida parking', 'Parcheggio comodissimo per godersi le serate trasteverine senza l''ansia delle limitazioni notturne. Ampi spazi di manovra e personale cortese sempre disponibile. Perfetto per auto di medie dimensioni.', 'Via degli Orti di Trastevere, 3, Roma', 'Via degli Orti di Trastevere', '3', 'Roma', '00153', 'RM', 41.882103, 12.472149, 2.20, 4.00, 2.00, NULL, NULL, 2.00, '08:00:00', '03:00:00', FALSE, E'TR1:2x1-TR2:2x1-TR3:2x1-TR4:2x1-TR5:2x1-TR6:2x1\nX:12x1\nTR7:2x1-TR8:2x1-TR9:2x1-TR10:2x1-TR11:2x1-TR12:2x1', 3, 12, ARRAY[]::TEXT[]),
+(1, 'Termini FastPark 24/7', 'Hub di sosta strategico adiacente alla Stazione Termini. Aperto tutto il giorno e la notte. Connessione immediata ai treni ad alta velocità e alle due principali linee della metropolitana (A e B). Spazi extra per furgoni.', 'Via Marsala, 50, Roma', 'Via Marsala', '50', 'Roma', '00185', 'RM', 41.902500, 12.506100, 2.50, 5.00, 2.50, 7.00, 1.50, 2.50, '00:00:00', '23:59:59', TRUE, E'M01:2x1-M02:2x1-M03:2x1-M04:2x1-M05:2x1-M06:2x1-M07:2x1-M08:2x1\nX:16x1\nM09:2x1-M10:2x1-M11:2x1-M12:2x1-M13:2x1-M14:2x1-M15:2x1-M16:2x1\nX:16x1\nM17:2x1-M18:2x1-M19:2x1-M20:2x1-M21:2x1-M22:2x1-M23:2x1-M24:2x1', 5, 16, ARRAY[]::TEXT[]),
+(2, 'Navona sotterraneo', 'Boutique parking esclusivo a ridosso di Piazza Navona e del Pantheon. Attenzione: ci si trova a ridosso del perimetro ZTL, seguire i percorsi consigliati per l''accesso. Dispone di servizio car valet e telecamere HD.', 'Via di Panico, 20, Roma', 'Via di Panico', '20', 'Roma', '00186', 'RM', 41.900400, 12.467400, 1.90, 8.00, 4.00, NULL, 3.00, 4.00, '07:00:00', '01:00:00', FALSE, E'N01:2x1-N02:2x1-N03:2x1-N04:2x1-N05:2x1\nX:10x1\nN06:2x1-N07:2x1-N08:2x1-N09:2x1-N10:2x1', 3, 10, ARRAY[]::TEXT[]),
+(11, 'Lido di Ostia Parking', 'Comodo parcheggio a pochi passi dal lungomare di Ostia e dagli stabilimenti balneari. Ideale per le gite fuori porta del weekend. Dispone di ampi spazi coperti per proteggere i veicoli dalla salsedine ed evitare i danni del sole.', 'Lungomare Paolo Toscanelli, 50, Lido di Ostia', 'Lungomare Paolo Toscanelli', '50', 'Roma', '00121', 'RM', 41.730215, 12.274510, 2.10, 3.00, 1.50, NULL, 1.00, 2.00, '08:00:00', '02:00:00', FALSE, E'O01:2x1-O02:2x1-O03:2x1-O04:2x1-O05:2x1\nX:10x1\nO06:2x1-O07:2x1-O08:2x1-O09:2x1-O10:2x1\nX:10x1', 4, 10, ARRAY[]::TEXT[]),
+(12, 'Fiumicino Airport LowCost', 'Parcheggio lunga sosta economico a soli 5 minuti dall''Aeroporto Internazionale Leonardo da Vinci. Navetta gratuita da e per i terminal inclusa nel prezzo. Ampio piazzale sorvegliato h24, senza limiti di altezza per accogliere agevolmente anche i furgoni.', 'Via della Scafa, 150, Fiumicino', 'Via della Scafa', '150', 'Fiumicino', '00054', 'RM', 41.765612, 12.253130, 4.00, 2.00, 1.50, 4.00, 2.00, 1.00, '00:00:00', '23:59:59', TRUE, E'F01:2x1-F02:2x1-F03:2x1-F04:2x1-F05:2x1-F06:2x1-F07:2x1\nX:14x1\nF08:2x1-F09:2x1-F10:2x1-F11:2x1-F12:2x1-F13:2x1-F14:2x1\nX:14x1\nX:14x1', 5, 14, ARRAY[]::TEXT[]),
+(11, 'Olimpico Matchday Garage', 'Posizione strategica per assistere alle partite della Roma, della Lazio o ai grandi concerti allo Stadio Olimpico e al Foro Italico. Permette di evitare il caos della sosta selvaggia e garantisce un deflusso rapido verso le vie principali post-evento.', 'Viale dei Gladiatori, 2, Roma', 'Viale dei Gladiatori', '2', 'Roma', '00135', 'RM', 41.930431, 12.457811, 2.20, 5.00, 2.50, NULL, NULL, 3.00, '08:00:00', '01:00:00', FALSE, E'SO01:2x1-SO02:2x1-SO03:2x1-SO04:2x1-SO05:2x1-SO06:2x1\nX:12x1\nSO07:2x1-SO08:2x1-SO09:2x1-SO10:2x1-SO11:2x1-SO12:2x1\nX:12x1\nSO13:2x1-SO14:2x1-SO15:2x1-SO16:2x1-SO17:2x1-SO18:2x1\nX:12x1', 6, 12, ARRAY[]::TEXT[]),
+(12, 'Centocelle Hub Parking', 'Autorimessa sotterranea situata nel cuore del quartiere Centocelle, a pochissimi minuti a piedi dalla fermata Mirti della Linea C. Soluzione sicura, dal prezzo onesto e sorvegliata, ottima sia per i residenti che per i pendolari.', 'Via dei Castani, 100, Roma', 'Via dei Castani', '100', 'Roma', '00171', 'RM', 41.884720, 12.564450, 2.30, 2.50, 1.00, 3.50, 1.00, 1.50, '06:00:00', '22:00:00', FALSE, E'C01:2x1-C02:2x1-C03:2x1-C04:2x1\nX:8x1\nC05:2x1-C06:2x1-C07:2x1-C08:2x1\nX:8x1', 4, 8, ARRAY[]::TEXT[]);
 
 -- POSTI AUTO
 INSERT INTO PostoAuto (ID_Garage, CodicePosto, TipoVeicolo, IsDisabili, IsElettrica) VALUES
@@ -188,7 +198,77 @@ INSERT INTO PostoAuto (ID_Garage, CodicePosto, TipoVeicolo, IsDisabili, IsElettr
 (6, 'T39', 'AUTO', FALSE, FALSE),
 (6, 'T40', 'AUTO', FALSE, FALSE),
 (6, 'T41', 'AUTO', FALSE, FALSE),
-(6, 'T42', 'AUTO', FALSE, FALSE)
+(6, 'T42', 'AUTO', FALSE, FALSE),
+
+(7, 'C01', 'AUTO', FALSE, TRUE), (7, 'C02', 'AUTO', FALSE, TRUE),
+(7, 'C03', 'AUTO', TRUE, FALSE), (7, 'C04', 'AUTO', FALSE, FALSE),
+(7, 'C05', 'AUTO', FALSE, FALSE), (7, 'C06', 'AUTO', FALSE, FALSE),
+(7, 'C07', 'AUTO', FALSE, FALSE), (7, 'C08', 'MOTO', FALSE, FALSE),
+(7, 'C09', 'MOTO', FALSE, FALSE), (7, 'C10', 'MOTO', FALSE, FALSE),
+(7, 'C11', 'MOTO', FALSE, FALSE), (7, 'C12', 'AUTO', FALSE, FALSE),
+(7, 'C13', 'AUTO', FALSE, FALSE), (7, 'C14', 'AUTO', FALSE, FALSE),
+
+-- Garage 8: Trastevere (12 posti)
+(8, 'TR1', 'AUTO', FALSE, TRUE), (8, 'TR2', 'AUTO', FALSE, TRUE),
+(8, 'TR3', 'AUTO', TRUE, FALSE), (8, 'TR4', 'AUTO', FALSE, FALSE),
+(8, 'TR5', 'AUTO', FALSE, FALSE), (8, 'TR6', 'AUTO', FALSE, FALSE),
+(8, 'TR7', 'MOTO', FALSE, FALSE), (8, 'TR8', 'MOTO', FALSE, FALSE),
+(8, 'TR9', 'AUTO', FALSE, FALSE), (8, 'TR10', 'AUTO', FALSE, FALSE),
+(8, 'TR11', 'AUTO', FALSE, FALSE), (8, 'TR12', 'AUTO', FALSE, FALSE),
+
+-- Garage 9: Termini (24 posti - include Furgoni)
+(9, 'M01', 'FURGONE', FALSE, FALSE), (9, 'M02', 'FURGONE', FALSE, FALSE),
+(9, 'M03', 'FURGONE', FALSE, FALSE), (9, 'M04', 'FURGONE', FALSE, FALSE),
+(9, 'M05', 'AUTO', TRUE, FALSE), (9, 'M06', 'AUTO', TRUE, FALSE),
+(9, 'M07', 'AUTO', FALSE, TRUE), (9, 'M08', 'AUTO', FALSE, TRUE),
+(9, 'M09', 'AUTO', FALSE, FALSE), (9, 'M10', 'AUTO', FALSE, FALSE),
+(9, 'M11', 'AUTO', FALSE, FALSE), (9, 'M12', 'AUTO', FALSE, FALSE),
+(9, 'M13', 'MOTO', FALSE, FALSE), (9, 'M14', 'MOTO', FALSE, FALSE),
+(9, 'M15', 'MOTO', FALSE, FALSE), (9, 'M16', 'MOTO', FALSE, FALSE),
+(9, 'M17', 'AUTO', FALSE, FALSE), (9, 'M18', 'AUTO', FALSE, FALSE),
+(9, 'M19', 'AUTO', FALSE, FALSE), (9, 'M20', 'AUTO', FALSE, FALSE),
+(9, 'M21', 'AUTO', FALSE, FALSE), (9, 'M22', 'AUTO', FALSE, FALSE),
+(9, 'M23', 'AUTO', FALSE, FALSE), (9, 'M24', 'AUTO', FALSE, FALSE),
+
+-- Garage 10: Navona (10 posti)
+(10, 'N01', 'AUTO', FALSE, TRUE), (10, 'N02', 'AUTO', FALSE, TRUE),
+(10, 'N03', 'AUTO', TRUE, FALSE), (10, 'N04', 'AUTO', FALSE, FALSE),
+(10, 'N05', 'AUTO', FALSE, FALSE), (10, 'N06', 'MOTO', FALSE, FALSE),
+(10, 'N07', 'MOTO', FALSE, FALSE), (10, 'N08', 'AUTO', FALSE, FALSE),
+(10, 'N09', 'AUTO', FALSE, FALSE), (10, 'N10', 'AUTO', FALSE, FALSE),
+
+-- Garage 11: Lido di Ostia (10 posti)
+(11, 'O01', 'AUTO', FALSE, TRUE), (11, 'O02', 'AUTO', TRUE, FALSE),
+(11, 'O03', 'AUTO', FALSE, FALSE), (11, 'O04', 'AUTO', FALSE, FALSE),
+(11, 'O05', 'AUTO', FALSE, FALSE), (11, 'O06', 'MOTO', FALSE, FALSE),
+(11, 'O07', 'MOTO', FALSE, FALSE), (11, 'O08', 'AUTO', FALSE, FALSE),
+(11, 'O09', 'AUTO', FALSE, FALSE), (11, 'O10', 'AUTO', FALSE, FALSE),
+
+-- Garage 12: Fiumicino (14 posti - include Furgoni)
+(12, 'F01', 'FURGONE', FALSE, FALSE), (12, 'F02', 'FURGONE', FALSE, FALSE),
+(12, 'F03', 'FURGONE', FALSE, FALSE), (12, 'F04', 'AUTO', TRUE, FALSE),
+(12, 'F05', 'AUTO', FALSE, TRUE), (12, 'F06', 'AUTO', FALSE, TRUE),
+(12, 'F07', 'AUTO', FALSE, FALSE), (12, 'F08', 'AUTO', FALSE, FALSE),
+(12, 'F09', 'AUTO', FALSE, FALSE), (12, 'F10', 'AUTO', FALSE, FALSE),
+(12, 'F11', 'MOTO', FALSE, FALSE), (12, 'F12', 'MOTO', FALSE, FALSE),
+(12, 'F13', 'AUTO', FALSE, FALSE), (12, 'F14', 'AUTO', FALSE, FALSE),
+
+-- Garage 13: Olimpico (18 posti)
+(13, 'SO01', 'AUTO', FALSE, TRUE), (13, 'SO02', 'AUTO', FALSE, TRUE),
+(13, 'SO03', 'AUTO', TRUE, FALSE), (13, 'SO04', 'AUTO', FALSE, FALSE),
+(13, 'SO05', 'AUTO', FALSE, FALSE), (13, 'SO06', 'AUTO', FALSE, FALSE),
+(13, 'SO07', 'MOTO', FALSE, FALSE), (13, 'SO08', 'MOTO', FALSE, FALSE),
+(13, 'SO09', 'MOTO', FALSE, FALSE), (13, 'SO10', 'AUTO', FALSE, FALSE),
+(13, 'SO11', 'AUTO', FALSE, FALSE), (13, 'SO12', 'AUTO', FALSE, FALSE),
+(13, 'SO13', 'AUTO', FALSE, FALSE), (13, 'SO14', 'AUTO', FALSE, FALSE),
+(13, 'SO15', 'AUTO', FALSE, FALSE), (13, 'SO16', 'AUTO', FALSE, FALSE),
+(13, 'SO17', 'AUTO', FALSE, FALSE), (13, 'SO18', 'AUTO', FALSE, FALSE),
+
+-- Garage 14: Centocelle (8 posti)
+(14, 'C01', 'AUTO', FALSE, TRUE), (14, 'C02', 'AUTO', TRUE, FALSE),
+(14, 'C03', 'AUTO', FALSE, FALSE), (14, 'C04', 'AUTO', FALSE, FALSE),
+(14, 'C05', 'MOTO', FALSE, FALSE), (14, 'C06', 'MOTO', FALSE, FALSE),
+(14, 'C07', 'AUTO', FALSE, FALSE), (14, 'C08', 'AUTO', FALSE, FALSE)
 ON CONFLICT (ID_Garage, CodicePosto) DO NOTHING;
 
 -- PRENOTAZIONI
@@ -200,18 +280,26 @@ INSERT INTO Prenotazione (ID_Utente, ID_Posto, CodicePrenotazione, Targa, Note, 
 (8, 64, 'PR-M04D444', 'DD004DD', 'Furgone per trasloco', '2026-05-03 07:00:00', '2026-05-03 11:00:00', 18.00, 'CONCLUSA'),
 (9, 85, 'PR-M05E555', 'EE005EE', '', '2026-05-04 10:00:00', '2026-05-04 12:00:00', 4.00, 'CONCLUSA'),
 (10, 109, 'PR-M06F666', 'FF006FF', 'Mercato', '2026-05-05 08:00:00', '2026-05-05 10:00:00', 9.00, 'CONCLUSA'),
+(5,  151, 'PR-NEW01', 'XX111XX', 'Visita ai Fori', '2026-05-05 09:00:00', '2026-05-05 14:00:00', 30.00, 'CONCLUSA'),
 (5, 2, 'PR-M07G777', 'GG007GG', '', '2026-05-06 14:00:00', '2026-05-06 16:00:00', 5.00, 'CONCLUSA'),
 (6, 22, 'PR-M08H888', 'HH008HH', '', '2026-05-07 19:00:00', '2026-05-07 23:00:00', 24.00, 'CONCLUSA'),
 (7, 45, 'PR-M09I999', 'II009II', 'Lavoro', '2026-05-08 08:00:00', '2026-05-08 17:00:00', 31.50, 'CONCLUSA'),
 (8, 65, 'PR-M10J000', 'JJ010JJ', '', '2026-05-09 10:00:00', '2026-05-09 12:00:00', 6.00, 'CONCLUSA'),
+(6,  165, 'PR-NEW02', 'YY222YY', 'Serata trasteverina', '2026-05-08 20:00:00', '2026-05-09 01:00:00', 20.00, 'CONCLUSA'),
 (9, 86, 'PR-M11K111', 'KK011KK', '', '2026-05-10 11:00:00', '2026-05-10 15:00:00', 8.00, 'CONCLUSA'),
 (10, 110, 'PR-M12L222', 'LL012LL', '', '2026-05-11 20:00:00', '2026-05-11 23:00:00', 13.50, 'CONCLUSA'),
+(8,  201, 'PR-NEW04', 'WW444WW', 'Car valet richiesto', '2026-05-11 19:00:00', '2026-05-11 23:00:00', 32.00, 'CONCLUSA'),
 (5, 3, 'PR-M13M333', 'MM013NN', '', '2026-05-12 09:00:00', '2026-05-12 11:00:00', 5.00, 'CONCLUSA'),
+(7,  177, 'PR-NEW03', 'ZZ333ZZ', 'Viaggio treno', '2026-05-10 07:00:00', '2026-05-12 22:00:00', 65.00, 'CONCLUSA'),
 (6, 23, 'PR-M14N444', 'NN014NN', 'Cena', '2026-05-12 20:00:00', '2026-05-12 23:00:00', 18.00, 'CONCLUSA'),
 (7, 46, 'PR-M15O555', 'OO015OO', '', '2026-05-13 14:00:00', '2026-05-13 16:00:00', 7.00, 'CONCLUSA'),
 (8, 66, 'PR-M16P666', 'PP016PP', '', '2026-05-14 08:00:00', '2026-05-14 12:00:00', 12.00, 'CONCLUSA'),
+(10, 221, 'PR-NEW06', 'JJ666JJ', 'Volo Ryanair', '2026-05-10 06:00:00', '2026-05-15 12:00:00', 48.00, 'CONCLUSA'),
 (9, 87, 'PR-M17Q777', 'QQ017QQ', '', '2026-05-15 15:00:00', '2026-05-15 18:00:00', 6.00, 'CONCLUSA'),
+(9,  211, 'PR-NEW05', 'KK555KK', 'Giornata al mare', '2026-05-15 08:00:00', '2026-05-15 18:00:00', 30.00, 'CONCLUSA'),
+(5,  235, 'PR-NEW07', 'XX111XX', 'Concerto stadio', '2026-05-14 18:00:00', '2026-05-15 00:30:00', 32.50, 'CONCLUSA'),
 (10, 111, 'PR-M18R888', 'RR018RR', '', '2026-05-16 10:00:00', '2026-05-16 13:00:00', 13.50, 'CONCLUSA'),
+(6,  253, 'PR-NEW08', 'YY222YY', 'Visita parenti', '2026-05-16 10:00:00', '2026-05-16 12:00:00', 5.00,  'CONCLUSA'),
 (5, 4, 'PR-M19S999', 'SS019SS', '', '2026-05-17 08:00:00', '2026-05-17 14:00:00', 15.00, 'CONCLUSA'),
 (6, 24, 'PR-M20T000', 'TT020TT', '', '2026-05-17 11:00:00', '2026-05-17 13:00:00', 6.00, 'CONCLUSA'),
 (7, 47, 'PR-M21U111', 'UU021UU', 'Passeggiata', '2026-05-18 16:00:00', '2026-05-18 19:00:00', 10.50, 'CONCLUSA'),
@@ -658,7 +746,15 @@ INSERT INTO Transazione (ID_Utente, ID_Prenotazione, Tipo, Importo, Descrizione)
 (5,  205,'PRENOTAZIONE',   -7.00,  'Pagamento prenotazione PR-R6T7Y8U9'),
 (6,  206,'PRENOTAZIONE',  -22.50,  'Pagamento prenotazione PR-I1O2P3A4'),
 (7,  207,'PRENOTAZIONE',   -2.50,  'Pagamento prenotazione PR-S5D6F7G8'),
-(8,  208,'PRENOTAZIONE',  -22.00,  'Pagamento prenotazione PR-H9J1K2L3');
+(8,  208,'PRENOTAZIONE',  -22.00,  'Pagamento prenotazione PR-H9J1K2L3'),
+(5,  209, 'PRENOTAZIONE', -30.00, 'Pagamento prenotazione PR-NEW01'),
+(6,  210, 'PRENOTAZIONE', -20.00, 'Pagamento prenotazione PR-NEW02'),
+(7,  211, 'PRENOTAZIONE', -65.00, 'Pagamento prenotazione PR-NEW03'),
+(8,  212, 'PRENOTAZIONE', -32.00, 'Pagamento prenotazione PR-NEW04'),
+(9,  213, 'PRENOTAZIONE', -30.00, 'Pagamento prenotazione PR-NEW05'),
+(10, 214, 'PRENOTAZIONE', -48.00, 'Pagamento prenotazione PR-NEW06'),
+(5,  215, 'PRENOTAZIONE', -32.50, 'Pagamento prenotazione PR-NEW07'),
+(6,  216, 'PRENOTAZIONE',  -5.00, 'Pagamento prenotazione PR-NEW08');
 
 -- INCASSI AUTOMATICI PER OGNI PRENOTAZIONE
 INSERT INTO Transazione (ID_Utente, ID_Prenotazione, Tipo, Importo, Descrizione)
@@ -736,7 +832,15 @@ INSERT INTO Recensione (ID_Prenotazione, ID_Utente, ID_Garage, VotoGenerale, Vot
 (124, 10, 6, 4, 5, 4, 4, 4, 4, 'Comodo e facile da trovare. Utile se non si conosce bene la viabilità della zona.'),
 (125, 5, 1, 5, 5, 4, 5, 5, 5, 'Veramente ottimo e comodissimo per raggiungere a piedi il Palazzo dei Congressi per gli eventi.'),
 (126, 6, 2, 4, 5, 3, 5, 4, 5, 'Posto di alto livello, perfetto per proteggere macchine di pregio o di nuova immatricolazione.'),
-(127, 6, 2, 5, 5, 4, 5, 5, 5, 'Posizione perfetta ai Parioli. Ho lasciato la macchina qui in totale sicurezza prima di spostarci in centro per una passeggiata in terrazza al tramonto verso Piazza Navona. Servizio valet rapidissimo.')
+(127, 6, 2, 5, 5, 4, 5, 5, 5, 'Posizione perfetta ai Parioli. Ho lasciato la macchina qui in totale sicurezza prima di spostarci in centro per una passeggiata in terrazza al tramonto verso Piazza Navona. Servizio valet rapidissimo.'),
+(209, 5, 7,  5, 5, 4, 4, 4, 5, 'Posizione impagabile. In 3 minuti a piedi si è davanti al Colosseo. Evitata tutta la ZTL e parcheggiato al coperto senza stress.'),
+(210, 6, 8,  4, 5, 4, 4, 5, 4, 'Utilissimo per passare una serata a Trastevere senza rischiare multe. Il personale è stato molto rapido nella consegna delle chiavi.'),
+(211, 7, 9,  5, 5, 5, 4, 5, 5, 'Lasciato il furgone qui prima di prendere il treno a Termini. Sorvegliato h24, mi ha dato grande tranquillità per i giorni in cui sono stato fuori.'),
+(212, 8, 10, 5, 5, 3, 5, 4, 5, 'Costoso, ma si paga la location a Piazza Navona e il servizio esclusivo. Macchina trattata coi guanti dal car valet.'),
+(213, 9, 11, 4, 5, 4, 5, 4, 4, 'Macchina all''ombra e al sicuro dalla salsedine, a due passi dagli stabilimenti balneari di Ostia. Davvero una comodità.'),
+(214, 10, 12, 5, 4, 5, 4, 5, 5, 'Navetta per il terminal di Fiumicino comodissima e puntuale. Prezzo eccellente per la sosta di 5 giorni.'),
+(215, 5, 13, 5, 5, 4, 4, 4, 4, 'Fantastico per i concerti all''Olimpico! Deflusso rapido grazie al posizionamento tattico, ce ne siamo andati senza restare imbottigliati.'),
+(216, 6, 14, 4, 4, 5, 4, 4, 4, 'Sicuro e a due passi dalla fermata metro Mirti. Perfetto per le commissioni veloci nel quartiere di Centocelle.')
 ON CONFLICT (ID_Prenotazione) DO NOTHING;
 
 -- AGGIORNAMENTO MEDIE GARAGE (eseguito post-inserimento recensioni)
