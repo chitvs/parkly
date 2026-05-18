@@ -31,6 +31,9 @@ const pwdGeneralError = ref('')
 const modalPwdElement = ref(null)
 let modalPwdInstance = null
 
+// Variabili per il controllo del modale di eliminazione account
+const showConfirmDeleteModal = ref(false)
+
 // Variabili per mostrare/nascondere le password
 const showCurrentPwd = ref(false)
 const showNewPwd = ref(false)
@@ -127,23 +130,23 @@ const handleFileUpload = async (event) => {
 }
 
 // logica per l'eliminazione dell'account
-const handleDeleteAccount = async () => {
-  const confermato = window.confirm(
-    "Sei sicuro di voler eliminare il tuo account? Questa azione è irreversibile e perderai l'accesso al tuo saldo residuo."
-  );
+const handleDeleteAccount = () => {
+  alertStore.pulisci()
+  showConfirmDeleteModal.value = true
+}
 
-  if (confermato) {
-    alertStore.pulisci()
-    const response = await authStore.deleteAccount();
-    if (response.success) {
-      alertStore.mostra('success', "Account eliminato con successo.");
-      router.push('/'); // Rimanda alla home
-    } else {
-      alertStore.mostra('error', response.error || "Errore durante l'eliminazione dell'account.");
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    }
+const confirmDeleteAccount = async () => {
+  showConfirmDeleteModal.value = false
+  alertStore.pulisci()
+  const response = await authStore.deleteAccount();
+  if (response.success) {
+    alertStore.mostra('success', "Account eliminato con successo.");
+    router.push('/'); // Rimanda alla home
+  } else {
+    alertStore.mostra('error', response.error || "Errore durante l'eliminazione dell'account.");
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
-};
+}
 
 // Funzione per aprire il modal del cambio password
 const openPwdModal = () => {
@@ -185,6 +188,11 @@ const closePwdModal = () => {
 const submitChangePassword = async () => {
   pwdError.value = false;
   pwdGeneralError.value = '';
+
+  if (pwdNew.value === pwdCurrent.value) {
+    pwdGeneralError.value = "La nuova password non può essere identica a quella attuale.";
+    return;
+  }
 
   if (pwdNew.value !== pwdConfirm.value) {
     pwdError.value = true;
@@ -392,6 +400,60 @@ const submitChangePassword = async () => {
       </div>
     </div>
 
+    <!-- Modale Eliminazione Account-->
+    <Transition name="overlay-fade">
+      <div v-if="showConfirmDeleteModal" class="review-overlay" @click.self="showConfirmDeleteModal = false">
+        <Transition name="modal-slide" appear>
+          <div class="review-modal">
+
+            <div class="review-topbar">
+              <div class="step-track">
+                <span class="step-pip step-pip--on" style="background: #dc3545; width: 20px;"></span>
+              </div>
+              <button class="close-btn" @click="showConfirmDeleteModal = false">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+
+            <div class="review-body pt-2 text-center">
+              <div class="mb-3">
+                <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3rem;"></i>
+              </div>
+
+              <span class="garage-chip" style="background: rgba(220, 53, 69, 0.1); color: #dc3545;">
+                Azione Irreversibile
+              </span>
+
+              <h3 class="modal-title" style="color: #c82333;">Sei sicuro?</h3>
+
+              <p class="modal-sub">
+                Stai per eliminare definitivamente il tuo account.
+              </p>
+
+              <div class="alert error p-3 rounded-4 mb-4 text-start"
+                style="font-size: 0.85rem; border: none; background: #FFF5F5; color: #B91C1C; margin: 0 auto; max-width: 100%;">
+                <ul class="mb-0 ps-3">
+                  <li>Questa azione è <strong>irreversibile</strong>.</li>
+                  <li>Tutte le tue sessioni verranno chiuse immediatamente.</li>
+                  <li>Perderai l'accesso al tuo <strong>saldo residuo</strong>.</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="review-footer d-flex gap-2">
+              <button class="cta-btn cta-btn--ghost flex-grow-1" @click="showConfirmDeleteModal = false">
+                Annulla
+              </button>
+              <button class="cta-btn cta-btn--danger flex-grow-1" @click="confirmDeleteAccount">
+                Elimina Ora
+              </button>
+            </div>
+
+          </div>
+        </Transition>
+      </div>
+    </Transition>
+
     <Footer />
   </div>
 </template>
@@ -477,4 +539,128 @@ input[type="file"].form-control-sm {
   color: white !important; 
 }
 
+.review-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.review-modal {
+  background: white;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 450px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+}
+.review-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.2rem 1.5rem 0;
+}
+.close-btn {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 1.1rem;
+}
+.step-track {
+  display: flex;
+  gap: 6px;
+}
+.step-pip {
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 99px;
+  background: #e2e8f0;
+}
+.step-pip--on {
+  width: 20px;
+  background: #00408A;
+}
+.review-body {
+  padding: 1rem 1.75rem 1rem;
+}
+.garage-chip {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 5px 13px;
+  border-radius: 99px;
+  margin-bottom: 1rem;
+}
+.modal-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+.modal-sub {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin-bottom: 1.5rem;
+}
+.review-footer {
+  padding: 1rem 1.75rem 1.5rem;
+  background: #ffffff;
+  border-top: 1px solid #f1f5f9;
+}
+.cta-btn {
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border: none;
+  transition: background 0.15s;
+  text-align: center;
+}
+.cta-btn--danger {
+  background: #dc3545;
+  color: white;
+}
+.cta-btn--danger:hover {
+  background: #c82333;
+}
+.cta-btn--ghost {
+  background: #f1f5f9;
+  color: #475569;
+}
+.cta-btn--ghost:hover {
+  background: #e2e8f0;
+}
+.flex-grow-1 {
+  flex-grow: 1;
+}
+.overlay-fade-enter-active,
+.overlay-fade-leave-active {
+  transition: opacity 0.35s ease;
+}
+.overlay-fade-enter-from,
+.overlay-fade-leave-to {
+  opacity: 0;
+}
+.modal-slide-enter-active {
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s ease;
+}
+.modal-slide-leave-active {
+  transition: transform 0.25s ease, opacity 0.2s ease;
+}
+.modal-slide-enter-from {
+  transform: translateY(40px) scale(0.96);
+  opacity: 0;
+}
+.modal-slide-leave-to {
+  transform: translateY(20px) scale(0.97);
+  opacity: 0;
+}
 </style>
