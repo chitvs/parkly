@@ -1,6 +1,8 @@
 <script setup>
 import { ref, onMounted, nextTick } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
+import { authStore } from '../store/auth.js'
+import { alertStore } from '../store/alert.js'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 import SearchBar from '../components/SearchBar.vue'
@@ -41,19 +43,33 @@ const fetchRandomGarages = async () => {
                 nome: g.nome,
                 indirizzo: g.indirizzo,
                 tariffa: Number(g.tariffabase || 0).toFixed(2),
-                immagine: (g.foto_urls && g.foto_urls.length > 0) ? g.foto_urls[0] : 
-                          (g.Foto_URLs && g.Foto_URLs.length > 0) ? g.Foto_URLs[0] : null
+                immagine: (g.foto_urls && g.foto_urls.length > 0) ? g.foto_urls[0] :
+                    (g.Foto_URLs && g.Foto_URLs.length > 0) ? g.Foto_URLs[0] : null
             }))
 
             await nextTick()
             checkScrollBounds()
+        } else {
+            alertStore.mostra('error', 'Impossibile caricare i garage in evidenza.')
         }
     } catch (error) {
         console.error("Errore nel caricamento dei garage in evidenza:", error)
+        alertStore.mostra('error', 'Errore di connessione durante il caricamento dei garage.')
     }
 }
 
 const handleSearch = () => {
+    // Permettiamo la ricerca parziale. Controlliamo solo la coerenza se le date ci sono entrambe.
+    if (checkIn.value && checkOut.value) {
+        const dataIn = new Date(checkIn.value)
+        const dataOut = new Date(checkOut.value)
+        if (dataOut <= dataIn) {
+            alertStore.mostra('error', 'L\'orario di partenza deve essere successivo a quello di arrivo.')
+            return
+        }
+    }
+
+    alertStore.pulisci()
     router.push({
         name: 'garage',
         query: {
@@ -70,6 +86,15 @@ const goToGarage = (id) => {
 
 const goQuick = (loc) => {
     router.push({ name: 'garage', query: { location: loc } })
+}
+
+const handleDiventaGestore = () => {
+    if (!authStore.utente) {
+        alertStore.mostra('error', 'Devi essere loggato per poter diventare un gestore.')
+        return
+    }
+    // Il v-if sulla card nasconde già il bottone ai gestori, quindi qui basta reindirizzare
+    router.push('/diventa-gestore')
 }
 
 const scrollGallery = (direction) => {
@@ -90,10 +115,10 @@ const scrollGallery = (direction) => {
 
 const checkScrollBounds = () => {
     if (!scrollContainer.value) return;
-    
+
     const { scrollLeft, scrollWidth, clientWidth } = scrollContainer.value;
-    
-    canScrollLeft.value = scrollLeft > 2; 
+
+    canScrollLeft.value = scrollLeft > 2;
     canScrollRight.value = Math.ceil(scrollLeft + clientWidth) < scrollWidth - 2;
 }
 
@@ -106,19 +131,19 @@ const quickSearches = [
 ]
 
 const steps = [
-    { num: '01', icon: 'bi-geo-alt', title: 'Cerca', desc: 'Inserisci la destinazione e l\'orario. Vedi tutti i garage disponibili su mappa.' },
-    { num: '02', icon: 'bi-grid-3x3-gap', title: 'Scegli il posto', desc: 'Seleziona un garage e dalla planimetria interattiva il posto più adatto al tuo veicolo.' },
-    { num: '03', icon: 'bi-wallet2', title: 'Paga', desc: 'Addebito sul tuo portafoglio Parkly.' },
-    { num: '04', icon: 'bi-patch-check', title: 'Parcheggia', desc: 'Il posto è tuo. Ricevi il ticket, entra e parti tranquillo.' },
+    { num: '01', icon: 'bi-geo-alt', title: 'Cerca', desc: 'Inserisci la destinazione e l\'orario. Vedi tutti i garage disponibili sulla mappa.' },
+    { num: '02', icon: 'bi-grid-3x3-gap', title: 'Scegli il posto', desc: 'Seleziona un garage e dalla planimetria interattiva seleziona il posto più adatto al tuo veicolo.' },
+    { num: '03', icon: 'bi-wallet2', title: 'Paga', desc: 'Gestisci il tuo saldo sul tuo portafoglio Parkly.' },
+    { num: '04', icon: 'bi-patch-check', title: 'Parcheggia', desc: 'Il posto è tuo. Ricevi il ticket, entra e lascia il tuo veicolo in tutta tranqullità.' },
 ]
 
 const features = [
-    { icon: 'bi-map', title: 'Mappa interattiva', desc: 'Visualizza garage e disponibilità in tempo reale, filtrabili per tipo veicolo e servizi.' },
-    { icon: 'bi-lightning-charge', title: 'Prenotazione immediata', desc: 'Lock atomico sul posto: nessun doppio booking. Il tuo posto è garantito.' },
-    { icon: 'bi-credit-card', title: 'Portafoglio integrato', desc: 'Ricarica tra 5€ e 1000€. Ogni transazione registrata, rimborsi automatici.' },
-    { icon: 'bi-chat-dots', title: 'Chat con il gestore', desc: 'Messaggistica in tempo reale via Socket.IO, privata per ogni prenotazione.' },
+    { icon: 'bi-map', title: 'Mappa interattiva', desc: 'Visualizza garage e disponibilità in tempo reale, e filtra per tipo di veicolo e servizi.' },
+    { icon: 'bi-lightning-charge', title: 'Prenotazione immediata', desc: 'Il tuo posto viene bloccato all\'istante ed è garantito.' },
+    { icon: 'bi-credit-card', title: 'Portafoglio integrato', desc: 'Ricarica tra 5€ e 1000€. Ogni transazione viene registrata e i rimborsi sono automatici.' },
+    { icon: 'bi-chat-dots', title: 'Chat con il gestore', desc: 'Messaggistica in tempo reale,chat private tra cliente e gestore per ogni prenotazione.' },
     { icon: 'bi-ev-station', title: 'Ricarica elettrica', desc: 'Filtra i garage con colonnine EV. Parcheggi e ricarichi allo stesso tempo.' },
-    { icon: 'bi-shield-check', title: 'Recensioni verificate', desc: 'Solo prenotazioni completate possono generare una recensione.' },
+    { icon: 'bi-shield-check', title: 'Recensioni verificate', desc: 'Solo gli utenti con prenotazioni completate possono generare una recensione.' },
 ]
 </script>
 
@@ -128,10 +153,11 @@ const features = [
 
         <main class="main-content">
 
-            <section class="hero-header">   
+            <section class="hero-header">
                 <div class="hero-text">
-                    <h1>Sostare non è mai stato così <span class="highlight">semplice</span>.</h1>
-                    <p>La piattaforma intelligente per prenotare il tuo posto auto con semplicità, chiarezza e velocità.</p>
+                    <h1>Trovare parcheggio non è mai stato così <span class="highlight">semplice</span>.</h1>
+                    <p>La piattaforma intelligente per prenotare il tuo posto auto con semplicità, chiarezza e velocità.
+                    </p>
                 </div>
             </section>
 
@@ -211,14 +237,14 @@ const features = [
                 </div>
             </section>
 
-            <div class="cta-wrap">
+            <div class="cta-wrap" v-if="authStore.utente?.ruolo !== 'GESTORE'">
                 <div class="cta">
                     <div class="cta-text">
                         <h2>Hai un garage? Lavora con noi.</h2>
-                        <p>Pubblica i tuoi posti su Parkly. Dashboard con occupazione in tempo reale, statistiche
-                            mensili, pagamenti automatici.</p>
+                        <p>Pubblica la tua attività su Parkly. Goditi Dashboard con occupazione in tempo reale,
+                            statistiche mensili e pagamenti automatici.</p>
                     </div>
-                    <RouterLink to="/diventa-gestore" class="cta-btn">Diventa gestore</RouterLink>
+                    <button @click="handleDiventaGestore" class="home-cta-btn">Diventa gestore</button>
                 </div>
             </div>
 
@@ -463,14 +489,14 @@ const features = [
     color: #00408a;
     font-size: 1.2rem;
     transition: all 0.2s ease;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 
 .nav-btn:hover:not(:disabled) {
     background: #eff6ff;
     border-color: #00408a;
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
 }
 
 .nav-btn:disabled {
@@ -487,14 +513,11 @@ const features = [
     position: relative;
     display: flex;
     gap: 24px;
-
     padding-bottom: 20px;
     overflow-x: auto;
-
     scroll-snap-type: x proximity;
     scroll-behavior: smooth;
     overscroll-behavior-x: contain;
-
     -ms-overflow-style: none;
     scrollbar-width: none;
 }
@@ -523,7 +546,7 @@ const features = [
 }
 
 .garage-card:hover {
-    box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
 }
 
 .garage-img-placeholder {
@@ -599,25 +622,32 @@ const features = [
     line-height: 1.5;
 }
 
-.cta-btn {
+.home-cta-btn {
     background: #ffffff;
     color: #00408a;
-    padding: 14px 28px;
+    padding: 0 28px;
+    height: 52px;
     border-radius: 12px;
     font-weight: 700;
-    text-decoration: none;
-    white-space: nowrap;
+    font-family: 'Inter', sans-serif;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     transition: 0.2s;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.cta-btn:hover {
+.home-cta-btn:hover {
     background: #f8fafc;
     transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    color: #00224a;
 }
 
 @media (max-width: 900px) {
+
     .steps-grid,
     .features-grid {
         grid-template-columns: repeat(2, 1fr);
@@ -636,6 +666,7 @@ const features = [
 }
 
 @media (max-width: 600px) {
+
     .steps-grid,
     .features-grid {
         grid-template-columns: 1fr;

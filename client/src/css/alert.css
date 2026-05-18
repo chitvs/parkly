@@ -39,3 +39,49 @@
     border-color: #dc3545 !important;
     box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1) !important;
 }
+
+.alert-fixed-top {
+    position: fixed;
+    top: 85px; /* Appena sotto l'header */
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1050;
+    width: 90%;
+    max-width: 600px;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+    animation: slideDown 0.3s ease-out forwards;
+}
+
+.alert-fixed-bottom {
+    position: fixed;
+    bottom: 30px; /* Perfetto per il footer */
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1050;
+    width: 90%;
+    max-width: 600px;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+    animation: slideUp 0.3s ease-out forwards;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -20px);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translate(-50%, 20px);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
+}

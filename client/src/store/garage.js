@@ -5,13 +5,14 @@ export const garageStore = reactive({
   currentGarage: null,
   posti: [],
   recensioni: [],
-  
+
   // --- STATI GESTORE ---
   mieiGarage: [],
   storicoPrenotazioni: [],
   postiPerGarage: {},
   occupazioneGarage: {},
-  
+  idGarageSelezionato: 'TUTTI',
+
   // --- STATI CONDIVISI ---
   isLoading: false,
 
@@ -68,6 +69,7 @@ export const garageStore = reactive({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
+        credentials: 'include'
       })
       return await response.json()
     } catch (err) {
@@ -102,6 +104,10 @@ export const garageStore = reactive({
     }
   },
 
+  setGarageSelezionato(id) {
+    this.idGarageSelezionato = id;
+  },
+
   async caricaDashboardGestore() {
     this.isLoading = true;
     try {
@@ -109,6 +115,13 @@ export const garageStore = reactive({
       if (!res.success) return { success: false };
 
       this.mieiGarage = markRaw(res.data);
+
+      if (this.idGarageSelezionato !== 'TUTTI') {
+        const esisteAncora = this.mieiGarage.some(g => Number(g.id_garage) === Number(this.idGarageSelezionato));
+        if (!esisteAncora) {
+          this.idGarageSelezionato = 'TUTTI';
+        }
+      }
 
       const nuoviPosti = {};
       const nuovaOccupazione = {};
@@ -174,6 +187,7 @@ export const garageStore = reactive({
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(garageData),
+        credentials: 'include'
       })
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || 'Errore durante l\'aggiornamento')
@@ -182,6 +196,24 @@ export const garageStore = reactive({
       return { success: false, error: err.message || 'Errore di rete' }
     } finally {
       this.isLoading = false
+    }
+  },
+
+  async uploadPhotos(idGarage, formData) {
+    this.isLoading = true;
+    try {
+      const response = await fetch(`/api/garage/${idGarage}/upload-photos`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Errore durante l'upload delle foto");
+      return { success: true, urls: data.urls };
+    } catch (err) {
+      return { success: false, error: err.message || 'Errore di rete' };
+    } finally {
+      this.isLoading = false;
     }
   },
 
@@ -204,6 +236,7 @@ export const garageStore = reactive({
       const response = await fetch(`/api/garage/garages-gestore/${idGarage}/posti/${idPosto}/manutenzione`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(maintenanceData),
       })
       const data = await response.json()

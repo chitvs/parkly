@@ -16,7 +16,7 @@ export const strategic_places = [
         id: 'p3',
         name: 'Aeroporto Fiumicino',
         synonyms: ['fiumicino', 'fco', 'aeroporto'],
-        coords: { lat: 41.7999, lng: 12.2462 }
+        coords: { lat: 41.7866, lng: 12.2525 }
     },
     {
         id: 'p4',
@@ -48,8 +48,8 @@ export const strategic_places = [
         id: 'p8',
         name: 'Trastevere',
         synonyms: ['trastevere', 'piazza trilussa'],
-        coords: { lat: 41.8893, lng: 12.4691 }
-    },
+        coords: { lat: 41.8918, lng: 12.4700 }
+    }, 
     {
         id: 'p9',
         name: 'Piazza Navona',
@@ -74,24 +74,24 @@ export const strategic_places = [
         id: 'p12',
         name: 'EUR',
         synonyms: ['eur', 'nuvola', 'laghetto'],
-        coords: { lat: 41.8285, lng: 12.4674 }
+        coords: { lat: 41.8287, lng: 12.4709 } 
     },
     {
         id: 'p13',
         name: 'Policlinico',
         synonyms: ['policlinico', 'università', 'sapienza', 'ospedale'],
-        coords: { lat: 41.9081, lng: 12.5108 }
+        coords: { lat: 41.9075, lng: 12.5130 } 
     },
     {
         id: 'p14',
         name: 'San Giovanni',
         synonyms: ['san giovanni', 're di roma', 'appia'],
-        coords: { lat: 41.8861, lng: 12.5089 }
+        coords: { lat: 41.8851, lng: 12.5103 } 
     },
     {
         id: 'p15',
-        name: 'Parioli / Flaminio',
-        synonyms: ['parioli', 'luiss', 'flaminio', 'auditorium', 'parco della musica'],
+        name: 'Parioli',
+        synonyms: ['parioli', 'luiss', 'auditorium', 'parco della musica'],
         coords: { lat: 41.9260, lng: 12.4900 }
     },
     {
@@ -104,7 +104,7 @@ export const strategic_places = [
         id: 'p17',
         name: 'Prati / Tribunale',
         synonyms: ['prati', 'lepanto', 'clodio', 'tribunale', 'cola di rienzo'],
-        coords: { lat: 41.9100, lng: 12.4600 }
+        coords: { lat: 41.9056, lng: 12.4694 }
     },
     {
         id: 'p18',

@@ -45,7 +45,10 @@ export const walletStore = reactive({
 
   async contabilizzaRicavi() {
       try {
-        const res = await fetch('/api/wallet/contabilizza-ricavi', { method: 'POST' });
+        const res = await fetch('/api/wallet/contabilizza-ricavi', { 
+          method: 'POST',
+          credentials: 'include' 
+        });
         const json = await res.json();
         
         if (json.success && json.data.sbloccati > 0) {
@@ -59,7 +62,9 @@ export const walletStore = reactive({
 
   async caricaSaldoSospeso() {
     try {
-      const res = await fetch('/api/wallet/saldo-sospeso');
+      const res = await fetch('/api/wallet/saldo-sospeso', {
+        credentials: 'include' 
+      });
       const json = await res.json();
       if (json.success) {
         this.saldoSospeso = json.data.totale;

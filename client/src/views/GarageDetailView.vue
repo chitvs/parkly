@@ -1,8 +1,9 @@
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { garageStore } from '../store/garage'
 import { authStore } from '../store/auth'
+import { alertStore } from '../store/alert'
 import 'bootstrap-icons/font/bootstrap-icons.css'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
@@ -18,12 +19,28 @@ const targa = ref('')
 const note = ref('')
 const codiceDisabilita = ref('')
 const postoSelezionato = ref(null)
-const messaggio = ref(null)
 const isMapConfirmed = ref(false)
 const isPrenotando = ref(false)
-const fotoIngrandita = ref(null)
+const indiceFotoAttiva = ref(null)
+
+// genera la data e ora attuale in formato locale ISO per bloccare le date passate nel calendario nativo
+const oggiIso = computed(() => {
+    const tzoffset = (new Date()).getTimezoneOffset() * 60000; // offset in millisecondi
+    return (new Date(Date.now() - tzoffset)).toISOString().slice(0, 16);
+})
+
+const handleKeydown = (e) => {
+    if (indiceFotoAttiva.value !== null) {
+        if (e.key === 'Escape') chiudiFoto()
+        if (e.key === 'ArrowRight') fotoSuccessiva()
+        if (e.key === 'ArrowLeft') fotoPrecedente()
+    }
+}
 
 onMounted(async () => {
+    // listener per utilizzare ESC e le frecce
+    document.addEventListener('keydown', handleKeydown)
+
     garageStore.clearGarageData()
     await garageStore.fetchGarage(Number(props.id))
 
@@ -40,9 +57,15 @@ onMounted(async () => {
     }
 })
 
+onUnmounted(() => {
+    // rimuovo il listener quando il componente viene distrutto
+    document.removeEventListener('keydown', handleKeydown)
+})
+
 watch([checkIn, checkOut], () => {
     isMapConfirmed.value = false
     postoSelezionato.value = null
+    alertStore.pulisci() // Pulisce eventuali errori precedenti quando si cambiano le date
 })
 
 // Estrae le foto in modo sicuro
@@ -51,28 +74,40 @@ const fotoGarage = computed(() => {
     return garageStore.currentGarage?.foto_urls || []
 })
 
-const apriFoto = (url) => {
-    fotoIngrandita.value = url
+const apriFoto = (index) => {
+    indiceFotoAttiva.value = index
     document.body.style.overflow = 'hidden' // Blocca lo scroll della pagina
 }
 
 const chiudiFoto = () => {
-    fotoIngrandita.value = null
+    indiceFotoAttiva.value = null
     document.body.style.overflow = '' // Sblocca lo scroll
+}
+
+const fotoSuccessiva = () => {
+    if (indiceFotoAttiva.value === null || fotoGarage.value.length === 0) return
+    // passa alla foto successiva, tornando alla prima se siamo all'ultima
+    indiceFotoAttiva.value = (indiceFotoAttiva.value + 1) % fotoGarage.value.length
+}
+
+const fotoPrecedente = () => {
+    if (indiceFotoAttiva.value === null || fotoGarage.value.length === 0) return
+    // passa alla precedente, andando all'ultima se siamo alla prima
+    indiceFotoAttiva.value = (indiceFotoAttiva.value - 1 + fotoGarage.value.length) % fotoGarage.value.length
 }
 
 // leggiamo i prezzi base direttamente dal record del garage
 const tariffePerVeicolo = computed(() => {
     const g = garageStore.currentGarage;
     if (!g) return {};
-    
+
     const tariffe = {};
     if (g.tariffamoto) tariffe['MOTO'] = Number(g.tariffamoto);
     if (g.tariffaauto) tariffe['AUTO'] = Number(g.tariffaauto);
     if (g.tariffafurgone) tariffe['FURGONE'] = Number(g.tariffafurgone);
-    
+
     if (!tariffe['AUTO'] && g.tariffabase) tariffe['AUTO'] = Number(g.tariffabase);
-    
+
     return tariffe;
 });
 
@@ -110,8 +145,10 @@ const isCudeValido = computed(() => {
 })
 
 const aggiornaMappa = async () => {
+    alertStore.pulisci()
+
     if (!checkIn.value || !checkOut.value) {
-        messaggio.value = { tipo: 'error', testo: 'Inserisci data di arrivo e partenza prima di controllare.' }
+        alertStore.mostra('error', 'Inserisci data di arrivo e partenza prima di controllare.')
         return
     }
 
@@ -120,16 +157,15 @@ const aggiornaMappa = async () => {
     const adesso = new Date()
 
     if (dataArrivo < adesso) {
-        messaggio.value = { tipo: 'error', testo: 'Non puoi prenotare per un orario passato.' }
+        alertStore.mostra('error', 'Non puoi prenotare per un orario passato.')
         return
     }
 
     if (dataPartenza <= dataArrivo) {
-        messaggio.value = { tipo: 'error', testo: 'L\'orario di partenza deve essere successivo a quello di arrivo.' }
+        alertStore.mostra('error', 'L\'orario di partenza deve essere successivo a quello di arrivo.')
         return
     }
 
-    messaggio.value = null
     await garageStore.fetchPosti(props.id, checkIn.value, checkOut.value)
     isMapConfirmed.value = true
     postoSelezionato.value = null
@@ -142,8 +178,8 @@ const resetSelezione = async () => {
     note.value = ''
     postoSelezionato.value = null
     codiceDisabilita.value = ''
-    messaggio.value = null
     isMapConfirmed.value = false
+    alertStore.pulisci()
 
     await garageStore.fetchPosti(props.id, '', '')
 }
@@ -162,14 +198,15 @@ const durataOre = computed(() => {
 
 const gestisciPrenotazione = async () => {
     if (!postoSelezionato.value) return
+    alertStore.pulisci()
 
     if (!isTargaValida.value) {
-        messaggio.value = { tipo: 'error', testo: 'Inserisci una targa valida prima di procedere.' }
+        alertStore.mostra('error', 'Inserisci una targa valida prima di procedere.')
         return
     }
 
     if (postoSelezionato.value.isdisabili && !isCudeValido.value) {
-        messaggio.value = { tipo: 'error', testo: 'Inserisci un codice Contrassegno CUDE valido (es. IT-1234567).' }
+        alertStore.mostra('error', 'Inserisci un codice Contrassegno CUDE valido (es. IT-1234567).')
         return
     }
 
@@ -196,26 +233,27 @@ const gestisciPrenotazione = async () => {
         }
 
         await aggiornaMappa()
-        
-        messaggio.value = { tipo: 'success', testo: `Prenotazione avvenuta con successo! Il tuo codice è: ${res.prenotazione.codiceprenotazione}` }
+
+        alertStore.mostra('success', `Prenotazione avvenuta con successo! Il tuo codice è: ${res.prenotazione.codiceprenotazione}`)
         postoSelezionato.value = null
         targa.value = ''
         note.value = ''
+        window.scrollTo({ top: 0, behavior: 'smooth' })
     } else {
-        messaggio.value = { tipo: 'error', testo: res.error || 'Errore durante la prenotazione' }
+        alertStore.mostra('error', res.error || 'Errore durante la prenotazione')
     }
 }
 
-const commentiEspansi = ref(new Set())
+const recensioneSelezionata = ref(null)
 
-const toggleCommento = (index) => {
-    const nuovoSet = new Set(commentiEspansi.value)
-    if (nuovoSet.has(index)) {
-        nuovoSet.delete(index)
-    } else {
-        nuovoSet.add(index)
-    }
-    commentiEspansi.value = nuovoSet
+const apriModalCommento = (recensione) => {
+    recensioneSelezionata.value = recensione
+    document.body.style.overflow = 'hidden'
+}
+
+const chiudiModalCommento = () => {
+    recensioneSelezionata.value = null
+    document.body.style.overflow = ''
 }
 
 const formattaDataRecensione = (dataString) => {
@@ -253,7 +291,7 @@ const recensioniPaginate = computed(() => {
 })
 
 watch(paginaRecensioniCorrente, () => {
-    commentiEspansi.value.clear()
+    chiudiModalCommento()
 })
 
 </script>
@@ -263,7 +301,7 @@ watch(paginaRecensioniCorrente, () => {
         <Header />
 
         <main v-if="garageStore.isLoading" class="msg-box">Caricamento...</main>
-        
+
         <main v-else class="main-content">
             <section class="basic-hero">
                 <div class="hero-top">
@@ -272,7 +310,8 @@ watch(paginaRecensioniCorrente, () => {
                         <p class="descrizione">{{ garageStore.currentGarage?.descrizione }}</p>
                         <div class="badge-row">
                             <div class="badge">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
                                     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                                     <circle cx="12" cy="10" r="3" />
                                 </svg>
@@ -280,7 +319,8 @@ watch(paginaRecensioniCorrente, () => {
                             </div>
 
                             <div class="badge" v-if="garageStore.currentGarage?.is24h">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <circle cx="12" cy="12" r="10"></circle>
                                     <polyline points="12 6 12 12 16 14"></polyline>
                                 </svg>
@@ -288,18 +328,21 @@ watch(paginaRecensioniCorrente, () => {
                             </div>
 
                             <div class="badge" v-else>
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
                                     <circle cx="12" cy="12" r="10" />
                                     <polyline points="12 6 12 12 16 14" />
                                 </svg>
-                                {{ garageStore.currentGarage?.orarioapertura.substring(0, 5) }} - {{ garageStore.currentGarage?.orariochiusura.substring(0,5) }}
+                                {{ garageStore.currentGarage?.orarioapertura.substring(0, 5) }} - {{
+                                    garageStore.currentGarage?.orariochiusura.substring(0, 5) }}
                             </div>
-                            
+
                             <div class="badge" v-if="garageStore.currentGarage?.altezzamassima">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M12 22V5"/>
-                                    <path d="M7 10l5-5 5 5"/>
-                                    <line x1="4" y1="2" x2="20" y2="2"/>
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 22V5" />
+                                    <path d="M7 10l5-5 5 5" />
+                                    <line x1="4" y1="2" x2="20" y2="2" />
                                 </svg>
                                 Max {{ garageStore.currentGarage?.altezzamassima }}m
                             </div>
@@ -308,20 +351,23 @@ watch(paginaRecensioniCorrente, () => {
 
                     <div class="hero-right">
                         <div class="prezzo-label">Tariffe a partire da:</div>
-                        
+
                         <div class="price-line" v-if="tariffePerVeicolo['MOTO']">
                             <span class="v-tipo">Moto</span>
-                            <span class="prezzo-valore-small">€{{ tariffePerVeicolo['MOTO'].toFixed(2) }}<span>/h</span></span>
+                            <span class="prezzo-valore-small">€{{ tariffePerVeicolo['MOTO'].toFixed(2)
+                            }}<span>/h</span></span>
                         </div>
-                        
+
                         <div class="price-line" v-if="tariffePerVeicolo['AUTO']">
                             <span class="v-tipo">Auto</span>
-                            <span class="prezzo-valore-small">€{{ tariffePerVeicolo['AUTO'].toFixed(2) }}<span>/h</span></span>
+                            <span class="prezzo-valore-small">€{{ tariffePerVeicolo['AUTO'].toFixed(2)
+                            }}<span>/h</span></span>
                         </div>
-                        
+
                         <div class="price-line" v-if="tariffePerVeicolo['FURGONE']">
                             <span class="v-tipo">Furgone</span>
-                            <span class="prezzo-valore-small">€{{ tariffePerVeicolo['FURGONE'].toFixed(2) }}<span>/h</span></span>
+                            <span class="prezzo-valore-small">€{{ tariffePerVeicolo['FURGONE'].toFixed(2)
+                            }}<span>/h</span></span>
                         </div>
 
                         <div class="special-rates-container" v-if="sovrapprezzoElettrica || scontoDisabili">
@@ -340,38 +386,164 @@ watch(paginaRecensioniCorrente, () => {
 
             <section class="gallery-section" v-if="fotoGarage.length > 0">
                 <div class="gallery-track">
-                    <img 
-                        v-for="(url, index) in fotoGarage" 
-                        :key="index" 
-                        :src="url" 
-                        alt="Foto garage" 
-                        class="gallery-img"
-                        @click="apriFoto(url)"
-                    >
+                    <img v-for="(url, index) in fotoGarage" :key="index" :src="url" alt="Foto garage"
+                        class="gallery-img" @click="apriFoto(index)">
                 </div>
             </section>
 
-            <div v-if="messaggio" :class="['alert', messaggio.tipo]">
-                {{ messaggio.testo }}
-                <button @click="messaggio = null" class="close-btn">x</button>
-            </div>
-
             <div class="layout-grid">
-                <div class="card">
-                    <div class="card-header">
-                        <h2>Planimetria</h2>
+
+                <div class="left-column">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>Planimetria</h2>
+                        </div>
+                        <div class="card-body">
+                            <PlanimetriaGarage :posti="garageStore.posti"
+                                :mappaTestuale="garageStore.currentGarage?.mappatestuale"
+                                :selectedId="postoSelezionato?.id_posto" :isAnteprima="!isMapConfirmed"
+                                @select="(p) => postoSelezionato = p"
+                                @error="(msg) => alertStore.mostra('error', msg)" />
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <PlanimetriaGarage :posti="garageStore.posti"
-                            :mappaTestuale="garageStore.currentGarage?.mappatestuale"
-                            :selectedId="postoSelezionato?.id_posto"
-                            :isAnteprima="!isMapConfirmed"
-                            @select="(p) => postoSelezionato = p"
-                            @error="(msg) => messaggio = { tipo: 'error', testo: msg }" />
-                    </div>
+
+                    <section class="reviews-section card" v-if="garageStore.currentGarage">
+                        <div class="card-header">
+                            <h2>Recensioni</h2>
+                        </div>
+                        <div class="card-body">
+
+                            <div v-if="garageStore.recensioni.length > 0">
+
+                                <div class="reviews-top-row">
+                                    <div class="overall-rating-header">
+                                        <h2 class="rating-number">{{
+                                            Number(garageStore.currentGarage.mediagenerale).toFixed(2) }}</h2>
+
+                                        <div class="average-stars">
+                                            <i v-for="i in 5" :key="i" class="bi" :class="[
+                                                garageStore.currentGarage.mediagenerale >= i ? 'bi-star-fill star--on' :
+                                                    garageStore.currentGarage.mediagenerale >= i - 0.5 ? 'bi-star-half star--on' :
+                                                        'bi-star star--off'
+                                            ]">
+                                            </i>
+                                        </div>
+
+                                        <span class="reviews-count">
+                                            {{ garageStore.recensioni.length }} recensioni
+                                        </span>
+                                    </div>
+
+                                    <div class="rating-ladder">
+                                        <div v-for="star in 5" :key="star" class="ladder-row">
+                                            <span class="ladder-num">{{ 6 - star }}</span>
+                                            <div class="ladder-bar-bg">
+                                                <div class="ladder-bar-fill"
+                                                    :style="{ width: distribuzioneVoti[6 - star] + '%' }">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <hr class="reviews-divider">
+
+                                <div class="categories-grid">
+                                    <div class="category-item">
+                                        <span class="cat-label"><i class="bi bi-geo-alt"></i> Posizione</span>
+                                        <span class="cat-val">{{
+                                            Number(garageStore.currentGarage.mediaposizione).toFixed(1) }}</span>
+                                    </div>
+                                    <div class="category-item">
+                                        <span class="cat-label"><i class="bi bi-tag"></i> Prezzo</span>
+                                        <span class="cat-val">{{
+                                            Number(garageStore.currentGarage.mediaprezzo).toFixed(1) }}</span>
+                                    </div>
+                                    <div class="category-item">
+                                        <span class="cat-label"><i class="bi bi-stars"></i> Pulizia</span>
+                                        <span class="cat-val">{{
+                                            Number(garageStore.currentGarage.mediapulizia).toFixed(1) }}</span>
+                                    </div>
+                                    <div class="category-item">
+                                        <span class="cat-label"><i class="bi bi-car-front"></i> Spazio di manovra</span>
+                                        <span class="cat-val">{{
+                                            Number(garageStore.currentGarage.mediaspazio).toFixed(1) }}</span>
+                                    </div>
+                                    <div class="category-item">
+                                        <span class="cat-label"><i class="bi bi-shield-check"></i> Sicurezza</span>
+                                        <span class="cat-val">{{
+                                            Number(garageStore.currentGarage.mediasicurezza).toFixed(1) }}</span>
+                                    </div>
+                                </div>
+
+                                <div class="user-comments-section mt-5 pt-4 border-top">
+                                    <div class="reviews-wrapper">
+                                        <div class="comments-grid">
+                                            <div v-for="(recensione, index) in recensioniPaginate" :key="index"
+                                                class="comment-card">
+                                                <div class="comment-header">
+                                                    <div class="user-avatar">
+                                                        <img v-if="recensione.fotoprofilo_url"
+                                                            :src="recensione.fotoprofilo_url" alt="User avatar">
+                                                        <span v-else>{{ recensione.nome.charAt(0).toUpperCase()
+                                                        }}</span>
+                                                    </div>
+
+                                                    <div class="user-info">
+                                                        <h4 class="user-name">{{ recensione.nome }} {{
+                                                            recensione.inizialecognome }}.</h4>
+                                                    </div>
+                                                </div>
+
+                                                <div class="comment-meta">
+                                                    <div class="small-stars">
+                                                        <i v-for="star in 5" :key="'s' + star" class="bi"
+                                                            :class="star <= Math.round(recensione.votogenerale) ? 'bi-star-fill star--on' : 'bi-star star--off'">
+                                                        </i>
+                                                    </div>
+                                                    <span class="meta-dot">·</span>
+                                                    <span class="comment-date">{{
+                                                        formattaDataRecensione(recensione.datacreazione) }}</span>
+                                                </div>
+
+                                                <p class="comment-text" v-if="recensione.commento">{{
+                                                    recensione.commento }}</p>
+                                                <p class="comment-text text-muted fst-italic" v-else></p>
+
+                                                <div class="action-slot">
+                                                    <button :style="{
+                                                        visibility: (
+                                                            recensione.commento &&
+                                                            (recensione.commento.length > 130 || recensione.commento.split('\n').length > 3)
+                                                        ) ? 'visible' : 'hidden'
+                                                    }" class="mostra-altro-btn" @click="apriModalCommento(recensione)">
+                                                        Leggi tutto
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="pagination-wrapper mt-5 d-flex justify-content-center">
+                                            <Pagination compact v-model:paginaCorrente="paginaRecensioniCorrente"
+                                                v-model:elementiPerPagina="recensioniPerPagina"
+                                                :totaleElementi="garageStore.recensioni.length" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            <div v-else class="empty-reviews text-center py-5 text-muted">
+                                <i class="bi bi-chat-left-dots"
+                                    style="font-size: 2.5rem; color: #cbd5e1; display: block; "></i>
+                                Nessuna recensione presente al momento.<br>Sii il primo a recensire!
+                            </div>
+
+                        </div>
+                    </section>
                 </div>
 
-                <aside class="card">
+                <aside class="card sticky-aside">
                     <div class="card-header">
                         <h2>Orari sosta</h2>
                     </div>
@@ -379,11 +551,11 @@ watch(paginaRecensioniCorrente, () => {
 
                         <div class="form-group">
                             <label>Arrivo</label>
-                            <input type="datetime-local" v-model="checkIn">
+                            <input type="datetime-local" v-model="checkIn" :min="oggiIso">
                         </div>
                         <div class="form-group">
                             <label>Partenza</label>
-                            <input type="datetime-local" v-model="checkOut">
+                            <input type="datetime-local" v-model="checkOut" :min="oggiIso">
                         </div>
 
                         <div class="action-buttons">
@@ -409,7 +581,8 @@ watch(paginaRecensioniCorrente, () => {
 
                             <div class="form-group" v-if="postoSelezionato.isdisabili">
                                 <label>Codice Contrassegno CUDE</label>
-                                <input type="text" v-model="codiceDisabilita" @input="formattaCude" placeholder="Es. IT-1234567" required>
+                                <input type="text" v-model="codiceDisabilita" @input="formattaCude"
+                                    placeholder="Es. IT-1234567" required>
                                 <small v-if="codiceDisabilita.length > 0 && !isCudeValido" class="error-text">
                                     Formato non valido.
                                 </small>
@@ -438,158 +611,95 @@ watch(paginaRecensioniCorrente, () => {
                                     <span>€ {{ prezzoTotale }}</span>
                                 </div>
                             </div>
-                            <div class="policy-box">
-                                <div class="policy-header">
+                            <details class="policy-box">
+                                <summary class="policy-header">
                                     <i class="bi bi-info-circle-fill"></i>
                                     <strong>Politica di annullamento</strong>
-                                </div>
+                                </summary>
+
                                 <ul class="policy-list">
-                                    <li><strong>Rimborso del 100%</strong> per disdette effettuate con almeno 12 ore di preavviso, o per ripensamenti entro 15 minuti dalla prenotazione.</li>
-                                    <li><strong>Rimborso del 50%</strong> per le cancellazioni effettuate a meno di 12 ore dall'arrivo.</li>
+                                    <li><strong>Rimborso del 100%</strong> per disdette effettuate con almeno 12 ore di
+                                        preavviso, o per ripensamenti entro 15 minuti dalla prenotazione.</li>
+                                    <li><strong>Rimborso del 50%</strong> per le cancellazioni effettuate a meno di 12
+                                        ore dall'arrivo.</li>
                                     <li><strong>Non rimborsabile</strong> se la sosta è già iniziata.</li>
                                 </ul>
-                            </div>
+                            </details>
                         </div>
 
-                        <button class="btn fill" :disabled="!isMapConfirmed || !postoSelezionato || !targa || !isTargaValida || (postoSelezionato.isdisabili && !isCudeValido)"
+                        <button class="btn fill"
+                            :disabled="!isMapConfirmed || !postoSelezionato || !targa || !isTargaValida || (postoSelezionato.isdisabili && !isCudeValido) || isPrenotando"
                             @click="gestisciPrenotazione">
-                            Prenota ora
+                            <span v-if="isPrenotando"><i class="bi bi-hourglass-split"></i> Elaborazione...</span>
+                            <span v-else>Prenota ora</span>
                         </button>
 
                     </div>
                 </aside>
             </div>
-            
-            <section class="reviews-section card" v-if="garageStore.currentGarage">
-                <div class="card-body">
+        </main>
 
-                    <div class="overall-rating-header">
-                        <h2 class="rating-number">{{ Number(garageStore.currentGarage.mediagenerale).toFixed(2) }}</h2>
+        <!-- MODAL COMMENTO COMPLETO -->
+        <Teleport to="body">
+            <div v-if="recensioneSelezionata" class="review-overlay" @click.self="chiudiModalCommento">
+                <div class="review-modal">
 
-                        <div class="average-stars">
-                            <i v-for="i in 5" :key="i" class="bi" :class="[
-                                garageStore.currentGarage.mediagenerale >= i ? 'bi-star-fill star--on' :
-                                    garageStore.currentGarage.mediagenerale >= i - 0.5 ? 'bi-star-half star--on' :
-                                        'bi-star star--off'
-                            ]">
-                            </i>
+                    <!-- Header modal -->
+                    <div class="modal-header-row">
+                        <div class="modal-reviewer-info">
+                            <div class="user-avatar modal-avatar">
+                                <img v-if="recensioneSelezionata.fotoprofilo_url"
+                                    :src="recensioneSelezionata.fotoprofilo_url" alt="User avatar">
+                                <span v-else>{{ recensioneSelezionata.nome.charAt(0).toUpperCase() }}</span>
+                            </div>
+                            <div>
+                                <p class="modal-title-text">
+                                    {{ recensioneSelezionata.nome }} {{ recensioneSelezionata.inizialecognome }}.
+                                </p>
+                                <div class="modal-stars-row">
+                                    <div class="small-stars">
+                                        <i v-for="star in 5" :key="star" class="bi"
+                                            :class="star <= Math.round(recensioneSelezionata.votogenerale) ? 'bi-star-fill star--on' : 'bi-star star--off'">
+                                        </i>
+                                    </div>
+                                    <span class="meta-dot">·</span>
+                                    <span class="comment-date">{{
+                                        formattaDataRecensione(recensioneSelezionata.datacreazione) }}</span>
+                                </div>
+                            </div>
                         </div>
-
-                        <span class="reviews-count">
-                            {{ garageStore.recensioni.length }} recensioni
-                        </span>
+                        <button class="close-btn" @click="chiudiModalCommento" aria-label="Chiudi">
+                            <i class="bi bi-x-lg" style="font-size: 0.85rem;"></i>
+                        </button>
                     </div>
 
-                    <hr class="reviews-divider">
-
-                    <div v-if="garageStore.recensioni.length > 0">
-
-                        <div class="reviews-breakdown">
-                            <div class="rating-ladder">
-                                <div v-for="star in 5" :key="star" class="ladder-row">
-                                    <span class="ladder-num">{{ 6 - star }}</span>
-                                    <div class="ladder-bar-bg">
-                                        <div class="ladder-bar-fill"
-                                            :style="{ width: distribuzioneVoti[6 - star] + '%' }">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="categories-grid">
-                                <div class="category-item">
-                                    <span class="cat-label"><i class="bi bi-geo-alt"></i> Posizione</span>
-                                    <span class="cat-val">{{ Number(garageStore.currentGarage.mediaposizione).toFixed(1)
-                                    }}</span>
-                                </div>
-                                <div class="category-item">
-                                    <span class="cat-label"><i class="bi bi-tag"></i> Prezzo</span>
-                                    <span class="cat-val">{{ Number(garageStore.currentGarage.mediaprezzo).toFixed(1)
-                                    }}</span>
-                                </div>
-                                <div class="category-item">
-                                    <span class="cat-label"><i class="bi bi-stars"></i> Pulizia</span>
-                                    <span class="cat-val">{{ Number(garageStore.currentGarage.mediapulizia).toFixed(1)
-                                    }}</span>
-                                </div>
-                                <div class="category-item">
-                                    <span class="cat-label"><i class="bi bi-car-front"></i> Spazio di manovra</span>
-                                    <span class="cat-val">{{ Number(garageStore.currentGarage.mediaspazio).toFixed(1)
-                                    }}</span>
-                                </div>
-                                <div class="category-item">
-                                    <span class="cat-label"><i class="bi bi-shield-check"></i> Sicurezza</span>
-                                    <span class="cat-val">{{ Number(garageStore.currentGarage.mediasicurezza).toFixed(1)
-                                    }}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="user-comments-section mt-5 pt-4 border-top">
-                            <div class="comments-grid">
-                                <div v-for="(recensione, index) in recensioniPaginate" :key="index"
-                                    class="comment-card">
-                                    <div class="comment-header">
-                                        <div class="user-avatar">
-                                            <img v-if="recensione.fotoprofilo_url" :src="recensione.fotoprofilo_url"
-                                                alt="User avatar">
-                                            <span v-else>{{ recensione.nome.charAt(0).toUpperCase() }}</span>
-                                        </div>
-
-                                        <div class="user-info">
-                                            <h4 class="user-name">{{ recensione.nome }} {{ recensione.inizialecognome
-                                            }}.</h4>
-                                        </div>
-                                    </div>
-
-                                    <div class="comment-meta">
-                                        <div class="small-stars">
-                                            <i v-for="star in 5" :key="'s' + star" class="bi"
-                                                :class="star <= Math.round(recensione.votogenerale) ? 'bi-star-fill star--on' : 'bi-star star--off'">
-                                            </i>
-                                        </div>
-                                        <span class="meta-dot">·</span>
-                                        <span class="comment-date">{{ formattaDataRecensione(recensione.datacreazione)
-                                        }}</span>
-                                    </div>
-
-                                    <p class="comment-text"
-                                        :class="{ 'comment-text--expanded': commentiEspansi.has(index) }"
-                                        v-if="recensione.commento">{{ recensione.commento }}</p>
-                                    <p class="comment-text text-muted fst-italic" v-else></p>
-
-                                    <button v-if="recensione.commento && recensione.commento.length > 180"
-                                        class="mostra-altro-btn" @click="toggleCommento(index)">
-                                        {{ commentiEspansi.has(index) ? 'Mostra meno' : 'Mostra altro' }}
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <div class="pagination-wrapper mt-5 d-flex justify-content-center" v-if="garageStore.recensioni.length > 0">
-                                <Pagination
-                                    compact
-                                    v-model:paginaCorrente="paginaRecensioniCorrente"
-                                    v-model:elementiPerPagina="recensioniPerPagina"
-                                    :totaleElementi="garageStore.recensioni.length"
-                                />
-                            </div>
-                        </div>
-
-                    </div>
-
-                    <div v-else class="empty-reviews text-center py-4 text-muted">
-                        Nessuna recensione presente al momento. Sii il primo a prenotare e recensire!
+                    <!-- Body modal: commento scrollabile -->
+                    <div class="modal-comment-body">
+                        <p class="modal-comment-text">{{ recensioneSelezionata.commento }}</p>
                     </div>
 
                 </div>
-            </section>
-        </main>
+            </div>
+        </Teleport>
 
-        <div v-if="fotoIngrandita" class="photo-modal" @click="chiudiFoto">
-            <button class="close-photo-btn" @click="chiudiFoto">
+        <div v-if="indiceFotoAttiva !== null" class="photo-modal" @click="chiudiFoto">
+
+            <button class="close-photo-btn" @click.stop="chiudiFoto">
                 <i class="bi bi-x-lg"></i>
             </button>
-            <img :src="fotoIngrandita" alt="Foto garage ingrandita" @click.stop>
+
+            <!-- Bottone Precedente -->
+            <button v-if="fotoGarage.length > 1" class="nav-photo-btn prev-btn" @click.stop="fotoPrecedente">
+                <i class="bi bi-chevron-left"></i>
+            </button>
+
+            <img :src="fotoGarage[indiceFotoAttiva]" alt="Foto garage ingrandita" @click.stop>
+
+            <!-- Bottone Successivo -->
+            <button v-if="fotoGarage.length > 1" class="nav-photo-btn next-btn" @click.stop="fotoSuccessiva">
+                <i class="bi bi-chevron-right"></i>
+            </button>
+
         </div>
 
     </div>
@@ -597,8 +707,6 @@ watch(paginaRecensioniCorrente, () => {
 </template>
 
 <style scoped>
-
-/* AGGIUNTA STILI PER LA GALLERIA */
 .gallery-section {
     max-width: 1200px;
     margin: 24px auto 0;
@@ -610,7 +718,7 @@ watch(paginaRecensioniCorrente, () => {
     gap: 16px;
     overflow-x: auto;
     padding-bottom: 12px;
-    scrollbar-width: thin; 
+    scrollbar-width: thin;
 }
 
 .gallery-track::-webkit-scrollbar {
@@ -638,17 +746,6 @@ watch(paginaRecensioniCorrente, () => {
     transform: translateY(-2px);
 }
 
-@media (max-width: 800px) {
-    .gallery-section {
-        padding: 0 16px;
-    }
-    .gallery-img {
-        height: 180px;
-        min-width: 240px;
-    }
-}
-
-/* STILI PER IL MODAL FOTO */
 .photo-modal {
     position: fixed;
     top: 0;
@@ -667,7 +764,7 @@ watch(paginaRecensioniCorrente, () => {
     max-width: 90%;
     max-height: 90vh;
     border-radius: 8px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     object-fit: contain;
 }
 
@@ -694,7 +791,6 @@ watch(paginaRecensioniCorrente, () => {
     background: rgba(255, 255, 255, 0.4);
 }
 
-/* --- VECCHI STILI PRESERVATI --- */
 .page-container {
     background: var(--bg-light);
     min-height: 100vh;
@@ -769,8 +865,8 @@ watch(paginaRecensioniCorrente, () => {
     padding-top: 4px;
     display: flex;
     flex-direction: column;
-    align-items: flex-end; 
-    gap: 8px; 
+    align-items: flex-end;
+    gap: 8px;
 }
 
 .prezzo-label {
@@ -784,7 +880,7 @@ watch(paginaRecensioniCorrente, () => {
 .price-line {
     display: flex;
     align-items: center;
-    gap: 15px; 
+    gap: 15px;
 }
 
 .v-tipo {
@@ -808,16 +904,6 @@ watch(paginaRecensioniCorrente, () => {
     opacity: 0.5;
 }
 
-@media (max-width: 600px) {
-    .hero-right {
-        align-items: flex-start; 
-        text-align: left;
-    }
-    .prezzo-valore-small {
-        text-align: left;
-    }
-}
-
 .alert {
     max-width: 1200px;
     margin: 16px auto 0;
@@ -831,13 +917,6 @@ watch(paginaRecensioniCorrente, () => {
     margin: 20px auto;
     padding: 0 32px 48px;
     align-items: start;
-}
-
-@media (max-width: 800px) {
-    .layout-grid {
-        grid-template-columns: 1fr;
-        padding: 0 16px 32px;
-    }
 }
 
 .card {
@@ -1018,33 +1097,47 @@ watch(paginaRecensioniCorrente, () => {
 }
 
 .reviews-section {
-    max-width: 1200px;
-    margin: 0 auto 40px;
-    width: calc(100% - 64px);
+    width: 100%;
+    margin: 0;
 }
 
 .reviews-section .card-body {
-    padding: 32px 48px;
+    padding: 32px;
+}
+
+.reviews-top-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 80px;
+    margin-bottom: 32px;
+    padding: 16px 16px;
+    background-color: #FAFAFA;
+    border-radius: 10px;
+    border: 0.5px solid var(--border-light);
 }
 
 .overall-rating-header {
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-bottom: 24px;
+    min-width: 150px;
 }
 
 .overall-rating-header h2.rating-number {
-    font-size: 4.5rem;
+    font-size: 3.5rem;
     font-weight: 800;
     color: var(--text-dark);
     margin: 0 0 4px 0;
     line-height: 1;
     letter-spacing: -0.05em;
+    text-align: center;
 }
 
 .average-stars {
     display: flex;
+    justify-content: center;
     gap: 6px;
     margin-bottom: 12px;
 }
@@ -1063,15 +1156,6 @@ watch(paginaRecensioniCorrente, () => {
     color: #dde3ed;
 }
 
-.overall-rating-header h2 {
-    font-size: 4rem;
-    font-weight: 800;
-    color: var(--text-dark);
-    margin: 0;
-    line-height: 1.1;
-    letter-spacing: -0.04em;
-}
-
 .reviews-count {
     font-size: 1.1rem;
     font-weight: 600;
@@ -1084,17 +1168,12 @@ watch(paginaRecensioniCorrente, () => {
     margin: 0 0 32px 0;
 }
 
-.reviews-breakdown {
-    display: flex;
-    gap: 60px;
-    align-items: flex-start;
-}
-
 .rating-ladder {
-    flex: 0 0 300px;
+    width: 100%;
+    max-width: 280px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
 }
 
 .ladder-row {
@@ -1126,37 +1205,45 @@ watch(paginaRecensioniCorrente, () => {
 }
 
 .categories-grid {
-    flex-grow: 1;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 24px 32px;
+    grid-template-columns: repeat(5, 1fr);
+    width: 100%;
 }
 
 .category-item {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    padding-left: 20px;
     border-left: 1px solid #f1f5f9;
+    height: 100%;
+    text-align: center;
+}
+
+.category-item:first-child {
+    border-left: none;
 }
 
 .cat-label {
     font-size: 0.85rem;
     color: #64748b;
+    line-height: 1.3;
     display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
+    gap: 6px;
 }
 
 .cat-label i {
     font-size: 1.1rem;
     color: var(--text-dark);
+    text-align: center;
 }
 
 .cat-val {
     font-size: 1.4rem;
     font-weight: 700;
     color: var(--text-dark);
+    margin-top: auto;
+    text-align: center;
 }
 
 .user-comments-section {
@@ -1169,12 +1256,20 @@ watch(paginaRecensioniCorrente, () => {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 32px 48px;
+    align-content: start;
+    height: 100%;
 }
 
 .comment-card {
     display: flex;
     flex-direction: column;
     min-width: 0;
+    background-color: #fafafa;
+    border: 0.5px solid var(--border-light);
+    border-radius: 10px;
+    padding: 20px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+
 }
 
 .comment-header {
@@ -1256,11 +1351,6 @@ watch(paginaRecensioniCorrente, () => {
     word-break: break-word;
 }
 
-.comment-text--expanded {
-    line-clamp: unset;
-    -webkit-line-clamp: unset;
-    overflow: visible;
-}
 
 .mostra-altro-btn {
     background: none;
@@ -1293,7 +1383,7 @@ watch(paginaRecensioniCorrente, () => {
 .special-line {
     display: flex;
     align-items: center;
-    justify-content: flex-end; 
+    justify-content: flex-end;
     gap: 15px;
     width: 100%;
 }
@@ -1302,7 +1392,70 @@ watch(paginaRecensioniCorrente, () => {
     opacity: 0.7;
 }
 
-/* --- POLICY DI CANCELLAZIONE BOX --- */
+.modal-header-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 24px 24px 16px;
+    border-bottom: 1px solid #f1f5f9;
+    flex-shrink: 0;
+}
+
+.modal-reviewer-info {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+}
+
+.modal-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    color: #64748b;
+    font-weight: 700;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.modal-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.modal-reviewer-info .modal-title-text {
+    font-size: 1.1rem;
+    margin-bottom: 4px;
+}
+
+.modal-stars-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.modal-comment-body {
+    padding: 20px 24px 24px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.modal-comment-text {
+    font-size: 1rem;
+    line-height: 1.75;
+    color: #334155;
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
 .policy-box {
     background-color: #f0f7ff;
     border: 1px solid #cce3fd;
@@ -1316,7 +1469,6 @@ watch(paginaRecensioniCorrente, () => {
     display: flex;
     align-items: center;
     gap: 6px;
-    margin-bottom: 8px;
     font-size: 0.85rem;
 }
 
@@ -1349,9 +1501,71 @@ watch(paginaRecensioniCorrente, () => {
     width: 100%;
 }
 
+.reviews-wrapper {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 625px;
+}
+
+.left-column {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-width: 0;
+}
+
+.sticky-aside {
+    position: sticky;
+    top: 100px;
+    height: max-content;
+}
+
+/* Stili per i bottoni di navigazione della modale */
+.nav-photo-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: none;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    font-size: 1.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+    z-index: 10001;
+}
+
+.nav-photo-btn:hover {
+    background: rgba(255, 255, 255, 0.4);
+}
+
+.prev-btn {
+    left: 32px;
+}
+
+.next-btn {
+    right: 32px;
+}
+
+/* Nascondi i bottoni sui dispositivi mobili molto piccoli per non coprire l'immagine */
 @media (max-width: 600px) {
-    .special-line {
-        justify-content: flex-start; 
+    .nav-photo-btn {
+        width: 40px;
+        height: 40px;
+    }
+
+    .prev-btn {
+        left: 16px;
+    }
+
+    .next-btn {
+        right: 16px;
     }
 }
 </style>

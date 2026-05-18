@@ -1,3 +1,13 @@
+-- Aggiungi questo in CIMA a parkly.sql
+DROP TABLE IF EXISTS Transazione CASCADE;
+DROP TABLE IF EXISTS Recensione CASCADE;
+DROP TABLE IF EXISTS Messaggio CASCADE;
+DROP TABLE IF EXISTS Prenotazione CASCADE;
+DROP TABLE IF EXISTS ManutenzionePosto CASCADE;
+DROP TABLE IF EXISTS PostoAuto CASCADE;
+DROP TABLE IF EXISTS Garage CASCADE;
+DROP TABLE IF EXISTS Utente CASCADE;
+
 -- UTENTE
 CREATE TABLE Utente (
     ID_Utente SERIAL PRIMARY KEY,
@@ -22,6 +32,11 @@ CREATE TABLE Garage (
     Nome VARCHAR(100) NOT NULL,
     Descrizione TEXT,
     Indirizzo VARCHAR(150) NOT NULL,
+    Via VARCHAR(100) NOT NULL,
+    Civico VARCHAR(20) NOT NULL,
+    Cap VARCHAR(10) NOT NULL,
+    Citta VARCHAR(100) NOT NULL,
+    Provincia VARCHAR(5) NOT NULL,
     Latitudine DECIMAL(8,6),
     Longitudine DECIMAL(9,6),   
     AltezzaMassima DECIMAL(4,2),

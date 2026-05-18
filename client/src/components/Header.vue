@@ -4,7 +4,8 @@ import { useRouter, useRoute } from 'vue-router'
 import * as bootstrap from 'bootstrap'
 import logoUrl from '../assets/LogoParklyBlu.svg'
 import logoInteroUrl from '../assets/LogoParklyIntero.svg'
-import { authStore } from '../store/auth.js' // Importa lo store
+import { authStore } from '../store/auth.js' // Importa lo store auth
+import { alertStore } from '../store/alert.js' // Importiamo lo store globale degli alert
 
 //foto profilo standard
 import defaultAvatarUrl from '../assets/default-avatar.png'
@@ -32,7 +33,7 @@ const isMenuOpen = ref(false)
 const isPasswordVisible = ref(false)
 
 watch([loginIdentificatore, loginPassword], ([newId, newPwd]) => {
-  if (newId === '' && newPwd === '') {
+  if ((newId === '' && newPwd === '') || newPwd==='') {
     loginError.value = ''
   }
 })
@@ -86,6 +87,8 @@ const handleLogin = async () => {
 
   if (data.success) {
     await closeLoginModal()
+    // Usiamo l'alert globale per il successo, dato che la modale ora è chiusa
+    alertStore.mostra('success', `Benvenuto su Parkly, ${authStore.utente?.nome}!`)
   } else {
     loginError.value = data.error || 'Credenziali non valide'
   }
@@ -98,6 +101,7 @@ const goToRegister = async () => {
 
 const handleLogout = async () => {
   await authStore.logout()
+  alertStore.mostra('success', 'Ti sei disconnesso correttamente. Arrivederci!')
   router.replace('/')
 }
 </script>
@@ -246,7 +250,7 @@ const handleLogout = async () => {
 </template>
 
 <style scoped>
-
+/* Il CSS originale rimane invariato */
 .main-header {
   display: flex;
   justify-content: space-between;
@@ -373,72 +377,5 @@ const handleLogout = async () => {
 .parkly-dropdown .dropdown-item.text-danger:hover {
   background-color: #fee2e2;
   color: #dc3545 !important;
-}
-
-/* --- STILI MODAL E INPUT --- */
-.parkly-modal { 
-  border-radius: 24px; 
-  border: none; 
-  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.2); 
-}
-.modal-title-text { 
-  font-weight: 700; 
-  color: #00408a; 
-  font-size: 1.5rem; 
-}
-.modal-input { 
-  height: 52px; 
-  border-radius: 12px; 
-  border: 1px solid #e0e0e0; 
-  padding: 10px 18px; 
-  font-size: 15px;
-  font-family: inherit;
-  color: #2c3e50; 
-}
-.modal-input:focus {
-  border-color: #00408a;
-  box-shadow: 0 0 0 3px rgba(0, 64, 138, 0.1);
-  outline: none;
-}
-.modal-submit-btn { 
-  background-color: #00408a; 
-  border: none; 
-  height: 52px; 
-  border-radius: 12px; 
-  font-weight: 600; 
-  color: white; 
-}
-
-.modal-submit-btn:hover {
-  background-color: #00336e;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-.password-group { 
-  border: 1px solid #dee2e6; 
-  border-radius: 12px; 
-  overflow: hidden; 
-}
-.password-field { 
-  border: none !important; 
-  height: 52px; 
-  box-shadow: none !important;
-  background: transparent !important; 
-  font-size: 15px;
-  padding: 10px 18px;
-  font-family: inherit;
-  color: #2c3e50;
-}
-.toggle-password-btn { 
-  border: none !important; 
-  background: transparent !important; 
-}
-.password-icon { 
-  width: 20px; 
-  height: 20px; 
-  }
-  .password-group:focus-within {
-  border-color: #00408a;
-  box-shadow: 0 0 0 3px rgba(0, 64, 138, 0.1);
 }
 </style>

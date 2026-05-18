@@ -32,19 +32,25 @@ const cambiaElementi = (e) => {
 const paginaVisibili = computed(() => {
   const total = totalePagine.value
   const cur   = props.paginaCorrente
+
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
 
-  const pages = new Set([1, total])
-  for (let i = Math.max(2, cur - 1); i <= Math.min(total - 1, cur + 1); i++) pages.add(i)
-  const sorted = [...pages].sort((a, b) => a - b)
-
   const result = []
-  let prev = 0
-  for (const p of sorted) {
-    if (p - prev > 1) result.push('...')
-    result.push(p)
-    prev = p
+  const half    = 2
+  let winStart  = Math.max(2, cur - half)
+  let winEnd    = Math.min(total - 1, cur + half)
+
+  if (winEnd - winStart < 4) {
+    if (winStart === 2) winEnd   = Math.min(total - 1, winStart + 4)
+    else                winStart = Math.max(2, winEnd - 4)
   }
+
+  result.push(1)
+  if (winStart > 2) result.push('...')
+  for (let i = winStart; i <= winEnd; i++) result.push(i)
+  if (winEnd < total - 1) result.push('...')
+  result.push(total)
+
   return result
 })
 </script>

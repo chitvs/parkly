@@ -1,14 +1,34 @@
 <script setup>
-import { RouterLink } from 'vue-router'
+import { useRouter, RouterLink } from 'vue-router'
+import { authStore } from '../store/auth.js'
+import { alertStore } from '../store/alert.js'
 import logoInteroUrl from '../assets/LogoParklyInteroBianco.svg'
 import IconGitHub from '../icons/IconGitHub.vue';
 
+const router = useRouter()
+
+const handleProtectedNavigation = (path, requiresNotGestore = false) => {
+    // controlla il login
+    if (!authStore.utente) {
+        alertStore.mostra('error', 'Devi effettuare l\'accesso per visualizzare questa pagina.')
+        return
+    }
+
+    // se è "Diventa Gestore", l'utente non deve esserlo già
+    if (requiresNotGestore && authStore.utente.ruolo === 'GESTORE') {
+        alertStore.mostra('error', 'Sei già un gestore della piattaforma!')
+        return
+    }
+
+    // tutto ok, puliamo eventuali alert precedenti e navighiamo
+    alertStore.pulisci()
+    router.push(path)
+}
 </script>
 
 <template>
   <footer class="main-footer">
     <div class="footer-container">
-      
       <div class="footer-content">
         
         <div class="footer-column brand-column">
@@ -32,16 +52,16 @@ import IconGitHub from '../icons/IconGitHub.vue';
           <ul>
             <li><RouterLink to="/">Home</RouterLink></li>
             <li><RouterLink to="/garage">Trova un garage</RouterLink></li>
-            <li><RouterLink to="/diventa-gestore">Diventa Gestore</RouterLink></li>
+            <li><a href="#" @click.prevent="handleProtectedNavigation('/diventa-gestore', true)">Diventa Gestore</a></li>
           </ul>
         </div>
 
         <div class="footer-column">
           <h4>Il Tuo Account</h4>
           <ul>
-            <li><RouterLink to="/prenotazioni">Le tue prenotazioni</RouterLink></li>
-            <li><RouterLink to="/profile">I Tuoi Dati</RouterLink></li>
-            <li><RouterLink to="/portafoglio">Il Tuo Portafoglio</RouterLink></li>
+            <li><a href="#" @click.prevent="handleProtectedNavigation('/prenotazioni')">Le tue prenotazioni</a></li>
+            <li><a href="#" @click.prevent="handleProtectedNavigation('/profile')">I Tuoi Dati</a></li>
+            <li><a href="#" @click.prevent="handleProtectedNavigation('/portafoglio')">Il Tuo Portafoglio</a></li>
           </ul>
         </div>
 
@@ -71,12 +91,12 @@ import IconGitHub from '../icons/IconGitHub.vue';
 
 <style scoped>
 .main-footer {
-  /* Un blu notte profondo, in armonia con il tuo #00408a */
   background-color: #001D3D; 
-  color: #94a3b8; /* Grigio-azzurro molto elegante per il testo */
+  color: #94a3b8; 
   font-family: 'Inter', 'Segoe UI', sans-serif;
   margin-top: auto; 
   padding-top: 4rem;
+  position: relative;
 }
 
 .footer-container {
@@ -131,7 +151,7 @@ import IconGitHub from '../icons/IconGitHub.vue';
 
 .github-pill:hover {
   background-color: #ffffff;
-  color: #06162d; /* Il colore scuro del tuo footer */
+  color: #06162d; 
   transform: translateY(-3px);
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
 }
@@ -170,6 +190,7 @@ ul a {
   font-size: 0.95rem;
   transition: all 0.2s ease;
   display: inline-block;
+  cursor: pointer;
 }
 
 /* Bellissimo effetto hover: il testo si illumina e scorre di 4px a destra */

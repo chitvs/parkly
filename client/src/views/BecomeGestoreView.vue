@@ -2,23 +2,25 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { authStore } from '../store/auth.js'
+import { alertStore } from '../store/alert.js' // Importiamo lo store globale
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 
 const router = useRouter()
 const isLoading = ref(false)
-const errorMessage = ref('')
 
 const confirmUpgrade = async () => {
     isLoading.value = true
-    errorMessage.value = ''
+    alertStore.pulisci() // Pulisce eventuali alert precedenti
 
     const result = await authStore.upgradeToGestore()
 
     if (result.success) {
+        // Mostriamo un feedback positivo prima del redirect
+        alertStore.mostra('success', 'Congratulazioni! Ora sei un Gestore e puoi pubblicare i tuoi garage.')
         router.replace('/')
     } else {
-        errorMessage.value = result.error
+        alertStore.mostra('error', result.error || 'Errore durante l\'operazione.')
     }
 
     isLoading.value = false
@@ -40,26 +42,24 @@ const confirmUpgrade = async () => {
                     </p>
                 </div>
 
-                <div v-if="errorMessage" class="alert error mb-4">
-                    {{ errorMessage }}
-                </div>
-
                 <div class="form-card text-center p-5">
                     <div class="mb-4">
                         <img src="../assets/LogoParklyBlu.svg" style="height: 70px; width: auto;">
                     </div>
-                    <h3 class="mb-3" style="color: var(--deep-blue, #00204A);">Sei pronto a iniziare?</h3>
-                    <p class="text-muted mb-4" style="font-size: 0.95rem;">
-                        L'operazione di upgrade è immediata. Potrai subito iniziare a inserire i tuoi parcheggi e
-                        ricevere prenotazioni.
-                    </p>
-
+                    <h3 class="mb-4" style="color: var(--deep-blue, #00204A); font-weight:700;">Sei pronto a iniziare?</h3>
+                    <br>
                     <button @click="confirmUpgrade" class="btn-primary w-100" style="height: 52px; font-size: 1.1rem;"
                         :disabled="isLoading">
                         <span v-if="isLoading" class="spinner-border spinner-border-sm me-2" role="status"
                             aria-hidden="true"></span>
                         Conferma e diventa Gestore
                     </button>
+
+                    <p class="text-muted mb-4 mt-3" style="font-size: 0.95rem;">
+                        Diventando un gestore potrai subito iniziare a inserire i tuoi parcheggi e
+                        ricevere prenotazioni.
+                    </p>
+
                 </div>
 
             </div>

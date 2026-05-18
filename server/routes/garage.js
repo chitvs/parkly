@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require("../database/db");
 const multer = require('multer');
 const { createClient } = require('@supabase/supabase-js');
+const { isGestore } = require('../middleware/authMiddleware');
 
 // configura il client Supabase usando le variabili dell'environment
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
@@ -10,7 +11,7 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SER
 // configura Multer (handler per le foto prima di mandarle a Supabase)
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Ritorna la lista di tutti i garage
+// Ritorna la lista di tutti i garage (FILTRATA DAI CLONI CON DISTINCT ON)
 router.get("/", async (req, res) => {
   try {
     const { inizio, fine } = req.query;
@@ -19,7 +20,7 @@ router.get("/", async (req, res) => {
 
     if (inizio && fine) {
       query = `
-        SELECT 
+        SELECT DISTINCT ON (g.nome)
             g.*,
             g.TariffaAuto AS tariffabase, 
             json_strip_nulls(json_build_object(
@@ -62,11 +63,12 @@ router.get("/", async (req, res) => {
                 AND ($2::timestamp::time >= g.orarioapertura OR $2::timestamp::time <= g.orariochiusura)
             )
         )
+        ORDER BY g.nome, g.id_garage ASC
       `;
       params = [inizio, fine];
     } else {
       query = `
-        SELECT 
+        SELECT DISTINCT ON (g.nome)
             g.*,
             g.TariffaAuto AS tariffabase, 
             json_strip_nulls(json_build_object(
@@ -90,6 +92,7 @@ router.get("/", async (req, res) => {
             GROUP BY id_garage
         ) p ON g.id_garage = p.id_garage
         WHERE g.isattivo = TRUE
+        ORDER BY g.nome, g.id_garage ASC
       `;
     }
 
@@ -102,13 +105,9 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.get('/garages-gestore', async (req, res) => {
+router.get('/garages-gestore', isGestore, async (req, res) => {
   try {
-    const utenteLoggato = req.session?.utente;
-    if (!utenteLoggato || utenteLoggato.ruolo !== 'GESTORE') {
-      return res.status(401).json({ error: 'Accesso negato' });
-    }
-    const idGestore = utenteLoggato.id;
+    const idGestore = req.session.utente.id;
     const result = await db.any('SELECT * FROM Garage WHERE ID_Gestore = $1', [idGestore]);
     res.json(result);
   } catch (error) {
@@ -117,102 +116,12 @@ router.get('/garages-gestore', async (req, res) => {
   }
 });
 
-// Crea un nuovo garage per il gestore loggato
-router.post('/garages-gestore', async (req, res) => {
-  try {
-    const utenteLoggato = req.session?.utente;
-    if (!utenteLoggato || utenteLoggato.ruolo !== 'GESTORE') {
-      return res.status(401).json({ error: 'Accesso negato' });
-    }
 
-    const idGestore = utenteLoggato.id;
-
-    const {
-      nome, descrizione, indirizzo, latitudine, longitudine,
-      tariffabase, tariffamoto, tariffafurgone, sovrapprezzoelettrica, scontodisabili,
-      altezzamassima, orarioapertura, orariochiusura, is24h, mappatestuale, posti, 
-      nrighe, ncolonne 
-    } = req.body;
-
-    if (!nome || !indirizzo || !tariffabase || !latitudine || !longitudine) {
-      return res.status(400).json({ error: 'Campi obbligatori mancanti.' });
-    }
-
-    const apertura = is24h ? '00:00' : (orarioapertura || '08:00');
-    const chiusura = is24h ? '23:59' : (orariochiusura || '20:00');
-    const mappa = mappatestuale || null;
-
-    const result = await db.tx(async t => {
-      const garage = await t.one(
-        `INSERT INTO Garage
-          (ID_Gestore, Nome, Descrizione, Indirizzo, Latitudine, Longitudine, AltezzaMassima, TariffaAuto, TariffaMoto, TariffaFurgone, SovrapprezzoElettrica, ScontoDisabili, OrarioApertura, OrarioChiusura, Is24h, MappaTestuale, NRighe, NColonne, IsAttivo)
-         VALUES
-          ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, TRUE)
-         RETURNING *`,
-        [
-          idGestore,
-          nome,
-          descrizione || null,
-          indirizzo, 
-          latitudine,
-          longitudine,
-          altezzamassima || null,
-          tariffabase,
-          tariffamoto || null,
-          tariffafurgone || null,
-          sovrapprezzoelettrica || null,
-          scontodisabili || null,
-          apertura,
-          chiusura,
-          is24h || false,
-          mappa,
-          nrighe,
-          ncolonne
-        ]
-      );
-
-      // Inserimento posti auto
-      if (posti && Array.isArray(posti) && posti.length > 0) {
-        for (const posto of posti) {
-          await t.none(
-            `INSERT INTO PostoAuto 
-              (ID_Garage, CodicePosto, TipoVeicolo, IsDisabili, IsElettrica, IsCoperto)
-             VALUES ($1, $2, $3, $4, $5, $6)`,
-            [
-              garage.id_garage,
-              posto.codice,
-              posto.tipo || 'AUTO',
-              posto.isDisabili || false,
-              posto.isElettrica || false,
-              posto.isCoperto !== undefined ? posto.isCoperto : true
-            ]
-          );
-        }
-      }
-
-      return garage;
-    });
-
-    res.status(201).json({ success: true, garage: result });
-
-  } catch (error) {
-    console.error("Errore creazione garage e posti:", error);
-    if (error.code === '23505') {
-       return res.status(400).json({ error: 'Errore: Codici dei posti duplicati o non validi.' });
-    }
-    res.status(500).json({ error: 'Errore interno del server durante il salvataggio.' });
-  }
-});
-
-//Caricamento foto del garage
-router.post('/:id/upload-photos', upload.array('foto_garage', 10), async (req, res) => {
-  //  Controllo permessi
-  const utenteLoggato = req.session?.utente;
-  if (!utenteLoggato || utenteLoggato.ruolo !== 'GESTORE') {
-    return res.status(401).json({ error: 'Accesso negato' });
-  }
+// Caricamento foto del garage
+router.post('/:id/upload-photos', isGestore, upload.array('foto_garage', 10), async (req, res) => {
 
   const idGarage = req.params.id;
+  const idGestore = req.session.utente.id;
   const files = req.files;
 
   if (!files || files.length === 0) {
@@ -220,23 +129,18 @@ router.post('/:id/upload-photos', upload.array('foto_garage', 10), async (req, r
   }
 
   try {
-    //  Controllo di sicurezza: il garage esiste ed è di questo gestore?
-    const garage = await db.oneOrNone('SELECT ID_Garage FROM Garage WHERE ID_Garage = $1 AND ID_Gestore = $2', [idGarage, utenteLoggato.id]);
-    if (!garage) {
-      return res.status(403).json({ error: 'Garage non trovato o non autorizzato' });
-    }
+    const garage = await db.oneOrNone('SELECT ID_Garage FROM Garage WHERE ID_Garage = $1 AND ID_Gestore = $2', [idGarage, idGestore]);
+    if (!garage) return res.status(403).json({ error: 'Garage non trovato o non autorizzato' });
 
     const urlsCaricate = [];
 
-    // Loop per caricare ogni singola foto su Supabase
     for (const file of files) {
       const estensione = file.originalname.split('.').pop();
-      // Organizzo i file per cartella usando l'ID del garage
       const nomeFile = `${idGarage}/${Date.now()}_${Math.random().toString(36).substring(7)}.${estensione}`;
 
       const { error } = await supabase
         .storage
-        .from('garage-photos') 
+        .from('garage-photos')
         .upload(nomeFile, file.buffer, {
           contentType: file.mimetype,
           upsert: false
@@ -244,12 +148,10 @@ router.post('/:id/upload-photos', upload.array('foto_garage', 10), async (req, r
 
       if (error) throw error;
 
-      // Recupero l'URL pubblico
       const { data: publicUrlData } = supabase.storage.from('garage-photos').getPublicUrl(nomeFile);
       urlsCaricate.push(publicUrlData.publicUrl);
     }
 
-    // Salvo gli URL nel database (aggiungendoli all'array esistente o creandolo)
     await db.none(
       'UPDATE Garage SET Foto_URLs = array_cat(COALESCE(Foto_URLs, ARRAY[]::TEXT[]), $1) WHERE ID_Garage = $2',
       [urlsCaricate, idGarage]
@@ -263,13 +165,16 @@ router.post('/:id/upload-photos', upload.array('foto_garage', 10), async (req, r
   }
 });
 
-router.get('/stato-garages-gestore', async (req, res) => { res.json([]); });
-
 router.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const garage = await db.oneOrNone("SELECT *, TariffaAuto AS tariffabase FROM Garage WHERE ID_Garage = $1", [id]);
-    if (!garage) return res.status(404).json({ success: false, error: "Garage non trovato" });
+    const garage = await db.oneOrNone(
+        "SELECT *, TariffaAuto AS tariffabase FROM Garage WHERE ID_Garage = $1 AND IsAttivo = TRUE", 
+        [id]
+    );
+    if (!garage) {
+        return res.status(404).json({ success: false, error: "Garage non trovato o temporaneamente non disponibile" });
+    }
     res.json({ success: true, garage });
   } catch (err) {
     res.status(500).json({ success: false, error: "Errore interno" });
@@ -372,7 +277,7 @@ router.get("/:id/posti", async (req, res) => {
     `;
     const rows = await db.any(queryComplessa, [id, inizio, fine]);
     const posti = formattaPosti(rows);
-    
+
     res.json({ success: true, posti });
   } catch (err) {
     console.error("Errore SQL:", err);
@@ -423,22 +328,86 @@ router.get("/:id/recensioni", async (req, res) => {
   }
 });
 
-// ─── Modifica di un garage esistente ─────────────────────────────────────────
-router.put('/garages-gestore/:id', async (req, res) => {
+// Modifica di un garage esistente
+router.put('/garages-gestore/:id', isGestore, async (req, res) => {
   try {
-    const utenteLoggato = req.session?.utente;
-    if (!utenteLoggato || utenteLoggato.ruolo !== 'GESTORE') {
-      return res.status(401).json({ error: 'Accesso negato' });
+    const idGestore = req.session.utente.id;
+    const idGarage = req.params.id;
+    const body = req.body;
+
+    // 1. Sicurezza: Verifica che il garage esista e appartenga al gestore loggato
+    const checkGarage = await db.oneOrNone(
+      'SELECT ID_Garage FROM Garage WHERE ID_Garage = $1 AND ID_Gestore = $2',
+      [idGarage, idGestore]
+    );
+
+    if (!checkGarage) {
+      return res.status(403).json({ error: 'Accesso negato o garage non trovato.' });
     }
 
-    const idGarage = req.params.id;
-    const idGestore = utenteLoggato.id;
+    // 2. AGGIORNAMENTO PARZIALE: Caso del Toggle Switch (attiva/disattiva garage)
+    if (body.isattivo !== undefined && !body.nome) {
+      try {
+        const updatedGarage = await db.tx(async t => {
+            // Se stiamo DISATTIVANDO il garage (isattivo === false)
+            if (body.isattivo === false) {
+                // A. Controlla se ci sono auto ATTUALMENTE parcheggiate
+                const inCorso = await t.any(`
+                    SELECT 1 FROM Prenotazione p
+                    JOIN PostoAuto pa ON p.ID_Posto = pa.ID_Posto
+                    WHERE pa.ID_Garage = $1 AND p.Stato = 'ATTIVA'
+                    AND p.InizioSosta <= (NOW() AT TIME ZONE 'Europe/Rome') 
+                    AND p.FineSosta > (NOW() AT TIME ZONE 'Europe/Rome')
+                `, [idGarage]);
 
+                if (inCorso.length > 0) {
+                    throw new Error("Impossibile disattivare il garage: ci sono auto attualmente parcheggiate all'interno.");
+                }
+
+                // B. Trova le prenotazioni future attive per annullarle
+                const future = await t.any(`
+                    SELECT p.ID_Prenotazione, p.ID_Utente, p.PrezzoTotale, p.CodicePrenotazione
+                    FROM Prenotazione p
+                    JOIN PostoAuto pa ON p.ID_Posto = pa.ID_Posto
+                    WHERE pa.ID_Garage = $1 AND p.Stato = 'ATTIVA'
+                    AND p.InizioSosta > (NOW() AT TIME ZONE 'Europe/Rome')
+                `, [idGarage]);
+
+                // C. Annulla e rimborsa
+                for (const pren of future) {
+                    await t.none(`UPDATE Prenotazione SET Stato = 'ANNULLATA' WHERE ID_Prenotazione = $1`, [pren.id_prenotazione]);
+                    await t.none(`UPDATE Utente SET Saldo = Saldo + $1 WHERE ID_Utente = $2`, [pren.prezzototale, pren.id_utente]);
+                    await t.none(`
+                        INSERT INTO Transazione (ID_Utente, ID_Prenotazione, Tipo, Importo, Descrizione)
+                        VALUES ($1, $2, 'RIMBORSO', $3, $4)
+                    `, [pren.id_utente, pren.id_prenotazione, pren.prezzototale, `Rimborso totale per chiusura forzata del garage (Prenotazione ${pren.codiceprenotazione})`]);
+                    
+                    // Rimuovi l'incasso sospeso del gestore
+                    await t.none(`DELETE FROM Transazione WHERE ID_Prenotazione = $1 AND Tipo = 'INCASSO_SOSPESO'`, [pren.id_prenotazione]);
+                }
+            }
+
+            // D. Esegui il cambio di stato effettivo
+            return await t.one(
+                'UPDATE Garage SET IsAttivo = $1 WHERE ID_Garage = $2 RETURNING *',
+                [body.isattivo, idGarage]
+            );
+        });
+        
+        return res.status(200).json({ success: true, garage: updatedGarage });
+        
+      } catch (error) {
+        return res.status(400).json({ error: error.message });
+      }
+    }
+
+    // 3. AGGIORNAMENTO COMPLETO: Caso del Form di Modifica
     const {
-      nome, descrizione, indirizzo, latitudine, longitudine,
+      nome, descrizione, indirizzo, via, civico, cap, citta, provincia, latitudine, longitudine,
       tariffabase, tariffamoto, tariffafurgone, sovrapprezzoelettrica, scontodisabili,
-      altezzamassima, orarioapertura, orariochiusura, is24h, mappatestuale, posti, nrighe, ncolonne 
-    } = req.body;
+      altezzamassima, orarioapertura, orariochiusura, is24h, mappatestuale, posti, 
+      nrighe, ncolonne 
+    } = body;
 
     if (!nome || !indirizzo || !tariffabase || !latitudine || !longitudine) {
       return res.status(400).json({ error: 'Campi obbligatori mancanti.' });
@@ -449,134 +418,149 @@ router.put('/garages-gestore/:id', async (req, res) => {
     const mappa = mappatestuale || null;
 
     const result = await db.tx(async t => {
-      // 1. Verifica che il garage sia di questo gestore
-      const garageEsistente = await t.oneOrNone('SELECT ID_Garage FROM Garage WHERE ID_Garage = $1 AND ID_Gestore = $2', [idGarage, idGestore]);
-      if (!garageEsistente) throw new Error('Garage non trovato o non autorizzato');
+      // A. Aggiorna l'anagrafica del Garage
+      const garage = await t.one(
+        `UPDATE Garage SET 
+          Nome = $1, Descrizione = $2, Indirizzo = $3, Via = $4, Civico = $5, Cap = $6, Citta = $7, Provincia = $8, 
+          Latitudine = $9, Longitudine = $10, AltezzaMassima = $11, TariffaAuto = $12, TariffaMoto = $13, 
+          TariffaFurgone = $14, SovrapprezzoElettrica = $15, ScontoDisabili = $16, OrarioApertura = $17, 
+          OrarioChiusura = $18, Is24h = $19, MappaTestuale = $20, NRighe = $21, NColonne = $22
+         WHERE ID_Garage = $23 
+         RETURNING *`,
+        [
+          nome, descrizione || null, indirizzo, via || null, civico || null, cap || null, citta || null, provincia || null,
+          latitudine, longitudine, altezzamassima || null, tariffabase, tariffamoto || null, tariffafurgone || null,
+          sovrapprezzoelettrica || null, scontodisabili || null, apertura, chiusura, is24h || false, mappa,
+          nrighe, ncolonne, idGarage
+        ]
+      );
 
-      // 2. Aggiornamento dati generali
-      const garage = await t.one(`
-        UPDATE Garage SET
-          Nome = $1, Descrizione = $2, Indirizzo = $3, Latitudine = $4, Longitudine = $5,
-          AltezzaMassima = $6, TariffaAuto = $7, TariffaMoto = $8, TariffaFurgone = $9,
-          SovrapprezzoElettrica = $10, ScontoDisabili = $11, OrarioApertura = $12,
-          OrarioChiusura = $13, Is24h = $14, MappaTestuale = $15, NRighe = $16, NColonne = $17
-        WHERE ID_Garage = $18
-        RETURNING *
-      `, [
-        nome, descrizione || null, indirizzo, latitudine, longitudine,
-        altezzamassima || null, tariffabase, tariffamoto || null, tariffafurgone || null,
-        sovrapprezzoelettrica || null, scontodisabili || null, apertura, chiusura,
-        is24h || false, mappa, nrighe, ncolonne, idGarage
-      ]);
-
-      // 3. Gestione Posti Auto (Upsert & Soft-Delete)
-      const postiAttuali = await t.any('SELECT ID_Posto, CodicePosto FROM PostoAuto WHERE ID_Garage = $1 AND IsAttivo = TRUE', [idGarage]);
-      const codiciRicevuti = posti.map(p => p.codice);
-
-      // Soft-delete dei posti rimossi dalla griglia
-      for (const pDB of postiAttuali) {
-        if (!codiciRicevuti.includes(pDB.codiceposto)) {
-          await t.none('UPDATE PostoAuto SET IsAttivo = FALSE WHERE ID_Posto = $1', [pDB.id_posto]);
-        }
-      }
-
-      // Inserisci i posti nuovi, o aggiorna quelli esistenti, o riattiva quelli in soft-delete
+      // B. Gestione Intelligente dei Posti Auto
       if (posti && Array.isArray(posti)) {
+        const codiciMantenuti = [];
+
         for (const posto of posti) {
-          await t.none(`
-            INSERT INTO PostoAuto (ID_Garage, CodicePosto, TipoVeicolo, IsDisabili, IsElettrica, IsCoperto, IsAttivo)
-            VALUES ($1, $2, $3, $4, $5, $6, TRUE)
-            ON CONFLICT (ID_Garage, CodicePosto) 
-            DO UPDATE SET 
+          codiciMantenuti.push(posto.codice);
+
+          // UPSERT: Inserisce il posto se non esiste, altrimenti aggiorna le caratteristiche riattivandolo
+          await t.none(
+            `INSERT INTO PostoAuto 
+              (ID_Garage, CodicePosto, TipoVeicolo, IsDisabili, IsElettrica, IsCoperto, IsAttivo)
+             VALUES ($1, $2, $3, $4, $5, $6, TRUE)
+             ON CONFLICT (ID_Garage, CodicePosto) 
+             DO UPDATE SET 
               TipoVeicolo = EXCLUDED.TipoVeicolo,
               IsDisabili = EXCLUDED.IsDisabili,
               IsElettrica = EXCLUDED.IsElettrica,
               IsCoperto = EXCLUDED.IsCoperto,
-              IsAttivo = TRUE
-          `, [
-            idGarage, posto.codice, posto.tipo || 'AUTO', 
-            posto.isDisabili || false, posto.isElettrica || false, 
-            posto.isCoperto !== undefined ? posto.isCoperto : true
-          ]);
+              IsAttivo = TRUE`,
+            [
+              idGarage,
+              posto.codice,
+              posto.tipo || 'AUTO',
+              posto.isDisabili || false,
+              posto.isElettrica || false,
+              posto.isCoperto !== undefined ? posto.isCoperto : true
+            ]
+          );
+        }
+
+        // SOFT DELETE: Disattiva i posti che sono stati rimossi dalla mappa dal gestore
+        // Non facciamo una DELETE reale per non distruggere le prenotazioni associate passate
+        if (codiciMantenuti.length > 0) {
+          await t.none(
+            `UPDATE PostoAuto SET IsAttivo = FALSE 
+             WHERE ID_Garage = $1 AND CodicePosto != ALL($2::text[])`,
+            [idGarage, codiciMantenuti]
+          );
+        } else {
+          // Se per qualche motivo ha rimosso TUTTI i posti
+          await t.none(`UPDATE PostoAuto SET IsAttivo = FALSE WHERE ID_Garage = $1`, [idGarage]);
         }
       }
 
       return garage;
     });
 
-    res.json({ success: true, garage: result });
+    res.status(200).json({ success: true, garage: result });
 
   } catch (error) {
-    console.error("Errore modifica garage:", error);
-    res.status(500).json({ error: error.message || 'Errore interno del server durante il salvataggio.' });
+    console.error("Errore aggiornamento garage:", error);
+    if (error.code === '23505') {
+       return res.status(400).json({ error: 'Errore: Codici dei posti duplicati o non validi.' });
+    }
+    res.status(500).json({ error: 'Errore interno del server durante il salvataggio.' });
   }
 });
 
 // ─── Aggiunta blocco manutenzione a un singolo posto ─────────────────────────
-router.post('/garages-gestore/:id/posti/:id_posto/manutenzione', async (req, res) => {
+router.post('/garages-gestore/:id/posti/:id_posto/manutenzione', isGestore, async (req, res) => {
     try {
-        const utenteLoggato = req.session?.utente;
-        if (!utenteLoggato || utenteLoggato.ruolo !== 'GESTORE') {
-            return res.status(401).json({ error: 'Accesso negato' });
-        }
-
         const { id, id_posto } = req.params;
         const { inizio, fine, motivazione } = req.body;
-        const idGestore = utenteLoggato.id;
+        const idGestore = req.session.utente.id;
 
-        if (!inizio || !fine) return res.status(400).json({ error: 'Date obbligatorie' });
+    if (!inizio || !fine) return res.status(400).json({ error: 'Date obbligatorie' });
 
-        await db.tx(async t => {
-            // 1. Verifica che il garage sia suo
-            const checkProprieta = await t.oneOrNone(`
+    await db.tx(async t => {
+      const checkProprieta = await t.oneOrNone(`
                 SELECT g.ID_Garage 
                 FROM Garage g JOIN PostoAuto p ON g.ID_Garage = p.ID_Garage 
                 WHERE g.ID_Garage = $1 AND p.ID_Posto = $2 AND g.ID_Gestore = $3
             `, [id, id_posto, idGestore]);
-            
-            if (!checkProprieta) throw new Error('Posto non trovato o non autorizzato');
 
-            // 2. Controllo conflitti con prenotazioni attive
-            const occupato = await t.oneOrNone(`
-                SELECT ID_Prenotazione FROM Prenotazione 
+            // 2. Troviamo le prenotazioni attive in conflitto e verifichiamo se qualcuna è GIÀ iniziata
+            const prenotazioniCoinvolte = await t.any(`
+                SELECT ID_Prenotazione, ID_Utente, PrezzoTotale, CodicePrenotazione,
+                       (InizioSosta <= (NOW() AT TIME ZONE 'Europe/Rome')) AS is_in_corso
+                FROM Prenotazione 
                 WHERE ID_Posto = $1 AND Stato = 'ATTIVA'
                 AND (InizioSosta, FineSosta) OVERLAPS ($2::timestamp, $3::timestamp)
             `, [id_posto, inizio, fine]);
 
-            if (occupato) throw new Error('Impossibile disabilitare: sono presenti prenotazioni attive in questo periodo.');
+            // 3. Controllo: blocca categoricamente se c'è una sosta attualmente in corso
+            const prenotazioneInCorso = prenotazioniCoinvolte.find(p => p.is_in_corso);
+            if (prenotazioneInCorso) {
+                throw new Error('Impossibile mettere in manutenzione: è presente un\'auto attualmente parcheggiata in questo posto.');
+            }
 
-            // 3. Inserimento
+            // 4. Gestione: Annullamento automatico e Rimborsi (solo per prenotazioni FUTURE)
+            for (const pren of prenotazioniCoinvolte) {
+                // Imposta stato su ANNULLATA
+                await t.none(`UPDATE Prenotazione SET Stato = 'ANNULLATA' WHERE ID_Prenotazione = $1`, [pren.id_prenotazione]);
+
+                // Rimborsa il cliente al 100%
+                await t.none(`UPDATE Utente SET Saldo = Saldo + $1 WHERE ID_Utente = $2`, [pren.prezzototale, pren.id_utente]);
+                await t.none(`
+                    INSERT INTO Transazione (ID_Utente, ID_Prenotazione, Tipo, Importo, Descrizione)
+                    VALUES ($1, $2, 'RIMBORSO', $3, $4)
+                `, [pren.id_utente, pren.id_prenotazione, pren.prezzototale, `Rimborso totale per annullamento forzato dal gestore (Prenotazione ${pren.codiceprenotazione})`]);
+
+                // Elimina l'incasso sospeso del gestore  ATTENZIONE: il gestore non vedrà nel portafoglio l'annullamento poichè la riga sparisce e basta. 
+                await t.none(`DELETE FROM Transazione WHERE ID_Prenotazione = $1 AND Tipo = 'INCASSO_SOSPESO'`, [pren.id_prenotazione]);
+            }
+
+            // 5. Inserimento della manutenzione
             await t.none(`
                 INSERT INTO ManutenzionePosto (ID_Posto, Inizio, Fine, Motivazione)
                 VALUES ($1, $2, $3, $4)
             `, [id_posto, inizio, fine, motivazione || null]);
-        });
+    });
 
-        res.json({ success: true, message: 'Posto disabilitato con successo per il periodo selezionato.' });
+        res.json({ success: true, message: 'Manutenzione avviata. Le eventuali prenotazioni future in conflitto sono state annullate e rimborsate.' });
 
-    } catch (error) {
-        console.error('Errore manutenzione:', error);
-        res.status(400).json({ error: error.message || 'Errore interno' });
-    }
+  } catch (error) {
+    console.error('Errore manutenzione:', error);
+    res.status(400).json({ error: error.message || 'Errore interno' });
+  }
 });
 
 // DELETE /api/garage/garages-gestore/:idGarage/posti/:idPosto/manutenzione/:idManutenzione
-router.delete('/garages-gestore/:idGarage/posti/:idPosto/manutenzione/:idManutenzione', async (req, res) => {
+router.delete('/garages-gestore/:idGarage/posti/:idPosto/manutenzione/:idManutenzione', isGestore, async (req, res) => {
     try {
-        const utenteLoggato = req.session?.utente;
 
-        if (!utenteLoggato || utenteLoggato.ruolo !== 'GESTORE') {
-            return res.status(401).json({ error: 'Accesso negato' });
-        }
-
-        // Salvagente: cattura l'ID indipendentemente da come lo hai salvato nella sessione
-        const idGestore = utenteLoggato.id || utenteLoggato.id_utente;
+        const idGestore = req.session.utente.id;
         const { idGarage, idPosto, idManutenzione } = req.params;
-
-
-        if (!idGestore) {
-            throw new Error("ID Gestore risultante è undefined!");
-        }
 
         const checkGarage = await db.oneOrNone(
             'SELECT 1 FROM Garage WHERE ID_Garage = $1 AND ID_Gestore = $2',
@@ -599,7 +583,6 @@ router.delete('/garages-gestore/:idGarage/posti/:idPosto/manutenzione/:idManuten
 
         res.json({ success: true, message: "Manutenzione rimossa. Il posto è di nuovo disponibile." });
     } catch (err) {
-        console.error("!!! ERRORE CRASH IN DELETE MANUTENZIONE !!!");
         console.error(err.message);
         res.status(500).json({ success: false, error: "Errore interno del server: " + err.message });
     }

@@ -2,6 +2,7 @@
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { authStore } from '../store/auth.js'
+import { alertStore } from '../store/alert.js'
 import * as bootstrap from 'bootstrap'
 
 import Header from '../components/Header.vue' 
@@ -27,8 +28,6 @@ const pwdNew = ref('')
 const pwdConfirm = ref('')
 const pwdError = ref(false)
 const pwdGeneralError = ref('')
-const pwdSuccessMessage = ref('')
-const profileMessage = ref(null)
 const modalPwdElement = ref(null)
 let modalPwdInstance = null
 
@@ -59,7 +58,7 @@ onMounted(async () => {
     originalData.value = { ...datiDalServer }
     Object.assign(formData, datiDalServer)
   } else {
-    profileMessage.value = { tipo: 'error', testo: response.error || "Impossibile caricare il profilo" }
+    alertStore.mostra('error', response.error || "Impossibile caricare il profilo")
   }
 })
 
@@ -80,18 +79,20 @@ const hasChanges = computed(() => {
 //salvo i nuovi dati
 const handleSave = async () => {
   if (!hasChanges.value) return 
+  alertStore.pulisci()
+
   try {
     const response = await authStore.updateProfile(formData)
     if (response.success) {
       originalData.value = { ...formData }
-      profileMessage.value = { tipo: 'success', testo: "Modifiche salvate con successo!" }
+      alertStore.mostra('success', "Modifiche salvate con successo!")
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } else {
-      profileMessage.value = { tipo: 'error', testo: response.error || "Errore durante il salvataggio dei dati." }
+      alertStore.mostra('error', response.error || "Errore durante il salvataggio dei dati.")
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
   } catch (error) {
-    profileMessage.value = { tipo: 'error', testo: "Errore imprevisto." }
+    alertStore.mostra('error', "Errore imprevisto.")
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 }
@@ -101,14 +102,14 @@ const handleFileUpload = async (event) => {
   const file = event.target.files[0];
   if (!file) return;
 
+  alertStore.pulisci()
   const data = new FormData();
   data.append('avatar', file); 
 
   try {
-    const response = await fetch('/api/auth/upload-avatar', {
-      method: 'POST', credentials: 'include', body: data 
-    });
-    const result = await response.json();
+    // Chiamata centralizzata allo store!
+    const result = await authStore.uploadAvatar(data);
+
     if (result.success) {
       formData.fotoProfilo_URL = result.url;
       originalData.value.fotoProfilo_URL = result.url;
@@ -116,12 +117,12 @@ const handleFileUpload = async (event) => {
         authStore.utente.fotoProfilo_URL = result.url;
         localStorage.setItem('utente', JSON.stringify(authStore.utente)); 
       }
-      profileMessage.value = { tipo: 'success', testo: "Foto profilo aggiornata!" };
+      alertStore.mostra('success', "Foto profilo aggiornata!");
     } else {
-      profileMessage.value = { tipo: 'error', testo: result.error };
+      alertStore.mostra('error', result.error);
     }
   } catch (err) {
-    profileMessage.value = { tipo: 'error', testo: "Errore durante il caricamento dell'immagine." };
+    alertStore.mostra('error', "Errore durante il caricamento dell'immagine.");
   }
 }
 
@@ -132,11 +133,13 @@ const handleDeleteAccount = async () => {
   );
 
   if (confermato) {
+    alertStore.pulisci()
     const response = await authStore.deleteAccount();
     if (response.success) {
+      alertStore.mostra('success', "Account eliminato con successo.");
       router.push('/'); // Rimanda alla home
     } else {
-      profileMessage.value = { tipo: 'error', testo: response.error || "Errore durante l'eliminazione dell'account." };
+      alertStore.mostra('error', response.error || "Errore durante l'eliminazione dell'account.");
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
   }
@@ -182,7 +185,6 @@ const closePwdModal = () => {
 const submitChangePassword = async () => {
   pwdError.value = false;
   pwdGeneralError.value = '';
-  pwdSuccessMessage.value = '';
 
   if (pwdNew.value !== pwdConfirm.value) {
     pwdError.value = true;
@@ -192,21 +194,17 @@ const submitChangePassword = async () => {
   const response = await authStore.changePassword(pwdCurrent.value, pwdNew.value);
 
   if (response.success) {
-    pwdSuccessMessage.value = "Password cambiata con successo!";
+    // Chiudi il modal prima, poi mostra l'alert globale
+    await closePwdModal();
+    alertStore.mostra('success', "Password cambiata con successo!");
     
-    // Attendi un attimo prima di chiudere il modal per mostrare il messaggio
-    setTimeout(async () => {
-      // Chiudi il modal in modo sicuro
-      await closePwdModal();
-      
-      // Pulisci i campi
-      pwdCurrent.value = '';
-      pwdNew.value = '';
-      pwdConfirm.value = '';
-      pwdSuccessMessage.value = '';
-      pwdGeneralError.value = '';
-    }, 1500);
+    // Pulisci i campi
+    pwdCurrent.value = '';
+    pwdNew.value = '';
+    pwdConfirm.value = '';
+    pwdGeneralError.value = '';
   } else {
+    // L'errore generale lo mostriamo dentro il modal
     pwdGeneralError.value = response.error || "Errore durante il cambio password.";
   }
 }
@@ -220,10 +218,6 @@ const submitChangePassword = async () => {
       <div class="row justify-content-center">
         <div class="col-12 col-md-8 col-lg-6">
 
-          <div v-if="profileMessage" :class="['alert', profileMessage.tipo, 'mb-4']">
-            {{ profileMessage.testo }}
-          </div>
-          
           <h2 class="fw-bold mb-1 title-color text-center">Il tuo Profilo</h2>
           <p class="text-muted mb-4 text-center">Modifica le tue informazioni personali</p>
 
@@ -389,10 +383,6 @@ const submitChangePassword = async () => {
                 <small class="text-danger ms-1">Le password non corrispondono!</small>
               </div>
 
-              <div v-if="pwdSuccessMessage" class="alert success mt-3 mb-0">
-                {{ pwdSuccessMessage }}
-              </div>
-
               <div class="d-grid mt-4">
                 <button type="submit" class="btn btn-primary modal-submit-btn">Aggiorna Password</button>
               </div>
@@ -487,59 +477,4 @@ input[type="file"].form-control-sm {
   color: white !important; 
 }
 
-/* --- STILI MODAL --- */
-.parkly-modal { 
-  border-radius: 24px; 
-  border: none; 
-  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.2); 
-}
-.modal-input { 
-  height: 52px; 
-  border-radius: 12px; 
-  border: 1px solid #e0e0e0; 
-  padding: 10px 18px; 
-  font-size: 15px; 
-}
-.modal-input:focus { 
-  border-color: #00408a; 
-  box-shadow: 0 0 0 3px rgba(0, 64, 138, 0.1); outline: none; 
-}
-.modal-submit-btn { 
-  height: 52px; 
-  border-radius: 12px; 
-  font-weight: 600; 
-  font-size: 1.1rem; 
-}
-
-/* --- STILI PASSWORD GROUP (DA REGISTER E HEADER) --- */
-.password-group {
-  border: 1px solid #dee2e6;
-  border-radius: 12px;
-  overflow: hidden;
-  background-color: #ffffff; /* Sfondo bianco per il gruppo */
-}
-
-.password-group:focus-within {
-  border-color: #00408a;
-  box-shadow: 0 0 0 3px rgba(0, 64, 138, 0.1);
-}
-
-.password-field {
-  border: none !important;
-  box-shadow: none !important;
-  background: transparent !important;
-  height: 52px;
-}
-
-.toggle-password-btn {
-  border: none !important;
-  box-shadow: none !important;
-  background: transparent !important;
-  align-items: center;
-}
-
-.password-icon {
-  width: 20px;
-  height: 20px;
-}
 </style>

@@ -33,10 +33,18 @@ export function usePlanimetriaEditor() {
         return codici
     })
 
-    // Genera codici automatici
-    const generaCodiceAutomatico = (tipo) => {
-        const prefisso = tipo.charAt(0).toUpperCase()
-        const postiDelTipo = postiConfigurati.value.filter(p => p.tipo === tipo)
+    // Genera codici automatici in base alle spunte e al tipo
+    const generaCodiceAutomatico = () => {
+        let prefisso = nuovoPosto.value.tipo.charAt(0).toUpperCase()
+        
+        // Se è disabili o elettrico, il prefisso diventa D o E (sovrascrivendo A/M/F)
+        if (nuovoPosto.value.isDisabili) {
+            prefisso = 'D'
+        } else if (nuovoPosto.value.isElettrica) {
+            prefisso = 'E'
+        }
+
+        const postiDelTipo = postiConfigurati.value.filter(p => p.codice.startsWith(prefisso))
         let maxNum = 0
         postiDelTipo.forEach(p => {
             const num = parseInt(p.codice.replace(/\D/g, ''), 10)
@@ -45,21 +53,34 @@ export function usePlanimetriaEditor() {
         return `${prefisso}${String(maxNum + 1).padStart(2, '0')}`
     }
 
+    // Compila automaticamente le opzioni se l'utente scrive a mano il codice
     const autoCompilaPosto = () => {
         const cod = nuovoPosto.value.codice.toUpperCase()
         if (!cod) return
+        
         if (cod.startsWith('M')) nuovoPosto.value.tipo = 'MOTO'
         else if (cod.startsWith('F')) nuovoPosto.value.tipo = 'FURGONE'
-        else nuovoPosto.value.tipo = 'AUTO'
-        nuovoPosto.value.isElettrica = cod.startsWith('E')
-        nuovoPosto.value.isDisabili = cod.startsWith('D')
+        else if (cod.startsWith('A')) nuovoPosto.value.tipo = 'AUTO'
+        
+        // Se scrive a mano E o D, attiva in automatico le spunte
+        if (cod.startsWith('E')) {
+            nuovoPosto.value.isElettrica = true
+            nuovoPosto.value.isDisabili = false
+        } else if (cod.startsWith('D')) {
+            nuovoPosto.value.isDisabili = true
+            nuovoPosto.value.isElettrica = false
+        }
     }
 
+    // Aggiunge il posto e ricorda le selezioni per il prossimo
     const aggiungiPostoConfigurato = () => {
-        const cod = nuovoPosto.value.codice.trim().toUpperCase() || generaCodiceAutomatico(nuovoPosto.value.tipo)
+        // Se il campo è vuoto, usa il generatore automatico (es. E01, D01, ecc.)
+        const cod = nuovoPosto.value.codice.trim().toUpperCase() || generaCodiceAutomatico()
+        
         if (postiConfigurati.value.find(p => p.codice === cod)) {
             return { success: false, error: 'Codice posto già esistente!' }
         }
+        
         postiConfigurati.value.push({
             codice: cod,
             tipo: nuovoPosto.value.tipo,
@@ -67,8 +88,22 @@ export function usePlanimetriaEditor() {
             isDisabili: nuovoPosto.value.isDisabili,
             isCoperto: nuovoPosto.value.isCoperto
         })
-        const tipoCorrente = nuovoPosto.value.tipo
-        nuovoPosto.value = { codice: '', tipo: tipoCorrente, isDisabili: false, isElettrica: false, isCoperto: true }
+        
+        // Salviamo in memoria lo stato delle spunte appena confermate
+        const tipoSalvato = nuovoPosto.value.tipo
+        const isElettricaSalvata = nuovoPosto.value.isElettrica
+        const isDisabiliSalvata = nuovoPosto.value.isDisabili
+        const isCopertoSalvato = nuovoPosto.value.isCoperto
+        
+        // Ripristiniamo la variabile 'nuovoPosto' mantenendo però le spunte
+        nuovoPosto.value = { 
+            codice: '', 
+            tipo: tipoSalvato, 
+            isDisabili: isDisabiliSalvata, 
+            isElettrica: isElettricaSalvata, 
+            isCoperto: isCopertoSalvato 
+        }
+        
         return { success: true }
     }
 

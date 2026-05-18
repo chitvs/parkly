@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onUnmounted, watch } from 'vue'
+import { alertStore } from '../../store/alert'
 import PlanimetriaGarage from '../PlanimetriaGarage.vue'
 
 const props = defineProps({
@@ -207,8 +208,12 @@ const onVerifica = (id) => {
     mapError.value[id] = false
     if (!filtro || !filtro.inizio || !filtro.fine) {
         mapError.value[id] = true
+        alertStore.mostra('error', 'Inserisci orario di inizio e fine per aggiornare la mappa.')
         return
     }
+    
+    // Se la validazione passa, puliamo eventuali alert di errore precedenti
+    alertStore.pulisci()
     emit('verifica-disponibilita', { inizio: filtro.inizio, fine: filtro.fine })
 }
 

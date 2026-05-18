@@ -1,14 +1,33 @@
 <script setup>
+import { ref, computed, watch } from 'vue'
 import { RouterLink } from 'vue-router'
+import Pagination from '../Pagination.vue'
 
-defineProps({
+const props = defineProps({
     mieiGarage: {
         type: Array,
         required: true
     }
 })
 
-defineEmits(['modifica'])
+defineEmits(['modifica', 'toggle-stato'])
+
+// Logica paginazione
+const paginaCorrente = ref(1)
+const elementiPerPagina = ref(5)
+
+const mieiGaragePaginati = computed(() => {
+    const inizio = (paginaCorrente.value - 1) * elementiPerPagina.value
+    return props.mieiGarage.slice(inizio, inizio + elementiPerPagina.value)
+})
+
+const scrollInAlto = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+watch(() => props.mieiGarage, () => {
+    paginaCorrente.value = 1
+}, { deep: true })
 </script>
 
 <template>
@@ -24,16 +43,16 @@ defineEmits(['modifica'])
             <table class="parkly-table">
                 <thead>
                     <tr>
-                        <th>ID</th>
+                        <th style="width: 50px;">#</th>
                         <th>Nome Garage</th>
                         <th>Indirizzo</th>
-                        <th>Tariffa Base</th>
-                        <th>Stato</th>
+                        <th style="width: 160px; text-align: center;">Stato</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="garage in mieiGarage" :key="garage.id_garage">
-                        <td class="td-muted">#{{ garage.id_garage }}</td>
+                    <tr v-for="(garage, index) in mieiGaragePaginati" :key="garage.id_garage">
+                        <td class="td-muted">{{ index + 1 + (paginaCorrente - 1) * elementiPerPagina }}</td>
+
                         <td class="td-bold">
                             <div class="d-flex align-items-center gap-2">
                                 <RouterLink :to="`/garage/${garage.id_garage}`" class="garage-link">
@@ -45,20 +64,32 @@ defineEmits(['modifica'])
                                 </button>
                             </div>
                         </td>
+
                         <td class="td-muted">{{ garage.indirizzo }}</td>
-                        <td class="td-bold" style="color: #0066CC;">€ {{ garage.tariffabase || garage.tariffaauto ||
-                            '0.00' }}</td>
+
                         <td>
-                            <span :class="['badge', garage.isattivo ? 'badge--green' : 'badge--red']">
-                                {{ garage.isattivo ? 'Attivo' : 'Inattivo' }}
-                            </span>
+                            <label class="status-container" style="cursor: pointer;"
+                                :title="garage.isattivo ? 'Disattiva garage' : 'Attiva garage'">
+                                <span class="status-text" :class="{ 'status-text--active': garage.isattivo }">
+                                    {{ garage.isattivo ? 'Attivo' : 'Disattivo' }}
+                                </span>
+                                <div class="toggle-switch">
+                                    <input type="checkbox" :checked="garage.isattivo"
+                                        @click.prevent="$emit('toggle-stato', garage)">
+                                    <span class="slider round"></span>
+                                </div>
+                            </label>
                         </td>
                     </tr>
                     <tr v-if="mieiGarage.length === 0">
-                        <td colspan="5" class="td-empty">Nessun garage trovato.</td>
+                        <td colspan="4" class="td-empty">Nessun garage trovato.</td>
                     </tr>
                 </tbody>
             </table>
+        </div>
+        <div class="pagination-container mt-4" v-if="mieiGarage.length > 0">
+            <Pagination v-model:paginaCorrente="paginaCorrente" v-model:elementiPerPagina="elementiPerPagina"
+                :totaleElementi="mieiGarage.length" @cambio-pagina="scrollInAlto" />
         </div>
     </section>
 </template>
@@ -90,16 +121,17 @@ defineEmits(['modifica'])
 }
 
 .page-header h1 {
-    font-size: 1.6rem;
+    font-size: 1.8rem;
     font-weight: 700;
     color: var(--deep-blue, #00204A);
     letter-spacing: -0.5px;
     margin: 0 0 4px;
+    font-family: 'Inter', sans-serif;
 }
 
 .subtitle {
     font-size: 0.875rem;
-    color: #888;
+    color: #64748b;
     margin: 0;
 }
 
@@ -193,23 +225,89 @@ defineEmits(['modifica'])
     color: #00204A;
 }
 
-.badge {
-    display: inline-block;
-    padding: 3px 10px;
-    border-radius: 999px;
-    font-size: 0.72rem;
-    font-weight: 600;
-    letter-spacing: 0.04em;
+/* --- Layout Contenitore Stato --- */
+.status-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.status-text {
+    font-size: 0.75rem;
+    font-weight: 700;
     text-transform: uppercase;
-}
-
-.badge--green {
-    background: #EAFAF1;
-    color: #1E8449;
-}
-
-.badge--red {
-    background: #FDEDEC;
+    letter-spacing: 0.05em;
     color: #C0392B;
+    /* Rosso per disattivo */
+    min-width: 75px;
+    /* Larghezza fissa per evitare scatti della tabella */
+    text-align: right;
+    transition: color 0.25s ease;
+}
+
+.status-text--active {
+    color: #1E8449;
+    /* Verde per attivo */
+}
+
+/* --- CSS Per il Toggle Switch --- */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #FDEDEC;
+    border: 1px solid #E74C3C;
+    transition: .25s;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 2px;
+    bottom: 2px;
+    background-color: #E74C3C;
+    transition: .25s;
+}
+
+input:checked+.slider {
+    background-color: #EAFAF1;
+    border-color: #2ecc71;
+}
+
+input:checked+.slider:before {
+    transform: translateX(20px);
+    background-color: #2ecc71;
+}
+
+.slider.round {
+    border-radius: 24px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
+
+.mt-4 {
+    margin-top: 1.5rem;
 }
 </style>

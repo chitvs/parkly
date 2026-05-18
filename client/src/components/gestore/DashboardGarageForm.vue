@@ -2,6 +2,7 @@
 import { ref, onMounted, nextTick } from 'vue'
 import { useGarageMapGestore } from '../../composables/useGarageMapGestore'
 import { usePlanimetriaEditor } from '../../composables/usePlanimetriaEditor'
+import { alertStore } from '../../store/alert'
 import PlanimetriaGarage from '../PlanimetriaGarage.vue'
 import electricityIcon from '../../assets/electricity.svg'
 import handicapIcon from '../../assets/handicap.svg'
@@ -13,7 +14,6 @@ const props = defineProps({
     staSalvando: { type: Boolean, default: false }
 })
 
-// Aggiunto l'evento update-photos per mandare le immagini al componente padre
 const emit = defineEmits(['save', 'open-info', 'update-photos'])
 
 const { calcolandoCoordinate, loadLeaflet, initMap, calcolaCoordinate } = useGarageMapGestore()
@@ -31,7 +31,6 @@ const localGarage = ref({
     orarioapertura: '08:00', orariochiusura: '20:00', is24h: false
 })
 const erroriValidazione = ref({})
-const mapInteractionError = ref('')
 
 // Gestione selezione foto
 const fotoSelezionate = ref([])
@@ -48,7 +47,11 @@ onMounted(async () => {
         localGarage.value = {
             ...g,
             tariffabase: g.tariffaauto || g.tariffabase,
-            via: g.indirizzo || g.via,
+            via: g.via || '',
+            civico: g.civico || '',
+            cap: g.cap || '',
+            citta: g.citta || '',
+            provincia: g.provincia || '',
             orarioapertura: g.orarioapertura?.substring(0, 5) || '08:00',
             orariochiusura: g.orariochiusura?.substring(0, 5) || '20:00'
         }
@@ -78,29 +81,96 @@ const handleCercaZona = async () => {
     } else { erroriValidazione.value.coordinate = res.error }
 }
 
+const inputCodicePosto = ref(null)
+const errorePosto = ref('') 
+
 const handleAggiungiPosto = () => {
-    mapInteractionError.value = ''
+    const codiceAttuale = nuovoPosto.value.codice
     const res = aggiungiPostoConfigurato()
-    if (res && !res.success) mapInteractionError.value = res.error
+
+    if (res && !res.success) {
+        errorePosto.value = res.error 
+        alertStore.mostra('error', res.error) // Usiamo lo store
+    } else {
+        errorePosto.value = ''
+
+        const match = codiceAttuale.match(/^([a-zA-Z\s\-_]+)(\d+)$/)
+        if (match) {
+            const prefisso = match[1]
+            const numero = parseInt(match[2], 10)
+            const padding = match[2].length 
+            nuovoPosto.value.codice = `${prefisso}${String(numero + 1).padStart(padding, '0')}`
+        }
+
+        if (inputCodicePosto.value) {
+            inputCodicePosto.value.focus()
+        }
+    }
 }
 
 const handleCellaClick = (r, c) => {
-    mapInteractionError.value = ''
+    const strumentoUtilizzato = strumentoAttivo.value
     const res = clickCella(r, c)
-    if (res && !res.success) mapInteractionError.value = res.error
+    
+    if (res && !res.success) {
+        alertStore.mostra('error', res.error) // Usiamo lo store al posto dell'alert nativo
+        return 
+    }
+
+    if (strumentoUtilizzato && strumentoUtilizzato !== 'GOMMA') {
+        const indiceAttuale = postiConfigurati.value.findIndex(p => p.codice === strumentoUtilizzato.codice)
+        
+        if (indiceAttuale !== -1) {
+            for (let i = indiceAttuale + 1; i < postiConfigurati.value.length; i++) {
+                const prossimoPosto = postiConfigurati.value[i]
+                
+                if (!codiciPosizionati.value.has(prossimoPosto.codice)) {
+                    selezionaStrumento(prossimoPosto)
+                    break
+                }
+            }
+        }
+    }
 }
 
 const validaForm = () => {
     const errori = {}
     const g = localGarage.value
 
+    // Validazione indirizzi
     if (!g.nome?.trim()) errori.nome = 'Obbligatorio.'
-    if (!g.via?.trim()) errori.via = 'Obbligatorio.'
-    if (!g.civico?.trim()) errori.civico = 'Obbligatorio.'
-    if (!g.cap?.trim()) errori.cap = 'Obbligatorio.'
-    if (!g.citta?.trim()) errori.citta = 'Obbligatorio.'
-    if (!g.provincia?.trim()) errori.provincia = 'Obbligatorio.'
+
+    if (!g.via?.trim()) {
+        errori.via = 'Obbligatorio.'
+    } else if (g.via.trim().length < 3) {
+        errori.via = 'Inserisci una via valida (min. 3 caratteri).'
+    }
+
+    if (!g.civico?.trim()) {
+        errori.civico = 'Obbligatorio.'
+    }
+
+    if (!g.cap?.trim()) {
+        errori.cap = 'Obbligatorio.'
+    } else if (!/^\d{5}$/.test(g.cap.trim())) {
+        errori.cap = 'Il CAP deve essere di 5 cifre.'
+    }
+
+    if (!g.citta?.trim()) {
+        errori.citta = 'Obbligatorio.'
+    } else if (g.citta.trim().length < 2) {
+        errori.citta = 'Inserisci una città valida.'
+    }
+
+    if (!g.provincia?.trim()) {
+        errori.provincia = 'Obbligatorio.'
+    } else if (!/^[A-Z]{2}$/.test(g.provincia.trim())) {
+        errori.provincia = 'Deve essere una sigla di 2 lettere (es. RM).'
+    }
+
     if (!g.latitudine || !g.longitudine) errori.coordinate = 'Clicca sulla mappa per catturare le coordinate esatte.'
+
+    // Validazione tariffe
     if (!g.tariffabase || g.tariffabase <= 0) errori.tariffabase = 'La tariffa auto è obbligatoria e > 0.'
 
     const tipiPresenti = new Set()
@@ -121,11 +191,54 @@ const validaForm = () => {
     if (necessitaDisabili && (g.scontodisabili === null || g.scontodisabili === '')) errori.scontodisabili = 'Imposta uno sconto (anche 0).'
     else if (g.scontodisabili < 0) errori.scontodisabili = 'Non può essere negativo.'
 
+    // Validazione mappa
     if (postiConfigurati.value.length === 0) errori.mappatestuale = 'Devi configurare almeno un posto auto.'
     else if (codiciPosizionati.value.size < postiConfigurati.value.length) errori.mappatestuale = 'Devi posizionare TUTTI i posti creati sulla scacchiera.'
 
+    if (Object.keys(errori).length > 0) {
+        alertStore.mostra('error', 'Controlla i campi in rosso prima di procedere.')
+    }
+
     erroriValidazione.value = errori
     return Object.keys(errori).length === 0
+}
+
+const verificaRidimensionamento = (tipo) => {
+    const nuovoValore = dimensioniMappa.value[tipo]
+
+    const righeAttuali = griglia.value.length
+    const colonneAttuali = righeAttuali > 0 ? griglia.value[0].length : 0
+    let occupato = false
+
+    if (tipo === 'righe' && nuovoValore < righeAttuali) {
+        for (let r = nuovoValore; r < righeAttuali; r++) {
+            for (let c = 0; c < colonneAttuali; c++) {
+                if (griglia.value[r] && griglia.value[r][c]) {
+                    occupato = true
+                    break
+                }
+            }
+            if (occupato) break
+        }
+    }
+    else if (tipo === 'colonne' && nuovoValore < colonneAttuali) {
+        for (let r = 0; r < righeAttuali; r++) {
+            for (let c = nuovoValore; c < colonneAttuali; c++) {
+                if (griglia.value[r] && griglia.value[r][c]) {
+                    occupato = true
+                    break
+                }
+            }
+            if (occupato) break
+        }
+    }
+
+    if (occupato) {
+        alertStore.mostra('error', "Impossibile ridurre le dimensioni: l'area da rimuovere contiene dei posti. Usa prima lo strumento Gomma per cancellarli.")
+        dimensioniMappa.value[tipo] = tipo === 'righe' ? righeAttuali : colonneAttuali
+    } else {
+        ridimensionaGriglia()
+    }
 }
 
 const inviaDati = () => {
@@ -181,28 +294,39 @@ const inviaDati = () => {
                         <label class="form-label">Civico*</label>
                         <input type="text" :class="['form-input', { 'input-error': erroriValidazione.civico }]"
                             v-model="localGarage.civico" placeholder="Es. 10">
-                        <span v-if="erroriValidazione.civico" class="form-error-text">{{ erroriValidazione.civico }}</span>
+                        <span v-if="erroriValidazione.civico" class="form-error-text">{{ erroriValidazione.civico
+                        }}</span>
                     </div>
                 </div>
 
                 <div class="form-row form-row--3col">
                     <div class="form-group">
                         <label class="form-label">CAP*</label>
+                        <!-- Forza solo numeri e massimo 5 caratteri -->
                         <input type="text" :class="['form-input', { 'input-error': erroriValidazione.cap }]"
-                            v-model="localGarage.cap" placeholder="Es. 00100">
+                            v-model="localGarage.cap"
+                            @input="localGarage.cap = localGarage.cap.replace(/\D/g, '').slice(0, 5)"
+                            placeholder="Es. 00100">
                         <span v-if="erroriValidazione.cap" class="form-error-text">{{ erroriValidazione.cap }}</span>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Città*</label>
+                        <!-- impedisce l'inserimento di numeri -->
                         <input type="text" :class="['form-input', { 'input-error': erroriValidazione.citta }]"
-                            v-model="localGarage.citta" placeholder="Es. Roma">
-                        <span v-if="erroriValidazione.citta" class="form-error-text">{{ erroriValidazione.citta }}</span>
+                            v-model="localGarage.citta"
+                            @input="localGarage.citta = localGarage.citta.replace(/\d/g, '')" placeholder="Es. Roma">
+                        <span v-if="erroriValidazione.citta" class="form-error-text">{{ erroriValidazione.citta
+                        }}</span>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Provincia (Sigla)*</label>
+                        <!-- Forza maiuscolo, solo lettere e massimo 2 caratteri -->
                         <input type="text" :class="['form-input', { 'input-error': erroriValidazione.provincia }]"
-                            v-model="localGarage.provincia" maxlength="2" placeholder="Es. RM">
-                        <span v-if="erroriValidazione.provincia" class="form-error-text">{{ erroriValidazione.provincia }}</span>
+                            v-model="localGarage.provincia"
+                            @input="localGarage.provincia = localGarage.provincia.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 2)"
+                            placeholder="Es. RM">
+                        <span v-if="erroriValidazione.provincia" class="form-error-text">{{ erroriValidazione.provincia
+                        }}</span>
                     </div>
                 </div>
 
@@ -249,15 +373,10 @@ const inviaDati = () => {
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">Foto del Garage (Max 10)</label>
-                        <input 
-                            type="file" 
-                            multiple 
-                            accept="image/*" 
-                            class="form-input" 
-                            style="padding: 10px;" 
-                            @change="handleFotoSelezionate"
-                        >
-                        <span class="form-hint">Puoi selezionare più immagini contemporaneamente (es. tenendo premuto CTRL o CMD).</span>
+                        <input type="file" multiple accept="image/*" class="form-input" style="padding: 10px;"
+                            @change="handleFotoSelezionate">
+                        <span class="form-hint">Puoi selezionare più immagini contemporaneamente (es. tenendo premuto
+                            CTRL o CMD).</span>
                     </div>
                 </div>
 
@@ -270,21 +389,24 @@ const inviaDati = () => {
                         <input type="number" step="0.50" min="0"
                             :class="['form-input', { 'input-error': erroriValidazione.tariffabase }]"
                             v-model="localGarage.tariffabase" placeholder="Es. 2.50">
-                        <span v-if="erroriValidazione.tariffabase" class="form-error-text">{{ erroriValidazione.tariffabase }}</span>
+                        <span v-if="erroriValidazione.tariffabase" class="form-error-text">{{
+                            erroriValidazione.tariffabase }}</span>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Tariffa Moto (€/h)</label>
                         <input type="number" step="0.50" min="0"
                             :class="['form-input', { 'input-error': erroriValidazione.tariffamoto }]"
                             v-model="localGarage.tariffamoto" placeholder="Opzionale">
-                        <span v-if="erroriValidazione.tariffamoto" class="form-error-text">{{ erroriValidazione.tariffamoto }}</span>
+                        <span v-if="erroriValidazione.tariffamoto" class="form-error-text">{{
+                            erroriValidazione.tariffamoto }}</span>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Tariffa Furgone (€/h)</label>
                         <input type="number" step="0.50" min="0"
                             :class="['form-input', { 'input-error': erroriValidazione.tariffafurgone }]"
                             v-model="localGarage.tariffafurgone" placeholder="Opzionale">
-                        <span v-if="erroriValidazione.tariffafurgone" class="form-error-text">{{ erroriValidazione.tariffafurgone }}</span>
+                        <span v-if="erroriValidazione.tariffafurgone" class="form-error-text">{{
+                            erroriValidazione.tariffafurgone }}</span>
                     </div>
                 </div>
 
@@ -294,14 +416,16 @@ const inviaDati = () => {
                         <input type="number" step="0.50" min="0"
                             :class="['form-input', { 'input-error': erroriValidazione.sovrapprezzoelettrica }]"
                             v-model="localGarage.sovrapprezzoelettrica" placeholder="Es. 2.00">
-                        <span v-if="erroriValidazione.sovrapprezzoelettrica" class="form-error-text">{{ erroriValidazione.sovrapprezzoelettrica }}</span>
+                        <span v-if="erroriValidazione.sovrapprezzoelettrica" class="form-error-text">{{
+                            erroriValidazione.sovrapprezzoelettrica }}</span>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Sconto Disabili (-€/h)</label>
                         <input type="number" step="0.50" min="0"
                             :class="['form-input', { 'input-error': erroriValidazione.scontodisabili }]"
                             v-model="localGarage.scontodisabili" placeholder="Es. 1.00">
-                        <span v-if="erroriValidazione.scontodisabili" class="form-error-text">{{ erroriValidazione.scontodisabili }}</span>
+                        <span v-if="erroriValidazione.scontodisabili" class="form-error-text">{{
+                            erroriValidazione.scontodisabili }}</span>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Altezza Massima (m)</label>
@@ -332,17 +456,17 @@ const inviaDati = () => {
                 <div class="section-header">
                     <h2>Crea i Posti Auto</h2>
                 </div>
-                
-                <div v-if="mapInteractionError" class="alert error text-center mx-auto mb-3" style="max-width: 600px;">
-                    {{ mapInteractionError }}
-                </div>
 
                 <div class="posto-creator">
                     <div class="form-group">
                         <label class="form-label">Codice</label>
                         <input type="text" class="form-input" v-model="nuovoPosto.codice" placeholder="Es. A01"
-                            @input="autoCompilaPosto" @keyup.enter="handleAggiungiPosto">
+                            ref="inputCodicePosto" @input="autoCompilaPosto" @keyup.enter="handleAggiungiPosto">
                     </div>
+                    <span v-if="errorePosto" class="form-error-text"
+                        style="grid-column: 1 / -1; margin-top: -10px; margin-bottom: 10px;">
+                        {{ errorePosto }}
+                    </span>
                     <div class="form-group">
                         <label class="form-label">Veicolo</label>
                         <select class="form-input" v-model="nuovoPosto.tipo">
@@ -353,9 +477,9 @@ const inviaDati = () => {
                     </div>
                     <div class="form-group check-group">
                         <label class="checkbox-label"><input type="checkbox" v-model="nuovoPosto.isElettrica"
-                                class="checkbox-input"> El.</label>
+                                class="checkbox-input"> Elettrico</label>
                         <label class="checkbox-label"><input type="checkbox" v-model="nuovoPosto.isDisabili"
-                                class="checkbox-input"> Dis.</label>
+                                class="checkbox-input"> Disabili</label>
                         <label class="checkbox-label"><input type="checkbox" v-model="nuovoPosto.isCoperto"
                                 class="checkbox-input"> Coperto</label>
                     </div>
@@ -365,8 +489,13 @@ const inviaDati = () => {
                 </div>
 
                 <div class="posti-list vertical-grid" v-if="postiConfigurati.length > 0">
-                    <div v-for="(posto, index) in postiConfigurati" :key="index" class="posto-card">
+                    <div v-for="(posto, index) in postiConfigurati" :key="index" class="posto-card"
+                        :style="codiciPosizionati.has(posto.codice) ? 'border-left: 4px solid #2ecc71;' : 'border-left: 4px solid #e74c3c;'">
+
                         <div class="posto-info">
+                            <span style="font-size: 0.7rem; color: #777;">
+                                <i class="bi"></i>
+                            </span>
                             <span class="posto-codice">{{ posto.codice }}</span>
                             <span class="posto-tipo">{{ posto.tipo }}</span>
                             <div class="posto-icons">
@@ -398,12 +527,12 @@ const inviaDati = () => {
                     <div class="form-group">
                         <label class="form-label">Larghezza (Unità)</label>
                         <input type="number" class="form-input" v-model.number="dimensioniMappa.colonne"
-                            @change="ridimensionaGriglia" min="2" max="30">
+                            @change="verificaRidimensionamento('colonne')" min="1" max="30">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Altezza (Unità)</label>
                         <input type="number" class="form-input" v-model.number="dimensioniMappa.righe"
-                            @change="ridimensionaGriglia" min="2" max="30">
+                            @change="verificaRidimensionamento('righe')" min="1" max="30">
                     </div>
                 </div>
 
@@ -411,8 +540,9 @@ const inviaDati = () => {
                     <div class="tavolozza">
                         <span class="tavolozza-label">Strumento attivo:</span>
                         <button type="button" class="tool-btn btn-gomma"
-                            :class="{ active: strumentoAttivo === 'GOMMA' }"
-                            @click="strumentoAttivo = 'GOMMA'">Gomma</button>
+                            :class="{ active: strumentoAttivo === 'GOMMA' }" @click="strumentoAttivo = 'GOMMA'">
+                            <i class="bi bi-eraser"></i>
+                            Gomma</button>
                         <button type="button" v-for="posto in postiConfigurati" :key="posto.codice" class="tool-btn"
                             :class="[posto.tipo.toLowerCase(), { active: strumentoAttivo?.codice === posto.codice, disabled: codiciPosizionati.has(posto.codice) }]"
                             :disabled="codiciPosizionati.has(posto.codice)" @click="selezionaStrumento(posto)">
@@ -424,7 +554,7 @@ const inviaDati = () => {
                 <div class="canvas-wrapper d-flex justify-content-center w-100">
                     <div class="canvas-griglia"
                         :style="{ gridTemplateColumns: `repeat(${dimensioniMappa.colonne}, 35px)` }">
-                        <template v-for="(riga, r) in griglia" :key="'r-'+r">
+                        <template v-for="(riga, r) in griglia" :key="'r-' + r">
                             <div v-for="(cella, c) in riga" :key="'c-' + r + '-' + c" class="cella-canvas"
                                 :class="{ occupata: cella, root: cella?.isRoot }" @click="handleCellaClick(r, c)">
                                 <span v-if="cella?.isRoot">{{ cella.codice }}</span>
@@ -456,7 +586,6 @@ const inviaDati = () => {
 </template>
 
 <style scoped>
-
 /* Ripristino esatto del CSS originale della form */
 .vista {
     animation: fadeIn 0.25s ease;
@@ -486,9 +615,10 @@ const inviaDati = () => {
 .page-header h1 {
     font-size: 1.6rem;
     font-weight: 700;
-    color: var(--deep-blue, #00204A);
+    color:  #00408A;
     letter-spacing: -0.5px;
     margin: 0 0 4px;
+    font-family: 'Inter', sans-serif;
 }
 
 .section-header {
@@ -496,9 +626,10 @@ const inviaDati = () => {
 }
 
 .section-header h2 {
-    font-size: 1rem;
+    font-size: 1.1rem;
     font-weight: 600;
-    color: var(--deep-blue, #00204A);
+    color: #00408a;
+    font-family: 'Inter', sans-serif;
 }
 
 .form-card {
@@ -541,15 +672,15 @@ const inviaDati = () => {
 }
 
 .form-input {
-    height: 48px;
+    height: 52px;
     border: 0.5px solid #E0E0E0;
-    border-radius: 8px;
-    padding: 0 14px;
-    font-size: 0.9rem;
+    border-radius: 12px;
+    padding: 0 18px;
+    font-size: 15px;
     color: #222;
     background: #FAFAFA;
     outline: none;
-    font-family: inherit;
+    font-family: 'Inter', sans-serif;
     transition: border-color 0.15s, background 0.15s;
     width: 100%;
     box-sizing: border-box;
@@ -603,13 +734,13 @@ const inviaDati = () => {
     background: #0066CC;
     color: #fff;
     border: none;
-    border-radius: 8px;
-    height: 48px;
+    border-radius: 12px;
+    height: 52px;
     padding: 0 32px;
     font-size: 0.9rem;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
-    font-family: inherit;
+    font-family: 'Inter',sans-serif;
     transition: background 0.15s, transform 0.1s;
 }
 

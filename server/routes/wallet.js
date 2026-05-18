@@ -1,14 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../database/db');
+const { isLoggato, isGestore } = require('../middleware/authMiddleware');
 
 // Ricarica del saldo
-router.post('/ricarica', async (req, res) => {
-    if (!req.session.utente || !req.session.utente.id) {
-        return res.status(401).json({ success: false, error: 'Non autorizzato' });
-    }
+router.post('/ricarica', isLoggato, async (req, res) => {
 
     const { importo } = req.body;
+    const utenteId = req.session.utente.id;
 
     if (!importo || isNaN(importo) || importo < 5 || importo > 1000) {
         return res.status(400).json({ 
@@ -21,13 +20,13 @@ router.post('/ricarica', async (req, res) => {
         const nuovoSaldo = await db.tx(async t => {
             const result = await t.one(
                 `UPDATE Utente SET Saldo = Saldo + $1 WHERE ID_Utente = $2 RETURNING Saldo`,
-                [importo, req.session.utente.id]
+                [importo, utenteId]
             );
 
             await t.none(
                 `INSERT INTO Transazione (ID_Utente, Tipo, Importo, Descrizione) 
                  VALUES ($1, 'RICARICA', $2, 'Ricarica')`,
-                [req.session.utente.id, importo]
+                [utenteId, importo]
             );
 
             return result.saldo;
@@ -44,10 +43,7 @@ router.post('/ricarica', async (req, res) => {
 });
 
 // Recupero storico transazioni
-router.get('/transazioni', async (req, res) => {
-    if (!req.session.utente || !req.session.utente.id) {
-        return res.status(401).json({ success: false, error: 'Non autorizzato' });
-    }
+router.get('/transazioni', isLoggato, async (req, res) => {
 
     try {
         const transazioni = await db.any(`
@@ -70,7 +66,7 @@ router.get('/transazioni', async (req, res) => {
 });
 
 
-router.post('/contabilizza-ricavi', async (req, res) => {
+router.post('/contabilizza-ricavi', isGestore, async (req, res) => {
     const id_gestore = req.session.utente.id;
 
     try {
@@ -113,10 +109,7 @@ router.post('/contabilizza-ricavi', async (req, res) => {
     }
 });
 
-router.get('/saldo-sospeso', async (req, res) => {
-    if (!req.session.utente || !req.session.utente.id) {
-        return res.status(401).json({ success: false, error: 'Non autorizzato' });
-    }
+router.get('/saldo-sospeso', isGestore, async (req, res) => {
 
     try {
         const result = await db.one(`
@@ -132,13 +125,10 @@ router.get('/saldo-sospeso', async (req, res) => {
     }
 });
 
-router.post('/preleva', async (req, res) => {
-    if (!req.session.utente || !req.session.utente.id) {
-        return res.status(401).json({ success: false, error: 'Non autorizzato' });
-    }
+router.post('/preleva',  isLoggato, async (req, res) => {
 
     const { importo, metodo } = req.body;
-    const id_gestore = req.session.utente.id;
+    const utenteId = req.session.utente.id;
 
     if (!importo || importo <= 0) {
         return res.status(400).json({ success: false, error: 'Importo non valido' });
@@ -146,7 +136,7 @@ router.post('/preleva', async (req, res) => {
 
     try {
         const esito = await db.tx(async t => {
-            const utente = await t.one('SELECT Saldo FROM Utente WHERE ID_Utente = $1 FOR UPDATE', [id_gestore]);
+            const utente = await t.one('SELECT Saldo FROM Utente WHERE ID_Utente = $1 FOR UPDATE', [utenteId]);
             
             if (parseFloat(utente.saldo) < parseFloat(importo)) {
                 throw new Error('Saldo insufficiente per il prelievo richiesto');
@@ -155,13 +145,13 @@ router.post('/preleva', async (req, res) => {
             // 1. Scaliamo il saldo
             const update = await t.one(`
                 UPDATE Utente SET Saldo = Saldo - $1 WHERE ID_Utente = $2 RETURNING Saldo
-            `, [importo, id_gestore]);
+            `, [importo, utenteId]);
 
             // 2. Registriamo la transazione
             await t.none(`
                 INSERT INTO Transazione (ID_Utente, Tipo, Importo, Descrizione)
                 VALUES ($1, 'PRELIEVO', $2, $3)
-            `, [id_gestore, -importo, `Prelievo fondi tramite ${metodo}`]);
+            `, [utenteId, -importo, `Prelievo fondi tramite ${metodo}`]);
 
             return update.saldo;
         });

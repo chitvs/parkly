@@ -172,7 +172,7 @@ io.on('connection', (socket) => {
 
   // Listener per la disconnessione
   socket.on('disconnect', () => {
-    console.log(`[Socket] Disconnesso: ${utente.nome} (ID: ${utente.id})`);
+    console.log(`[Socket] Disconnesso: ${utente.nome} ${utente.cognome} (ID: ${utente.id})`);
   });
 });
 

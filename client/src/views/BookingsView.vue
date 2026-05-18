@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted, watch, nextTick, computed, reactive } from
 import { prenotazioniStore } from '../store/prenotazioni.js'
 import { useRecensione } from '../composables/useRecensione.js'
 import { getSocket } from '../composables/useChat.js'
+import { alertStore } from '../store/alert.js'
 
 import 'bootstrap-icons/font/bootstrap-icons.css'
 import Header from '../components/Header.vue'
@@ -18,7 +19,6 @@ import IconMessage from '../icons/IconMessage.vue'
 const filtroStato = ref('') // '' = Tutte, 'ATTIVA', 'CONCLUSA', 'ANNULLATA'
 const filtroGarage = ref('') // '' = Tutti, oppure l'id_garage
 const ordinamento = ref('creazione_desc') // default: data creazione più recente
-const pageMessage = ref(null)
 
 // variabili per la paginazione
 const paginaCorrente = ref(1)
@@ -42,7 +42,7 @@ const {
   chiudiModale,
   inviaRecensione,
   eliminaRecensione,
-  reviewError
+  reviewError 
 } = useRecensione()
 
 // Stato per gestire la chat aperta 
@@ -87,11 +87,13 @@ onUnmounted(() => {
 // Chiamata all'API per prendere le prenotazioni
 const caricaPrenotazioni = async () => {
   isLoading.value = true
+  alertStore.pulisci() // Puliamo eventuali vecchi errori globali
+
   const response = await prenotazioniStore.getBookings()
   if (response.success) {
     bookings.value = response.data
   } else {
-    pageMessage.value = { tipo: 'error', testo: response.error || "Impossibile caricare le prenotazioni" }
+    alertStore.mostra('error', response.error || "Impossibile caricare le prenotazioni")
   }
   isLoading.value = false
 }
@@ -226,16 +228,18 @@ const apriModaleAnnullamento = async (booking) => {
 // Gestione della cancellazione di una prenotazione
 const handleConfirmCancel = async () => {
   if (!bookingToCancel.value) return
+  alertStore.pulisci()
 
   const response = await prenotazioniStore.cancelBooking(bookingToCancel.value.codiceprenotazione)
 
   if (response.success) {
     bookingToCancel.value.stato = 'ANNULLATA'
     showCancelModal.value = false
-    pageMessage.value = { tipo: 'success', testo: `Prenotazione annullata. Rimborsati: €${infoAnnullamento.rimborso.toFixed(2)}` }
+    alertStore.mostra('success', `Prenotazione annullata. Rimborsati: €${infoAnnullamento.rimborso.toFixed(2)}`)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   } else {
-    pageMessage.value = { tipo: 'error', testo: response.error || "Errore durante l'annullamento" }
+    showCancelModal.value = false
+    alertStore.mostra('error', response.error || "Errore durante l'annullamento")
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 }
@@ -243,12 +247,16 @@ const handleConfirmCancel = async () => {
 const chiudiEAggiorna = async () => {
   chiudiModale()
   await caricaPrenotazioni()
+  // Essendo il componente delle recensioni astratto nel composable, 
+  // possiamo lanciare il messaggio di successo qui per informare che tutto è andato bene
+  alertStore.mostra('success', 'La tua recensione è stata registrata correttamente.')
 }
 
 const handleElimina = async () => {
   const success = await eliminaRecensione()
   if (success) {
     await caricaPrenotazioni()
+    alertStore.mostra('success', 'Recensione eliminata.')
   }
 }
 
@@ -294,9 +302,6 @@ const chiudiChat = () => {
     <Header />
 
     <main class="container py-5 flex-grow-1">
-      <div v-if="pageMessage" :class="['alert', pageMessage.tipo, 'mb-4']">
-        {{ pageMessage.testo }}
-      </div>
 
       <div class="row mb-4">
         <div class="col-12 text-center text-md-start">
@@ -344,8 +349,8 @@ const chiudiChat = () => {
       <div v-else-if="bookings.length === 0" class="text-center py-5 empty-state">
         <img src="../assets/broken_car.png" alt="Nessuna prenotazione" width="120" class="mb-3 opacity-50" />
         <h4 class="fw-bold text-muted">Nessuna prenotazione trovata</h4>
-        <p class="text-muted">Non hai ancora effettuato nessuna prenotazione con noi.</p>
-        <router-link to="/ricerca" class="btn btn-primary mt-3 px-4 py-2">Trova Parcheggio</router-link>
+        <p class="text-muted">Non hai ancora effettuato nessuna prenotazione su Parkly.</p>
+        <router-link to="/garage" class="btn btn-primary mt-3 px-4 py-2">Trova Parcheggio</router-link>
       </div>
 
       <div v-else-if="prenotazioniFiltrate.length === 0" class="text-center py-5 empty-state">
@@ -377,7 +382,7 @@ const chiudiChat = () => {
                   <!-- Pulsante Annulla  -->
                   <button 
                       v-if="booking.stato === 'ATTIVA'" 
-                      @click="handleCancelBooking(booking.codiceprenotazione)" 
+                      @click="apriModaleAnnullamento(booking)" 
                       class="custom-btn btn-cancel"
                       title="Annulla Prenotazione"
                   >
@@ -806,30 +811,6 @@ const chiudiChat = () => {
   opacity: 0;
 }
 
-.review-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(2, 8, 23, 0.55);
-  backdrop-filter: blur(5px) saturate(130%);
-  -webkit-backdrop-filter: blur(5px) saturate(130%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1050;
-  padding: 1.25rem;
-}
-
-.review-modal {
-  background: #ffffff;
-  width: 100%;
-  max-width: 448px;
-  border-radius: 28px;
-  overflow: hidden;
-  box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.04),
-    0 32px 80px rgba(0, 0, 0, 0.2),
-    0 8px 24px rgba(0, 0, 0, 0.06);
-}
 
 .review-topbar {
   display: flex;
@@ -857,26 +838,6 @@ const chiudiChat = () => {
   background: var(--primary-blue, #00408A);
 }
 
-.close-btn {
-  width: 32px;
-  height: 32px;
-  border: none;
-  background: #f1f5f9;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: #64748b;
-  font-size: 1.15rem;
-  transition: background 0.2s, color 0.2s;
-  line-height: 1;
-}
-
-.close-btn:hover {
-  background: #e2e8f0;
-  color: #0f172a;
-}
 
 .review-body {
   padding: 1rem 1.75rem 1.5rem;
@@ -900,21 +861,6 @@ const chiudiChat = () => {
   margin-bottom: 1rem;
 }
 
-.modal-title {
-  font-size: 1.55rem;
-  font-weight: 800;
-  color: #0f172a;
-  margin-bottom: 0.35rem;
-  letter-spacing: -0.035em;
-  line-height: 1.2;
-}
-
-.modal-sub {
-  font-size: 0.88rem;
-  color: #64748b;
-  margin-bottom: 1.1rem;
-  line-height: 1.55;
-}
 
 .big-stars {
   display: flex;
@@ -972,65 +918,6 @@ const chiudiChat = () => {
   font-weight: 600;
 }
 
-.review-textarea {
-  width: 100%;
-  background: #f8fafc;
-  border: 1.5px solid #e8edf3;
-  border-radius: 14px;
-  padding: 13px 15px;
-  font-size: 0.88rem;
-  color: #334155;
-  resize: none;
-  outline: none;
-  transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
-  font-family: inherit;
-  line-height: 1.6;
-}
-
-.review-textarea::placeholder {
-  color: #a8b4c4;
-}
-
-.review-textarea:focus {
-  background: #ffffff;
-  border-color: var(--primary-blue, #00408A);
-  box-shadow: 0 0 0 4px rgba(0, 64, 138, 0.09);
-}
-
-.cta-btn {
-  width: 100%;
-  padding: 14px 24px;
-  background: var(--primary-blue, #00408A);
-  color: #fff;
-  border: none;
-  border-radius: 14px;
-  font-size: 0.92rem;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 9px;
-  transition: background 0.22s ease, box-shadow 0.22s ease, transform 0.15s ease, opacity 0.2s;
-  letter-spacing: 0.01em;
-}
-
-.cta-btn:hover:not(:disabled) {
-  background: #003070;
-  box-shadow: 0 8px 28px rgba(0, 64, 138, 0.28);
-  transform: translateY(-1px);
-}
-
-.cta-btn:active:not(:disabled) {
-  transform: translateY(0);
-  box-shadow: none;
-}
-
-.cta-btn:disabled {
-  opacity: 0.38;
-  cursor: not-allowed;
-}
-
 .cta-btn--green {
   background: #059669;
 }
@@ -1038,38 +925,6 @@ const chiudiChat = () => {
 .cta-btn--green:hover:not(:disabled) {
   background: #047857;
   box-shadow: 0 8px 28px rgba(5, 150, 105, 0.3);
-}
-
-.cta-btn--ghost {
-  background: transparent;
-  color: var(--primary-blue, #00408A);
-  border: 1.5px solid rgba(0, 64, 138, 0.18);
-}
-
-.cta-btn--ghost:hover {
-  background: rgba(0, 64, 138, 0.05);
-  border-color: rgba(0, 64, 138, 0.35);
-  color: white;
-  box-shadow: none;
-  transform: none;
-}
-
-.cta-btn--danger-ghost {
-  background: transparent;
-  color: #dc3545;
-  border: 1.5px solid rgba(220, 53, 69, 0.2);
-  width: auto;
-  padding-left: 18px;
-  padding-right: 18px;
-  flex-shrink: 0;
-}
-
-.cta-btn.cta-btn--danger-ghost:hover:not(:disabled) {
-  background: #dc3545;
-  border-color: rgba(220, 53, 69, 0.5);
-  color: #ffffff;
-  box-shadow: none;
-  transform: none;
 }
 
 .back-btn {

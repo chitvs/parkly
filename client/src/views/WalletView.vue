@@ -2,6 +2,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { authStore } from '../store/auth.js'
 import { walletStore } from '../store/wallet.js'
+import { alertStore } from '../store/alert.js'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 import 'bootstrap-icons/font/bootstrap-icons.css'
@@ -10,7 +11,6 @@ import Pagination from '../components/Pagination.vue'
 const isLoading = ref(false)
 const isLoadingTransazioni = ref(false)
 const transazioni = ref([])
-const messaggio = ref(null)
 
 // paginazione
 const paginaCorrente = ref(1)
@@ -101,23 +101,23 @@ const limitaImporto = () => {
 
 // submit e validazioni
 const handleRicarica = async () => {
-    messaggio.value = null
+    alertStore.pulisci()
 
     // validazione Importo
     if (formRicarica.importo < 5) {
-        messaggio.value = { tipo: 'error', testo: "L'importo minimo per la ricarica è di 5,00€." }
+        alertStore.mostra('error', "L'importo minimo per la ricarica è di 5,00€.")
         return
     }
 
     if (formRicarica.importo > 1000) {
-        messaggio.value = { tipo: 'error', testo: "Non puoi ricaricare più di 1.000,00€ in una singola transazione." }
+        alertStore.mostra('error', "Non puoi ricaricare più di 1.000,00€ in una singola transazione.")
         return
     }
 
     // validazione Titolare (almeno due parole)
     const paroleTitolare = formRicarica.titolare.trim().split(/\s+/)
     if (paroleTitolare.length < 2) {
-        messaggio.value = { tipo: 'error', testo: "Inserisci sia il nome che il cognome del titolare della carta." }
+        alertStore.mostra('error', "Inserisci sia il nome che il cognome del titolare della carta.")
         return
     }
 
@@ -131,7 +131,7 @@ const handleRicarica = async () => {
 
         // un mese deve essere tra 1 e 12
         if (isNaN(numMese) || numMese < 1 || numMese > 12 || isNaN(numAnno)) {
-            messaggio.value = { tipo: 'error', testo: "Mese o anno di scadenza non validi." }
+            alertStore.mostra('error', "Mese o anno di scadenza non validi.")
             return
         }
 
@@ -142,11 +142,11 @@ const handleRicarica = async () => {
 
         // controlla se l'anno è passato, oppure se è l'anno corrente ma il mese è passato
         if (numAnno < annoAttuale || (numAnno === annoAttuale && numMese < meseAttuale)) {
-            messaggio.value = { tipo: 'error', testo: "La carta inserita risulta scaduta." }
+            alertStore.mostra('error', "La carta inserita risulta scaduta.")
             return
         }
     } else {
-        messaggio.value = { tipo: 'error', testo: "Formato della data di scadenza non valido." }
+        alertStore.mostra('error', "Formato della data di scadenza non valido.")
         return
     }
 
@@ -159,7 +159,7 @@ const handleRicarica = async () => {
         })
 
         if (response.success) {
-            messaggio.value = { tipo: 'success', testo: `Ricarica di ${formattaValuta(formRicarica.importo)} effettuata con successo!` }
+            alertStore.mostra('success', `Ricarica di ${formattaValuta(formRicarica.importo)} effettuata con successo!`)
 
             formRicarica.titolare = ''
             formRicarica.numeroCarta = ''
@@ -170,10 +170,10 @@ const handleRicarica = async () => {
             await fetchTransazioni()
             paginaCorrente.value = 1
         } else {
-            messaggio.value = { tipo: 'error', testo: response.error || "Errore durante la ricarica. Verifica i dati." }
+            alertStore.mostra('error', response.error || "Errore durante la ricarica. Verifica i dati.")
         }
     } catch (error) {
-        messaggio.value = { tipo: 'error', testo: "Errore imprevisto di rete." }
+        alertStore.mostra('error', "Errore imprevisto di rete.")
     } finally {
         isLoading.value = false
     }
@@ -199,23 +199,23 @@ const formattaCoordinate = () => {
 
 // Funzione per gestire il prelievo
 const handlePrelievo = async () => {
-    messaggio.value = null
+    alertStore.pulisci()
 
     if (!prelievoForm.importo || prelievoForm.importo <= 0) {
-        messaggio.value = { tipo: 'error', testo: "Inserisci un importo valido." }
+        alertStore.mostra('error', "Inserisci un importo valido.")
         return
     }
     if (prelievoForm.importo < 5) {
-        messaggio.value = { tipo: 'error', testo: "L'importo minimo per il prelievo è di 5,00€." }
+        alertStore.mostra('error', "L'importo minimo per il prelievo è di 5,00€.")
         return
     }
     if (prelievoForm.importo > saldoAttuale.value) {
-        messaggio.value = { tipo: 'error', testo: "Saldo insufficiente." }
+        alertStore.mostra('error', "Saldo insufficiente.")
         return
     }
 
     if (!prelievoForm.coordinate.trim()) {
-        messaggio.value = { tipo: 'error', testo: "Inserisci le coordinate per l'accredito." }
+        alertStore.mostra('error', "Inserisci le coordinate per l'accredito.")
         return
     }
 
@@ -223,13 +223,13 @@ const handlePrelievo = async () => {
         const ibanRegex = /^[A-Z]{2}\d{2}[A-Z0-9]{1,30}$/
         const ibanPulito = prelievoForm.coordinate.replace(/\s/g, '').toUpperCase()
         if (!ibanRegex.test(ibanPulito)) {
-            messaggio.value = { tipo: 'error', testo: "Formato IBAN non valido." }
+            alertStore.mostra('error', "Formato IBAN non valido.")
             return
         }
     } else if (prelievoForm.metodo === 'PayPal') {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
         if (!emailRegex.test(prelievoForm.coordinate)) {
-            messaggio.value = { tipo: 'error', testo: "Inserisci un indirizzo email PayPal valido." }
+            alertStore.mostra('error', "Inserisci un indirizzo email PayPal valido.")
             return
         }
     }
@@ -254,15 +254,15 @@ const handlePrelievo = async () => {
         })
 
         if (response.success) {
-            messaggio.value = { tipo: 'success', testo: "Prelievo effettuato con successo." }
+            alertStore.mostra('success', "Prelievo effettuato con successo.")
             prelievoForm.importo = null
             prelievoForm.coordinate = ''
             await fetchTransazioni()
         } else {
-            messaggio.value = { tipo: 'error', testo: response.error }
+            alertStore.mostra('error', response.error)
         }
     } catch (error) {
-        messaggio.value = { tipo: 'error', testo: "Errore durante l'operazione." }
+        alertStore.mostra('error', "Errore durante l'operazione.")
     } finally {
         isLoading.value = false
     }
@@ -287,11 +287,6 @@ const handlePrelievo = async () => {
                     </div>
                 </div>
             </section>
-
-            <div v-if="messaggio" :class="['alert', messaggio.tipo]">
-                {{ messaggio.testo }}
-                <button @click="messaggio = null" class="close-btn">x</button>
-            </div>
 
             <div class="layout-grid wallet-grid">
 

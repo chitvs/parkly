@@ -131,11 +131,8 @@ router.post('/login', async (req, res) => {
 });
 
 // Cambio Password
-router.put('/change-password', async (req, res) => {
+router.put('/change-password', isLoggato, async (req, res) => {
     // Sicurezza: l'utente deve essere loggato
-    if (!req.session.utente || !req.session.utente.id) {
-        return res.status(401).json({ success: false, error: 'Non autorizzato' });
-    }
 
     const { currentPassword, newPassword } = req.body;
 
@@ -169,14 +166,7 @@ router.put('/change-password', async (req, res) => {
 });
 
 // Recupero dati profilo utente loggato
-router.get('/profile', async (req, res) => {
-    // Controllo se l'utente ha una sessione attiva
-    if (!req.session.utente || !req.session.utente.id) {
-        return res.status(401).json({
-            success: false,
-            error: 'Non autorizzato. Effettua il login.'
-        });
-    }
+router.get('/profile', isLoggato, async (req, res) => {
 
     try {
         // Cerco l'utente nel DB tramite il suo ID (salvato nella sessione)
@@ -206,14 +196,7 @@ router.get('/profile', async (req, res) => {
 
 
 // Aggiornamento dati profilo utente loggato
-router.put('/profile', async (req, res) => {
-    //  Controllo sicurezza: l'utente è loggato?
-    if (!req.session.utente || !req.session.utente.id) {
-        return res.status(401).json({
-            success: false,
-            error: 'Non autorizzato. Effettua il login.'
-        });
-    }
+router.put('/profile', isLoggato, async (req, res) => {
 
     const { nome, cognome, nomeUtente, email, telefono, codiceFiscale } = req.body;
 
@@ -258,10 +241,7 @@ router.put('/profile', async (req, res) => {
 });
 
 // Logout
-router.post('/logout', (req, res) => {
-    if (!req.session) {
-        return res.status(400).json({ success: false, message: "Nessuna sessione attiva" });
-    }
+router.post('/logout', isLoggato, (req, res) => {
     req.session.destroy((err) => {
         if (err) {
             console.error("Errore durante la distruzione della sessione:", err);
@@ -273,12 +253,7 @@ router.post('/logout', (req, res) => {
 });
 
 // eliminazione account (soft-delete)
-router.delete('/delete-account', async (req, res) => {
-    // l'utente è loggato?
-    if (!req.session.utente || !req.session.utente.id) {
-        return res.status(401).json({ success: false, error: 'Non autorizzato' });
-    }
-
+router.delete('/delete-account', isLoggato, async (req, res) => {
     try {
         const utenteId = req.session.utente.id;
 
@@ -310,9 +285,8 @@ router.get('/me', isLoggato, (req, res) => {
 });
 
 // Nuova API per l'upload della foto
-router.post('/upload-avatar', upload.single('avatar'), async (req, res) => {
-    // Controllo sicurezza
-    if (!req.session.utente) return res.status(401).json({ error: 'Non autorizzato' });
+router.post('/upload-avatar', isLoggato, upload.single('avatar'), async (req, res) => {
+    // Controllo
     if (!req.file) return res.status(400).json({ error: 'Nessun file caricato' });
 
     try {

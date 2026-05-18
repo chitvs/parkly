@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../database/db');
-const { isLoggato } = require('../middleware/authMiddleware');
+const { isLoggato, isGestore } = require('../middleware/authMiddleware');
 
 router.post('/', isLoggato, async (req, res) => {
     const { id_posto, targa, note, inizio, fine, prezzo_totale, codice_disabilita } = req.body;
@@ -18,18 +18,40 @@ router.post('/', isLoggato, async (req, res) => {
                 throw { isCustom: true, status: 402, message: 'Credito insufficiente per completare la prenotazione.' };
             }
 
-            // 2. Controllo orari garage
+            // 2. Controllo orari garage, stato garage e stato posto
             const checkOrari = await t.one(`
                 SELECT 
-                    g.Is24h, g.OrarioApertura, g.OrarioChiusura,
+                    g.Is24h, g.OrarioApertura, g.OrarioChiusura, 
+                    g.IsAttivo AS garage_attivo, -- NUOVO CONTROLLO
                     g.Nome AS nome_garage, g.ID_Gestore,
-                    p.CodicePosto,
-                    ($2::timestamp::time >= g.OrarioApertura AND $2::timestamp::time <= g.OrarioChiusura) AS inizio_valido,
-                    ($3::timestamp::time >= g.OrarioApertura AND $3::timestamp::time <= g.OrarioChiusura) AS fine_valida
+                    p.CodicePosto, 
+                    p.IsAttivo AS posto_attivo, -- NUOVO CONTROLLO
+                    
+                    -- Controllo INIZIO
+                    (CASE 
+                        WHEN g.OrarioApertura <= g.OrarioChiusura THEN 
+                            ($2::timestamp::time >= g.OrarioApertura AND $2::timestamp::time <= g.OrarioChiusura)
+                        ELSE 
+                            ($2::timestamp::time >= g.OrarioApertura OR $2::timestamp::time <= g.OrarioChiusura)
+                    END) AS inizio_valido,
+
+                    -- Controllo FINE
+                    (CASE 
+                        WHEN g.OrarioApertura <= g.OrarioChiusura THEN 
+                            ($3::timestamp::time >= g.OrarioApertura AND $3::timestamp::time <= g.OrarioChiusura)
+                        ELSE 
+                            ($3::timestamp::time >= g.OrarioApertura OR $3::timestamp::time <= g.OrarioChiusura)
+                    END) AS fine_valida
+
                 FROM Garage g
                 JOIN PostoAuto p ON g.ID_Garage = p.ID_Garage
                 WHERE p.ID_Posto = $1
             `, [id_posto, inizio, fine]);
+
+            // BLOCCO DI SICUREZZA: Se il garage o il posto sono stati disattivati nel frattempo
+            if (!checkOrari.garage_attivo || !checkOrari.posto_attivo) {
+                throw { isCustom: true, status: 403, message: "Operazione annullata: questo garage o posto auto è stato appena disabilitato dal gestore." };
+            }
 
             if (!checkOrari.is24h && (!checkOrari.inizio_valido || !checkOrari.fine_valida)) {
                 throw { isCustom: true, status: 400, message: "Gli orari selezionati non rientrano nell'orario di apertura del garage." };
@@ -103,10 +125,7 @@ router.post('/', isLoggato, async (req, res) => {
 });
 
 // Recupero le prenotazioni dell'utente loggato (in prenotazioni.js)
-router.get('/', async (req, res) => {
-    if (!req.session.utente || !req.session.utente.id) {
-        return res.status(401).json({ success: false, error: 'Non autorizzato' });
-    }
+router.get('/', isLoggato, async (req, res) => {
 
     const utenteId = req.session.utente.id;
 
@@ -167,10 +186,7 @@ router.get('/', async (req, res) => {
 });
 
 // annullamento prenotazione
-router.put('/:codice/annulla', async (req, res) => {
-    if (!req.session.utente || !req.session.utente.id) {
-        return res.status(401).json({ success: false, error: 'Non autorizzato' });
-    }
+router.put('/:codice/annulla', isLoggato, async (req, res) => {
 
     try {
         const codicePrenotazione = req.params.codice;
@@ -254,7 +270,7 @@ router.put('/:codice/annulla', async (req, res) => {
     }
 });
 
-router.get('/:codice/anteprima-annullamento', async (req, res) => {
+router.get('/:codice/anteprima-annullamento', isLoggato, async (req, res) => {
     try {
         const prenotazione = await db.oneOrNone(`
             SELECT p.PrezzoTotale,
@@ -309,15 +325,10 @@ router.get('/:codice/anteprima-annullamento', async (req, res) => {
 });
 
 // recupera lo storico delle prenotazioni del gestore loggato
-router.get('/prenotazioni-gestore', async (req, res) => {
+router.get('/prenotazioni-gestore', isGestore, async (req, res) => {
     try {
-        const utenteLoggato = req.session?.utente;
-        
-        if (!utenteLoggato || utenteLoggato.ruolo !== 'GESTORE') {
-            return res.status(401).json({ error: 'Accesso negato' });
-        }
-        
-        const idGestore = utenteLoggato.id;
+
+        const idGestore = req.session.utente.id;
         
         const query = `
             SELECT 

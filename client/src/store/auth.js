@@ -18,7 +18,9 @@ export const authStore = reactive({
   // Verifica se la sessione server sia ancora valida
   async checkAuth() {
     try {
-      const response = await fetch('/api/auth/me');
+      const response = await fetch('/api/auth/me', {
+        credentials: 'include'
+      });
       if (response.ok) {
         const data = await response.json();
         this.setUtente(data.utente);
@@ -139,13 +141,36 @@ async updateProfile(payload) {
     return { success: false, error: "Errore di connessione col server" };
   }
 },
+async uploadAvatar(formData) {
+    try {
+      const response = await fetch('/api/auth/upload-avatar', {
+        method: 'POST', 
+        credentials: 'include', 
+        body: formData 
+      });
+      
+      const result = await response.json();
+      
+      // Se l'upload ha successo, aggiorna subito l'utente globale e il localStorage
+      if (result.success && this.utente) {
+        this.utente.fotoProfilo_URL = result.url;
+        this.setUtente(this.utente);
+      }
+      
+      return result;
+    } catch (error) {
+      console.error("Errore upload avatar:", error);
+      return { success: false, error: "Errore di connessione durante il caricamento." };
+    }
+  },
 
 // Logica Logout completa
   async logout() {
     try {
       await fetch('/api/auth/logout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
       });
     } catch (err) {
       console.error("Errore durante il logout lato server:", err);
@@ -159,7 +184,8 @@ async updateProfile(payload) {
     try {
       const res = await fetch('/api/auth/delete-account', {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
       });
       
       const data = await res.json();
@@ -183,7 +209,8 @@ async updateProfile(payload) {
     try {
       const response = await fetch('/api/auth/upgrade-role', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
       });
       
       const data = await response.json();

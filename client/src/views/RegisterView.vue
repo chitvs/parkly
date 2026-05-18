@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import eyeUrl from '../icons/eye-open.svg'
 import eyeClosedUrl from '../icons/eye-closed.svg'
 import { authStore } from '../store/auth.js'
+import { alertStore } from '../store/alert.js'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 
@@ -18,16 +19,14 @@ const password = ref('')
 const passwordConfirm = ref('')
 const isPasswordVisible1 = ref(false)
 const isPasswordVisible2 = ref(false)
+
 const passwordError = ref(false)
-const generalError = ref('')
-const successMessage = ref('')
 
 const router = useRouter()
 
 const handleRegister = async () => {
   passwordError.value = false
-  generalError.value = ''
-  successMessage.value = ''
+  alertStore.pulisci()
 
   if (password.value !== passwordConfirm.value) {
     passwordError.value = true
@@ -48,12 +47,14 @@ const handleRegister = async () => {
 
   if (data.success) {
     console.log('Registrazione e login automatico riusciti')
-    successMessage.value = 'Registrazione avvenuta con successo.'
+    alertStore.mostra('success', 'Registrazione avvenuta con successo. Benvenuto su Parkly!')
+    
+    // Attendiamo un secondo prima di reindirizzare, così l'utente vede l'alert
     setTimeout(() => {
       router.push('/')
     }, 1500)
   } else {
-    generalError.value = data.error || 'Errore durante la registrazione'
+    alertStore.mostra('error', data.error || 'Errore durante la registrazione')
   }
 }
 </script>
@@ -88,13 +89,6 @@ const handleRegister = async () => {
 
               <!-- Divisore -->
               <hr class="custom-divider mb-4" />
-
-              <div v-if="generalError" class="alert error mb-4">
-                {{ generalError }}
-              </div>
-              <div v-if="successMessage" class="alert success mb-4">
-                {{ successMessage }}
-              </div>
 
               <form @submit.prevent="handleRegister">
                 <!-- Dati Personali -->
@@ -161,9 +155,7 @@ const handleRegister = async () => {
 
               <div class="text-center mt-4 pt-3 border-top">
                 <p class="small text-muted footer-text mb-0">
-                  Effettuando la registrazione accetti i
-                  <a href="#">Termini e Condizioni</a> e l'
-                  <a href="#">Informativa sulla Privacy</a>
+                  Effettuando la registrazione accetti i Termini e Condizioni e l'Informativa sulla Privacy di Parkly.
                 </p>
               </div>
             </div>
@@ -282,49 +274,6 @@ const handleRegister = async () => {
   box-shadow: 0 0 0 3px rgba(0, 64, 138, 0.1);
   background-color: #ffffff;
   outline: none;
-}
-
-.password-group {
-  border: 1px solid #e0e0e0;
-  border-radius: 12px;
-  overflow: hidden;
-  background-color: #f8fafc;
-  transition: all 0.2s ease;
-  height: 52px;
-}
-
-.password-group:focus-within {
-  border-color: #00408a;
-  box-shadow: 0 0 0 3px rgba(0, 64, 138, 0.1);
-  background-color: #ffffff;
-}
-
-.password-field {
-  border: none !important;
-  box-shadow: none !important;
-  background: transparent !important;
-  font-size: 15px;
-  padding: 10px 18px;
-  height: 100%;
-}
-
-.toggle-password-btn {
-  border: none !important;
-  box-shadow: none !important;
-  background: transparent !important;
-  align-items: center;
-  padding: 0.5rem;
-}
-
-.password-icon {
-  width: 20px;
-  height: 20px;
-  opacity: 0.6;
-  transition: opacity 0.2s;
-}
-
-.toggle-password-btn:hover .password-icon {
-  opacity: 0.9;
 }
 
 .register-btn.btn-primary,
