@@ -1,25 +1,37 @@
-const fs = require('fs');
-const path = require('path');
+/*
+ * Script di reset del database.
+ * Elimina e ricrea tutte le tabelle (parkly.sql), 
+ * poi popola con i dati di esempio (seed.sql).
+ *
+ * Per utilizzarlo runnare node scripts/reset_db.js
+ * ATTENZIONE perchè eseguire questo comando
+ * cancella tutti i dati esistenti.
+ */
 
-const db = require('./db'); 
+const fs = require("fs");
+const path = require("path");
+const db = require("./db");
 
 async function resetAndSeed() {
   try {
-    console.log(' Leggendo i file SQL...');
-    
-    const schemaSql = fs.readFileSync(path.join(__dirname, 'parkly.sql'), 'utf8');
-    const seedSql = fs.readFileSync(path.join(__dirname, 'seed.sql'), 'utf8');
+    console.log("Leggendo i file SQL...");
 
-    console.log('Ricreando le tabelle (schema)...');
+    const schemaSql = fs.readFileSync(
+      path.join(__dirname, "parkly.sql"),
+      "utf8",
+    );
+    const seedSql = fs.readFileSync(path.join(__dirname, "seed.sql"), "utf8");
+
+    console.log("Ricreando le tabelle (schema)...");
     await db.none(schemaSql);
 
-    console.log('Inserendo i dati del seed...');
+    console.log("Inserendo i dati del seed...");
     await db.none(seedSql);
 
-    console.log('Database resettato e popolato con successo!');
+    console.log("Database resettato e popolato con successo!");
     process.exit(0);
   } catch (error) {
-    console.error('Errore durante il reset del DB:', error);
+    console.error("Errore durante il reset del DB:", error);
     process.exit(1);
   }
 }
