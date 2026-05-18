@@ -467,7 +467,7 @@ const formattaDataLeggibile = (dataIso) => {
             @toggle-stato="cambiaStatoGarage" />
 
           <DashboardStato v-if="vistaAttiva === 'stato'" :key="'stato-' + reRenderKey" :miei-garage="mieiGarageFiltrati"
-            :posti-per-garage="postiPerGarage" :occupazione-garage="occupazioneGarage" :allerte-stato="allerteStato"
+            :posti-per-garage="postiPerGarage" :occupazione-garage="occupazioneGarage" :allerte-stato="allerteStato" :prenotazioni="storicoPrenotazioniFiltrato"
             @verifica-disponibilita="aggiornaMappaOrari" @manage-posto="apriGestionePosto" />
 
           <DashboardStorico v-if="vistaAttiva === 'storico'" :prenotazioni="storicoPrenotazioniFiltrato"
