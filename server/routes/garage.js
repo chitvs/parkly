@@ -586,39 +586,6 @@ router.delete('/garages-gestore/:idGarage/posti/:idPosto/manutenzione/:idManuten
         console.error(err.message);
         res.status(500).json({ success: false, error: "Errore interno del server: " + err.message });
     }
-
-    const idGestore = utenteLoggato.id || utenteLoggato.id_utente;
-    const { idGarage, idPosto, idManutenzione } = req.params;
-
-    if (!idGestore) {
-      throw new Error("ID Gestore risultante è undefined!");
-    }
-
-    const checkGarage = await db.oneOrNone(
-      'SELECT 1 FROM Garage WHERE ID_Garage = $1 AND ID_Gestore = $2',
-      [idGarage, idGestore]
-    );
-
-    if (!checkGarage) {
-      console.log("Errore: Il garage non appartiene a questo gestore");
-      return res.status(403).json({ success: false, error: "Non hai i permessi per gestire questo garage" });
-    }
-
-    const result = await db.result(
-      'DELETE FROM ManutenzionePosto WHERE ID_Manutenzione = $1 AND ID_Posto = $2',
-      [idManutenzione, idPosto]
-    );
-
-    if (result.rowCount === 0) {
-      return res.status(404).json({ success: false, error: "Manutenzione non trovata (forse già eliminata)" });
-    }
-
-    res.json({ success: true, message: "Manutenzione rimossa. Il posto è di nuovo disponibile." });
-  } catch (err) {
-    console.error("!!! ERRORE CRASH IN DELETE MANUTENZIONE !!!");
-    console.error(err.message);
-    res.status(500).json({ success: false, error: "Errore interno del server: " + err.message });
-  }
 });
 
 module.exports = router;
