@@ -45,11 +45,9 @@ const {
 } = useGarageFilters()
 
 const getDisplayPrice = (garage) => {
-    // se l'utente ha selezionato un veicolo specifico e il backend ci ha mandato i dati
     if (filterTipoVeicolo.value !== 'ALL' && garage.tariffeVeicoli && garage.tariffeVeicoli[filterTipoVeicolo.value]) {
         return Number(garage.tariffeVeicoli[filterTipoVeicolo.value]).toFixed(2);
     }
-    // altrimenti mostra la tariffa base generica
     return Number(garage.tariffabase).toFixed(2);
 }
 
@@ -60,7 +58,6 @@ const {
 } = useSpatialSearch(searchLocation, garages, passaFiltriTecnici, raggioKm, ordinamento, filterTipoVeicolo)
 
 const espandiRaggio = () => {
-    // Imposta lo slider al raggio esteso
     raggioKm.value = Math.max(raggioKm.value + 3, 5);
 }
 
@@ -1362,5 +1359,53 @@ body {
     background-color: #f1f5f9;
     color: #006ce4;
     font-weight: 600;
+}
+
+@media (max-width: 768px) {
+    .page-body {
+        flex-direction: column;
+        max-width: 100% !important;
+        margin: 1rem auto;
+        padding: 0 1rem;
+    }
+    .sidebar {
+        width: 100%;
+        position: static;
+        margin-bottom: 1rem;
+    }
+    .garage-card {
+        flex-direction: column;
+        height: auto;
+    }
+    .gcard-thumb {
+        width: 100%;
+        height: 200px;
+    }
+    .gcard-main {
+        padding: 12px;
+    }
+    .gcard-right {
+        width: 100%;
+        border-left: none;
+        border-top: 1px solid #e2e8f0;
+        text-align: left;
+        padding: 12px;
+    }
+    .results-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    .fs-body {
+        flex-direction: column;
+    }
+    .fs-left-half, .fs-right-half {
+        width: 100%;
+        height: 50%;
+    }
+    .fs-left-half {
+        border-right: none;
+        border-bottom: 1px solid #e2e8f0;
+    }
 }
 </style>

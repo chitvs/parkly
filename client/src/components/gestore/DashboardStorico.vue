@@ -22,7 +22,6 @@ const formatData = (iso) => {
 const statoBadge = (stato) =>
     stato === 'ATTIVA' ? 'badge--green' : stato === 'ANNULLATA' ? 'badge--red' : 'badge--gray'
 
-// Logica paginazione
 const paginaCorrente = ref(1)
 const elementiPerPagina = ref(5)
 
@@ -120,6 +119,7 @@ watch(() => props.prenotazioni, () => {
     margin: 0 auto;
     padding: 0 1rem;
     box-sizing: border-box;
+    overflow-x: hidden; 
 }
 
 .page-header {
@@ -151,11 +151,12 @@ watch(() => props.prenotazioni, () => {
 .table-responsive-container {
     width: 100%;
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch; 
 }
 
 .parkly-table {
     width: 100%;
-    min-width: 850px; /* Impedisce il collasso delle colonne sui dispositivi mobili attivando lo scroll pulito */
+    min-width: 850px; 
     border-collapse: collapse;
     font-size: 0.875rem;
 }
@@ -226,7 +227,6 @@ watch(() => props.prenotazioni, () => {
     text-align: center !important;
 }
 
-/* Badges */
 .badge {
     display: inline-block;
     padding: 4px 12px;
@@ -265,7 +265,6 @@ watch(() => props.prenotazioni, () => {
     letter-spacing: 0.06em;
 }
 
-/* Bottoni Chat */
 .btn-chat {
     position: relative;
     display: inline-flex;
@@ -303,5 +302,14 @@ watch(() => props.prenotazioni, () => {
 
 .mt-4 {
     margin-top: 1.5rem;
+}
+
+.pagination-container {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    overflow: visible;
+    padding: 10px 0;
 }
 </style>

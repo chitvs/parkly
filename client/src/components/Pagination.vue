@@ -61,11 +61,12 @@ const paginaVisibili = computed(() => {
     <div v-if="compact" class="pag-compact">
       <button
         class="pag-compact__btn"
-        :disabled="paginaCorrente === 1"
-        @click="cambiaPagina(1)"
-        aria-label="Prima pagina"
+        :disabled="paginaCorrente <= 1"
+        @click="cambiaPagina(Math.max(1, paginaCorrente - 5))"
+        aria-label="-5 Pagine"
+        title="Indietro di 5 pagine"
       >
-        <img src="../assets/chevron-left-double.svg" class="icon" alt="Prima pagina">
+        <img src="../assets/chevron-left-double.svg" class="icon" alt="-5 Pagine">
       </button>
 
       <button
@@ -73,6 +74,7 @@ const paginaVisibili = computed(() => {
         :disabled="paginaCorrente === 1"
         @click="cambiaPagina(paginaCorrente - 1)"
         aria-label="Pagina precedente"
+        title="Precedente"
       >
         <img src="../assets/chevron-left.svg" class="icon" alt="Precedente">
       </button>
@@ -86,17 +88,19 @@ const paginaVisibili = computed(() => {
         :disabled="paginaCorrente === totalePagine"
         @click="cambiaPagina(paginaCorrente + 1)"
         aria-label="Pagina successiva"
+        title="Successiva"
       >
         <img src="../assets/chevron-right.svg" class="icon" alt="Successiva">
       </button>
 
       <button
         class="pag-compact__btn"
-        :disabled="paginaCorrente === totalePagine"
-        @click="cambiaPagina(totalePagine)"
-        aria-label="Ultima pagina"
+        :disabled="paginaCorrente >= totalePagine"
+        @click="cambiaPagina(Math.min(totalePagine, paginaCorrente + 5))"
+        aria-label="+5 Pagine"
+        title="Avanti di 5 pagine"
       >
-        <img src="../assets/chevron-right-double.svg" class="icon" alt="Ultima pagina">
+        <img src="../assets/chevron-right-double.svg" class="icon" alt="+5 Pagine">
       </button>
     </div>
 
@@ -117,8 +121,8 @@ const paginaVisibili = computed(() => {
 
       <div class="pag-full__right">
 
-        <button class="pag-full__btn" :disabled="paginaCorrente === 1" @click="cambiaPagina(1)" title="Prima pagina">
-          <img src="../assets/chevron-left-double.svg" class="icon" alt="Prima pagina">
+        <button class="pag-full__btn" :disabled="paginaCorrente <= 1" @click="cambiaPagina(Math.max(1, paginaCorrente - 5))" title="Indietro di 5 pagine">
+          <img src="../assets/chevron-left-double.svg" class="icon" alt="-5 Pagine">
         </button>
 
         <button class="pag-full__btn" :disabled="paginaCorrente === 1" @click="cambiaPagina(paginaCorrente - 1)" title="Precedente">
@@ -139,8 +143,8 @@ const paginaVisibili = computed(() => {
           <img src="../assets/chevron-right.svg" class="icon" alt="Successiva">
         </button>
 
-        <button class="pag-full__btn" :disabled="paginaCorrente === totalePagine" @click="cambiaPagina(totalePagine)" title="Ultima pagina">
-          <img src="../assets/chevron-right-double.svg" class="icon" alt="Ultima pagina">
+        <button class="pag-full__btn" :disabled="paginaCorrente >= totalePagine" @click="cambiaPagina(Math.min(totalePagine, paginaCorrente + 5))" title="Avanti di 5 pagine">
+          <img src="../assets/chevron-right-double.svg" class="icon" alt="+5 Pagine">
         </button>
 
       </div>
@@ -154,6 +158,8 @@ const paginaVisibili = computed(() => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  flex-wrap: wrap; 
+  justify-content: center;
 }
 
 .pag-compact__btn {
@@ -187,9 +193,8 @@ const paginaVisibili = computed(() => {
   color: #4b5563;
   padding: 0 8px;
   white-space: nowrap;
-  
   display: inline-block;
-  min-width: 100px;
+  min-width: 90px;
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
@@ -203,7 +208,7 @@ const paginaVisibili = computed(() => {
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 16px;
   padding: 12px 16px;
   background: #ffffff;
   border: 1px solid #cbd5e1;
@@ -251,6 +256,8 @@ const paginaVisibili = computed(() => {
 .pag-full__right {
   display: flex;
   align-items: center;
+  flex-wrap: wrap; 
+  justify-content: center;
   gap: 4px;
 }
 
@@ -301,18 +308,24 @@ const paginaVisibili = computed(() => {
   user-select: none;
 }
 
+.icon {
+  width: 16px;
+  height: 16px;
+}
+
 @media (max-width: 600px) {
   .pag-full {
+    flex-direction: column;
     justify-content: center;
+    padding: 16px 12px;
   }
   .pag-full__left {
     justify-content: center;
     width: 100%;
   }
-}
-
-.icon {
-  width: 16px;
-  height: 16px;
+  .pag-full__right {
+    width: 100%;
+    margin-top: 4px;
+  }
 }
 </style>

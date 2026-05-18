@@ -4,8 +4,8 @@ import { useRouter, useRoute } from 'vue-router'
 import * as bootstrap from 'bootstrap'
 import logoUrl from '../assets/LogoParklyBlu.svg'
 import logoInteroUrl from '../assets/LogoParklyIntero.svg'
-import { authStore } from '../store/auth.js' // Importa lo store auth
-import { alertStore } from '../store/alert.js' // Importiamo lo store globale degli alert
+import { authStore } from '../store/auth.js' 
+import { alertStore } from '../store/alert.js'
 
 //foto profilo standard
 import defaultAvatarUrl from '../assets/default-avatar.png'
@@ -87,7 +87,8 @@ const handleLogin = async () => {
 
   if (data.success) {
     await closeLoginModal()
-    // Usiamo l'alert globale per il successo, dato che la modale ora è chiusa
+
+    
     alertStore.mostra('success', `Benvenuto su Parkly, ${authStore.utente?.nome}!`)
   } else {
     loginError.value = data.error || 'Credenziali non valide'
@@ -250,6 +251,7 @@ const handleLogout = async () => {
 </template>
 
 <style scoped>
+
 /* Il CSS originale rimane invariato */
 .main-header {
   display: flex;
@@ -268,7 +270,6 @@ const handleLogout = async () => {
   transition: filter 0.3s ease, transform 0.3s ease;
 }
 
-/* Alone morbido (glow) intorno al logo SVG */
 .logo-image:hover {
   filter: drop-shadow(0 0 12px rgba(0, 64, 138, 0.5));
   transform: scale(1.03);
@@ -292,7 +293,6 @@ const handleLogout = async () => {
   color: #00408a;
 }
 
-/* GRUPPO BOTTONI E PILLOLA UTENTE */
 .auth-buttons-group {
   display: flex;
   gap: 0.8rem;
@@ -353,13 +353,11 @@ const handleLogout = async () => {
   height: 15px;
 }
 
-/* --- STILI DROPDOWN --- */
-
 .parkly-dropdown {
   border-radius: 14px;
   min-width: 220px;
-  padding: 0.5rem 0 0.6rem 0; /* Allungata di qualche pixel in basso (0.8rem invece di 0) */
-  overflow: hidden; /* Taglia via eventuali sfondi hover che escono dagli angoli arrotondati */
+  padding: 0.5rem 0 0.6rem 0;
+  overflow: hidden;
 }
 
 .parkly-dropdown .dropdown-item {
@@ -377,5 +375,44 @@ const handleLogout = async () => {
 .parkly-dropdown .dropdown-item.text-danger:hover {
   background-color: #fee2e2;
   color: #dc3545 !important;
+}
+
+@media (max-width: 600px) {
+  .main-header {
+    padding: 0.9rem 1rem;
+  }
+
+  .logo-image {
+    height: 38px;
+  }
+
+  .right-section {
+    gap: 0.6rem;
+  }
+
+  .nav-item {
+    display: none;
+  }
+
+  .auth-buttons-group {
+    gap: 0.5rem;
+  }
+
+  .login-btn,
+  .register-btn {
+    padding: 0 0.9rem;
+    font-size: 0.85rem;
+    height: 40px;
+  }
+
+  .user-name-btn {
+    padding: 0 0.8rem;
+    font-size: 0.85rem;
+    height: 40px;
+  }
+
+  .user-name-btn span {
+    display: none;
+  }
 }
 </style>
