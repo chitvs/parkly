@@ -5,6 +5,7 @@ import { Line, Doughnut, Radar, Bar } from 'vue-chartjs'
 
 import IconGarage from '../../icons/IconGarage.vue'
 
+// Registrazione manuale dei componenti per la libreria Chart.js.
 ChartJS.register(CategoryScale, LinearScale, RadialLinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement)
 
 const props = defineProps({
@@ -12,6 +13,7 @@ const props = defineProps({
     storicoPrenotazioni: { type: Array, required: true }
 })
 
+// Helper functions per manipolare le date in varianti di YYYY-MM-DD
 const formattaPerInputDate = (d) => {
     const y = d.getFullYear()
     const m = String(d.getMonth() + 1).padStart(2, '0')
@@ -20,22 +22,27 @@ const formattaPerInputDate = (d) => {
 }
 const formattaChiaveData = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
+// Imposta il filtro temporale nativo sull'intero mese in corso
 const dataCorrente = new Date()
 const primoGiornoMese = new Date(dataCorrente.getFullYear(), dataCorrente.getMonth(), 1)
 const ultimoGiornoMese = new Date(dataCorrente.getFullYear(), dataCorrente.getMonth() + 1, 0)
 
 const filtroInizio = ref(formattaPerInputDate(primoGiornoMese))
 const filtroFine = ref(formattaPerInputDate(ultimoGiornoMese))
+
+// Flag di UI per variare la disposizione delle tile statistiche in caso di un solo garage 
 const isSingoloGarage = computed(() => props.mieiGarage.length === 1)
 
+//Converte le stringhe in input in vere Date JS con limiti orari massimi per comprendere tutto il giorno
 const dateRange = computed(() => {
     const inizio = new Date(filtroInizio.value)
-    inizio.setHours(0, 0, 0, 0)
+    inizio.setHours(0, 0, 0, 0) // Inizia da mezzanotte e un minuto
     const fine = new Date(filtroFine.value)
-    fine.setHours(23, 59, 59, 999)
+    fine.setHours(23, 59, 59, 999) // Finisce a mezzanotte meno un minuto
     return { inizio, fine }
 })
 
+//Filtra tutte le prenotazioni in base ai limiti decisi sopra
 const prenotazioniFiltrate = computed(() => {
     const { inizio, fine } = dateRange.value
     return props.storicoPrenotazioni.filter(p => {
@@ -44,9 +51,13 @@ const prenotazioniFiltrate = computed(() => {
     })
 })
 
+//Evita di incassare le prenotazioni annullate.
 const calcolaIncasso = (prenotazioni) =>
     prenotazioni.filter(p => p.stato !== 'ANNULLATA').reduce((acc, p) => acc + parseFloat(p.prezzototale || 0), 0).toFixed(2)
 
+
+//Genera in un array i 4 "quadrati numerici" visualizzati in alto nella UI.
+//Adatta i titoli a seconda se si possiedono più strutture o una sola.
 const kpiData = computed(() => {
     const attive = prenotazioniFiltrate.value.filter(p => p.stato === 'ATTIVA').length
     const incasso = calcolaIncasso(prenotazioniFiltrate.value)
@@ -72,6 +83,7 @@ const kpiData = computed(() => {
     ]
 })
 
+// Mappa globale standard per uniformare la palette dei grafici
 const CHART_COLORS = {
     blue: '#00408A', blueAlpha: 'rgba(0, 102, 204, 0.2)',
     darkBlue: '#00408A', green: '#137333',
@@ -81,12 +93,17 @@ const CHART_COLORS = {
 const chartOptions = { responsive: true, maintainAspectRatio: false }
 const chartOptionsRadar = { responsive: true, maintainAspectRatio: false, scales: { r: { min: 0, max: 5, ticks: { stepSize: 1 } } } }
 
+/**
+ * Prepara i dati per il Line Chart (Trend Ricavi).
+ * Crea una label per OGNI giorno incluso nel filtro temporale (evita buchi nei giorni senza prenotazioni).
+ */
 const chartDataRevenue = computed(() => {
     const { inizio, fine } = dateRange.value
     const mappaIncassi = {}
     const chiaviOrdinate = []
     const labels = []
 
+    // Costruisce la timeline vuota (x-axis)
     const cursore = new Date(inizio)
     while (cursore <= fine) {
         const chiave = formattaChiaveData(cursore)
@@ -96,6 +113,7 @@ const chartDataRevenue = computed(() => {
         cursore.setDate(cursore.getDate() + 1)
     }
 
+    // Riempie la timeline accumulando i prezzi
     prenotazioniFiltrate.value.forEach(p => {
         if (p.stato !== 'ANNULLATA') {
             const chiave = formattaChiaveData(new Date(p.iniziososta))
@@ -110,11 +128,12 @@ const chartDataRevenue = computed(() => {
             backgroundColor: CHART_COLORS.blueAlpha,
             borderColor: CHART_COLORS.blue,
             data: chiaviOrdinate.map(k => mappaIncassi[k]),
-            tension: 0.3, fill: true,
+            tension: 0.3, fill: true, // Dona l'effetto "onda fluida"
         }],
     }
 })
 
+//Prepara i dati per il Doughnut Chart (Distribuzione stato)
 const chartDataStato = computed(() => {
     const conteggio = prenotazioniFiltrate.value.reduce(
         (acc, p) => { if (p.stato in acc) acc[p.stato]++; return acc },
@@ -129,6 +148,8 @@ const chartDataStato = computed(() => {
     }
 })
 
+//Prepara i dati per il Radar Chart sulle recensioni storiche.
+//Fa una media ponderata sulle 5 aree target valutate dagli utenti.
 const chartDataRadar = computed(() => {
     const CATEGORIE_RADAR = ['posizione', 'prezzo', 'pulizia', 'spazio', 'sicurezza']
     const garageTarget = props.mieiGarage
@@ -149,6 +170,7 @@ const chartDataRadar = computed(() => {
     }
 })
 
+//Grafico a Barre utile solo ai Multi-Proprietari per paragonare gli introiti delle diverse sedi.
 const chartDataRevenuePerGarage = computed(() => ({
     labels: props.mieiGarage.map(g => g.nome),
     datasets: [{

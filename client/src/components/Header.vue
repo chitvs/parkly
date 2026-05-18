@@ -24,6 +24,7 @@ import eyeClosedUrl from '../icons/eye-closed.svg'
 const router = useRouter()
 const route = useRoute()
 
+// Calcola se l'utente si trova attualmente nella pagina di registrazione
 const isRegisterPage = computed(() => route.path === '/register')
 
 const loginIdentificatore = ref('')
@@ -32,8 +33,12 @@ const loginError = ref('')
 const isMenuOpen = ref(false)
 const isPasswordVisible = ref(false)
 
+/**
+ * Ascolta i cambiamenti nei campi del form di login.
+ * Se l'utente cancella la password o svuota tutto, resetta l'eventuale messaggio di errore precedente.
+ */
 watch([loginIdentificatore, loginPassword], ([newId, newPwd]) => {
-  if ((newId === '' && newPwd === '') || newPwd==='') {
+  if ((newId === '' && newPwd === '') || newPwd === '') {
     loginError.value = ''
   }
 })
@@ -41,32 +46,44 @@ watch([loginIdentificatore, loginPassword], ([newId, newPwd]) => {
 const modalElement = ref(null)
 let modalInstance = null
 
+
+//Quando il componente viene montato nel DOM, inizializza l'istanza della Modale di Bootstraplegandola all'elemento HTML referenziato da `modalElement`.
 onMounted(() => {
   modalInstance = new bootstrap.Modal(modalElement.value)
 })
 
+//Pulisce l'istanza della modale quando l'header viene distrutto, evitando memory leak.
 onUnmounted(() => {
   if (modalInstance) {
     modalInstance.dispose()
   }
 })
 
+
+//Mostra visivamente la modale di login.
 const openLoginModal = () => {
   if (modalInstance) {
     modalInstance.show()
   }
 }
 
+/**
+ * Chiude la modale di login e aspetta che l'animazione di Bootstrap finisca.
+ * @returns {Promise} Una promise che si risolve quando la modale è completamente nascosta.
+ */
 const closeLoginModal = () => {
   return new Promise((resolve) => {
+    // Se la modale non esiste o non è aperta, risolve subito
     if (!modalInstance || !modalElement.value.classList.contains('show')) {
       resolve()
       return
     }
 
+    // Aggiunge un listener (che scatta una sola volta) per l'evento di chiusura di Bootstrap
     modalElement.value.addEventListener(
       'hidden.bs.modal',
       () => {
+        // Pulisce i campi del form al termine della chiusura
         loginIdentificatore.value = ''
         loginPassword.value = ''
         loginError.value = ''
@@ -77,28 +94,34 @@ const closeLoginModal = () => {
       { once: true }
     )
 
+    // Avvia l'animazione di chiusura
     modalInstance.hide()
   })
 }
 
+//Gestisce il tentativo di login chiamando lo store di autenticazione.
 const handleLogin = async () => {
   loginError.value = ''
   const data = await authStore.login(loginIdentificatore.value, loginPassword.value)
 
   if (data.success) {
     await closeLoginModal()
-    // Usiamo l'alert globale per il successo, dato che la modale ora è chiusa
+    // Notifica all'utente l'accesso avvenuto con successo
     alertStore.mostra('success', `Benvenuto su Parkly, ${authStore.utente?.nome}!`)
   } else {
+    // Mostra l'errore ricevuto dal server (es. "Credenziali errate")
     loginError.value = data.error || 'Credenziali non valide'
   }
 }
 
+//Chiude la modale di login e reindirizza alla pagina di registrazione.
 const goToRegister = async () => {
   await closeLoginModal()
   router.push('/register')
 }
 
+
+//Effettua il logout utente svuotando lo store e reindirizzando alla home.
 const handleLogout = async () => {
   await authStore.logout()
   alertStore.mostra('success', 'Ti sei disconnesso correttamente. Arrivederci!')
@@ -115,11 +138,8 @@ const handleLogout = async () => {
     </RouterLink>
 
     <div class="right-section" v-if="!isRegisterPage">
-      
-      <RouterLink 
-        to="/garage" 
-        class="nav-item"
-      >
+
+      <RouterLink to="/garage" class="nav-item">
         Trova un garage
       </RouterLink>
 
@@ -133,13 +153,12 @@ const handleLogout = async () => {
           </div>
         </template>
 
-        <div v-else class="logged-user-zone position-relative" 
-             @mouseenter="isMenuOpen = true"
-             @mouseleave="isMenuOpen = false">
+        <div v-else class="logged-user-zone position-relative" @mouseenter="isMenuOpen = true"
+          @mouseleave="isMenuOpen = false">
 
           <button class="btn user-name-btn d-flex align-items-center gap-2">
-            <img :src="authStore.utente?.fotoProfilo_URL || defaultAvatarUrl" alt="Avatar"
-              class="rounded-circle border" style="width: 30px; height: 30px; object-fit: cover; border-color: #dee2e6;" />
+            <img :src="authStore.utente?.fotoProfilo_URL || defaultAvatarUrl" alt="Avatar" class="rounded-circle border"
+              style="width: 30px; height: 30px; object-fit: cover; border-color: #dee2e6;" />
             <span>Ciao, <strong>{{ authStore.utente.nome }}</strong></span>
           </button>
 
@@ -153,21 +172,27 @@ const handleLogout = async () => {
                   Area Gestore
                 </RouterLink>
               </li>
-              <li><hr class="dropdown-divider" /></li>
+              <li>
+                <hr class="dropdown-divider" />
+              </li>
             </template>
 
             <template v-else-if="authStore.utente?.ruolo === 'CLIENTE'">
               <li>
-                <RouterLink class="dropdown-item fw-bold text-primary" to="/diventa-gestore" @click="isMenuOpen = false">
-                <IconGarage class="me-2" width="19" height="19" />
+                <RouterLink class="dropdown-item fw-bold text-primary" to="/diventa-gestore"
+                  @click="isMenuOpen = false">
+                  <IconGarage class="me-2" width="19" height="19" />
                   Diventa Gestore
                 </RouterLink>
               </li>
-              <li><hr class="dropdown-divider" /></li>
+              <li>
+                <hr class="dropdown-divider" />
+              </li>
             </template>
 
             <li>
-              <RouterLink class="dropdown-item d-flex align-items-center" to="/prenotazioni" @click="isMenuOpen = false">
+              <RouterLink class="dropdown-item d-flex align-items-center" to="/prenotazioni"
+                @click="isMenuOpen = false">
                 <IconHistory class="me-2" width="17" height="17" />
                 Le Tue Prenotazioni
               </RouterLink>
@@ -178,10 +203,9 @@ const handleLogout = async () => {
                 I Tuoi Dati
               </RouterLink>
             </li>
-            <li>   
+            <li>
               <RouterLink class="dropdown-item d-flex align-items-center" to="/portafoglio" @click="isMenuOpen = false">
-                <!-- <IconWallet class="me-2" width="18" height="18"/> -->
-                 <i class="bi bi-wallet2 me-2"></i>
+                <i class="bi bi-wallet2 me-2"></i>
                 Il Tuo Portafoglio
               </RouterLink>
             </li>
@@ -189,8 +213,9 @@ const handleLogout = async () => {
               <hr class="dropdown-divider" />
             </li>
             <li>
-              <a class="dropdown-item text-danger fw-bold d-flex align-items-center" href="#" @click.prevent="handleLogout">
-                <IconLogout class="me-2" width="18" height="18"/>
+              <a class="dropdown-item text-danger fw-bold d-flex align-items-center" href="#"
+                @click.prevent="handleLogout">
+                <IconLogout class="me-2" width="18" height="18" />
                 Esci
               </a>
             </li>
@@ -218,8 +243,8 @@ const handleLogout = async () => {
 
           <form @submit.prevent="handleLogin">
             <div class="mb-3">
-              <input type="text" class="form-control modal-input" :class="{ 'is-invalid-input': loginError }" placeholder="Email o Nome Utente"
-                v-model="loginIdentificatore" required />
+              <input type="text" class="form-control modal-input" :class="{ 'is-invalid-input': loginError }"
+                placeholder="Email o Nome Utente" v-model="loginIdentificatore" required />
             </div>
             <div class="mb-3">
               <div class="input-group password-group" :class="{ 'is-invalid-group': loginError }">
@@ -250,7 +275,6 @@ const handleLogout = async () => {
 </template>
 
 <style scoped>
-/* Il CSS originale rimane invariato */
 .main-header {
   display: flex;
   justify-content: space-between;
@@ -268,7 +292,7 @@ const handleLogout = async () => {
   transition: filter 0.3s ease, transform 0.3s ease;
 }
 
-/* Alone morbido (glow) intorno al logo SVG */
+/* Glow intorno al logo SVG */
 .logo-image:hover {
   filter: drop-shadow(0 0 12px rgba(0, 64, 138, 0.5));
   transform: scale(1.03);
@@ -292,7 +316,7 @@ const handleLogout = async () => {
   color: #00408a;
 }
 
-/* GRUPPO BOTTONI E PILLOLA UTENTE */
+/* -- BOTTONI E PILLOLA UTENTE -- */
 .auth-buttons-group {
   display: flex;
   gap: 0.8rem;
@@ -302,7 +326,7 @@ const handleLogout = async () => {
 .login-btn,
 .register-btn,
 .user-name-btn {
-  height: 48px; 
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -337,11 +361,11 @@ const handleLogout = async () => {
   padding: 0 1.6rem;
 }
 
-.login-btn:hover, 
+.login-btn:hover,
 .user-name-btn:hover,
 .register-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 .logged-user-zone::after {
@@ -358,8 +382,9 @@ const handleLogout = async () => {
 .parkly-dropdown {
   border-radius: 14px;
   min-width: 220px;
-  padding: 0.5rem 0 0.6rem 0; /* Allungata di qualche pixel in basso (0.8rem invece di 0) */
-  overflow: hidden; /* Taglia via eventuali sfondi hover che escono dagli angoli arrotondati */
+  padding: 0.5rem 0 0.6rem 0;
+  overflow: hidden;
+  /* Taglia via eventuali sfondi hover che escono dagli angoli arrotondati */
 }
 
 .parkly-dropdown .dropdown-item {
