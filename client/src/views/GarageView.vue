@@ -10,13 +10,12 @@ import { useGarages } from '../composables/useGarages.js'
 import { useGarageFilters } from '../composables/useGarageFilters.js'
 import { useSpatialSearch } from '../composables/useSpatialSearch.js'
 import { alertStore } from '../store/alert.js'
-import L from 'leaflet'
+import L from 'leaflet' // Importazione libreria di mapping
 import 'leaflet/dist/leaflet.css'
 
-const router = useRouter()
-const route = useRoute()
-
+// Coordinate di default  in assenza di altri dati
 const MAP_CENTER = [41.9028, 12.4964]
+// URL base per i tile gratuiti di OpenStreetMap
 const TILE_LAYER = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
 
 const isMapFullscreen = ref(false)
@@ -25,15 +24,17 @@ const hoveredGarageId = ref(null)
 const searchLocation = ref('')
 const checkIn = ref('')
 const checkOut = ref('')
+const hasDateError = ref(false)
 
-const hasDateError = ref(false) 
-
+// Referenze per l'ancoraggio delle mappe leaflet nei div HTML
 const mapContainer = ref(null)
 const fullMapContainer = ref(null)
+// Variabili d'istanza per Leaflet Map
 let mapInstance = null
 let fullMapInstance = null
 let searchMarkerInstance = null
 
+// Oggetto per tenere traccia dei marker correnti creati sulla mappa
 const markersRefs = {}
 
 const { isLoading, garages, fetchGarages } = useGarages()
@@ -44,6 +45,7 @@ const {
     resetTechnicalFilters, passaFiltriTecnici
 } = useGarageFilters()
 
+// Restituisce la stringa di prezzo da mostrare formattata, in base al tipo di veicolo ricercato
 const getDisplayPrice = (garage) => {
     // se l'utente ha selezionato un veicolo specifico e il backend ci ha mandato i dati
     if (filterTipoVeicolo.value !== 'ALL' && garage.tariffeVeicoli && garage.tariffeVeicoli[filterTipoVeicolo.value]) {
@@ -53,54 +55,65 @@ const getDisplayPrice = (garage) => {
     return Number(garage.tariffabase).toFixed(2);
 }
 
+// Logica spaziale che calcola quali garage stanno entro 'raggioKm' e rispetta i filtri 
 const {
     matchedPOI,
     garagesFiltrati,
     hasMoreResults
 } = useSpatialSearch(searchLocation, garages, passaFiltriTecnici, raggioKm, ordinamento, filterTipoVeicolo)
 
+// Funzione chiamata per caricare ulteriori parcheggi ampliando i km di raggio d'azione
 const espandiRaggio = () => {
-    // Imposta lo slider al raggio esteso
+    // Imposta lo slider al raggio esteso (+3km ma almeno 5)
     raggioKm.value = Math.max(raggioKm.value + 3, 5);
 }
 
 const isSortDropdownOpenMain = ref(false)
 const isSortDropdownOpenFS = ref(false)
 
+// Restituisce l'etichetta dell'ordinamento per i selettori dropdown
 const getSortLabel = () => {
     if (ordinamento.value === 'prezzo') return 'Prezzo'
     if (ordinamento.value === 'recensioni') return 'Recensioni'
-    return 'Distanza'
+    return 'Distanza' // Default base
 }
 
 const paginaCorrente = ref(1)
 const elementiPerPagina = ref(5)
 
+// Calcola quanti elementi in tutto rispettono i criteri attuali
 const totaleElementiPaginazione = computed(() => {
     return garagesFiltrati.value.length
 })
 
+// Decide se mostrare il messaggio o il box "Ci sono altri garage se allarghi il raggio" a fine lista
 const showExtendedResultsBlock = computed(() => {
     if (!hasMoreResults.value) return false
     const totalePagine = Math.ceil(totaleElementiPaginazione.value / elementiPerPagina.value) || 1
+    // Mostra il bottone "allarga" solo se si è all'ultima pagina dei risultati correnti
     return paginaCorrente.value === totalePagine
 })
 
+// Effettua lo slice corretto dei garage in base a pagina e capienza per la visuale standard
 const garagesPaginati = computed(() => {
     const inizio = (paginaCorrente.value - 1) * elementiPerPagina.value
     return garagesFiltrati.value.slice(inizio, inizio + elementiPerPagina.value)
 })
 
+// Numero di elementi da mostrare nella modale di ricerca su mappa "FullScreen"
 const elementiVisibiliFS = ref(6)
 
+// Limita la visualizzazione laterale dei garage in mappa fullscreen
 const garagesMostratiFS = computed(() => {
     return garagesFiltrati.value.slice(0, elementiVisibiliFS.value)
 })
 
+// Metodo per il bottone "Mostra Altri" nella barra laterale mappa Fullscreen
 const caricaAltriFS = () => {
     elementiVisibiliFS.value += 6
 }
 
+// Funzione di utilità per scrollare sia la window sia l'interno del div della modale in alto
 const scrollInAlto = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     document.documentElement.scrollTop = 0;
@@ -112,6 +125,7 @@ const scrollInAlto = () => {
     }
 }
 
+// Pulisce il marker di ricerca e fa lo zoom-out se l'utente svuota l'input stringa "Dove vuoi andare"
 watch(searchLocation, () => {
     if (!searchLocation.value.trim() && searchMarkerInstance) {
         searchMarkerInstance.remove()
@@ -120,6 +134,7 @@ watch(searchLocation, () => {
     }
 })
 
+// Osserva checkIn e checkOut e rilancia in automatico la fetch se cambiano e non presentano errori
 watch([checkIn, checkOut], async ([newIn, newOut]) => {
     alertStore.pulisci()
     hasDateError.value = false
@@ -134,18 +149,22 @@ watch([checkIn, checkOut], async ([newIn, newOut]) => {
     }
 })
 
+// Watcher molto importante: sincronizza i marcatori visibili sulla mappa Leaflet quando i filtri cambiano
 watch(garagesFiltrati, async (newGarages) => {
+    // Al cambio filtri si resetta sempre la paginazione 
     paginaCorrente.value = 1
     elementiVisibiliFS.value = 6
 
     if (!fullMapInstance) return
     const activeIds = newGarages.map(g => g.id_garage)
+
+    // Aggiunge o rimuove dal layer Mappa solo i marker che superano i filtri
     Object.keys(markersRefs).forEach(id => {
         const marker = markersRefs[id]
         activeIds.includes(Number(id)) ? marker.addTo(fullMapInstance) : marker.remove()
     })
     await nextTick()
-}, { deep: true })
+}, { deep: true }) // Deep in modo da reagire ai cambiamenti interni
 
 const handlePageChange = async () => {
     await nextTick();
@@ -153,18 +172,22 @@ const handlePageChange = async () => {
 }
 
 onMounted(async () => {
+    // Gestione nativa del browser per evitare che ricaricando tenga lo scroll basso
     if ('scrollRestoration' in history) {
         history.scrollRestoration = 'manual';
     }
     window.scrollTo({ top: 0, behavior: 'instant' })
 
+    // Popola form coi parametri passati via URL (se arriviamo da un reindirizzamento)
     if (route.query.location) searchLocation.value = route.query.location
     if (route.query.checkIn) checkIn.value = route.query.checkIn
     if (route.query.checkOut) checkOut.value = route.query.checkOut
 
+    // Richiesta di base iniziale al caricamento componente
     await fetchGarages(checkIn.value, checkOut.value)
     await nextTick()
 
+    // Inizializza la mini-mappa decorativa Leaflet se presente nel DOM
     if (mapContainer.value) {
         mapInstance = L.map(mapContainer.value, {
             center: MAP_CENTER,
@@ -174,6 +197,7 @@ onMounted(async () => {
             zoomControl: false, attributionControl: false
         })
         L.tileLayer(TILE_LAYER).addTo(mapInstance)
+        // Timeout necessario a renderizzare la grandezza del canvas prima di disegnarlo (bug leaflet)
         setTimeout(() => mapInstance.invalidateSize(), 400)
     }
 })
@@ -187,7 +211,9 @@ const resetFilters = () => {
     checkOut.value = ''
 }
 
+// Funzione invocata ai mouse-hover su lista garage, alza il marker e lo evidenzia col css
 const setHover = (garage, active) => {
+    // Prima resetta tutti gli altri
     Object.values(markersRefs).forEach(m => {
         m.getElement()?.classList.remove('is-active')
         m.setZIndexOffset(0)
@@ -197,6 +223,7 @@ const setHover = (garage, active) => {
         hoveredGarageId.value = garage.id_garage
         const currentMarker = markersRefs[garage.id_garage]
         if (currentMarker) {
+            // Applica CSS per ingrandirlo ed eleva strato visivo
             currentMarker.getElement()?.classList.add('is-active')
             currentMarker.setZIndexOffset(9000)
         }
@@ -205,6 +232,7 @@ const setHover = (garage, active) => {
     }
 }
 
+// Funzione chiamata cliccando la card laterale: Vola verso la coordinata target ed apre il piccolo popup
 const selectGarage = (garage) => {
     if (!fullMapInstance || !garage.latitudine) return
     fullMapInstance.flyTo([garage.latitudine, garage.longitudine], 15, { duration: 1.2 })
@@ -212,6 +240,7 @@ const selectGarage = (garage) => {
     setHover(garage, true)
 }
 
+// Riporta la mappa alle coordinate base staccando eventuali popup aperti
 const resetMapView = () => {
     if (!fullMapInstance) return
     setHover(null, false)
@@ -219,12 +248,14 @@ const resetMapView = () => {
     fullMapInstance.flyTo(MAP_CENTER, 11, { duration: 1.0 })
 }
 
+// Funzione principale che lancia il rendering del componente Mappa ad intero schermo
 const openMapFullscreen = async () => {
     isMapFullscreen.value = true
-    document.body.style.overflow = 'hidden'
+    document.body.style.overflow = 'hidden' // Blocco scorrimento background
     await nextTick()
 
     if (fullMapContainer.value && !fullMapInstance) {
+        // Costruzione nuova istanza Map per la full screen view
         fullMapInstance = L.map(fullMapContainer.value, {
             center: MAP_CENTER,
             zoom: 11,
@@ -233,8 +264,10 @@ const openMapFullscreen = async () => {
         })
         L.tileLayer(TILE_LAYER).addTo(fullMapInstance)
 
+        // Ricavo l'array degli id che superano filtri correnti in memoria
         const activeIds = garagesFiltrati.value.map(g => g.id_garage)
 
+        // Iterazione per pre-creare i marker di TUTTI i garage, nascondendo quelli non attivi
         garages.value.forEach(g => {
             if (g.latitudine && g.longitudine) {
                 const customIcon = L.divIcon({
@@ -246,6 +279,7 @@ const openMapFullscreen = async () => {
 
                 const marker = L.marker([g.latitudine, g.longitudine], { icon: customIcon })
 
+                // Compilazione del popup bianco che appare quando clicco il marker
                 marker.bindPopup(`
                     <div class="map-popup-content">
                         <strong>${g.nome}</strong><br>${g.indirizzo}<br>
@@ -260,15 +294,17 @@ const openMapFullscreen = async () => {
                 marker.on('mouseout', () => setHover(g, false))
             }
         })
+        // Se al lancio Mappa l'utente aveva già cercato una destinazione, inserisco il PIN rosso
         if (matchedPOI.value) {
             placeSearchMarker(matchedPOI.value.coords.lat, matchedPOI.value.coords.lng, matchedPOI.value.name)
         }
     }
 }
 
+// Crea/Sposta il PIN di ricerca destinazione (icona rossa pulsante) 
 const placeSearchMarker = (lat, lon, name, openPopup = false) => {
     if (searchMarkerInstance) {
-        searchMarkerInstance.remove()
+        searchMarkerInstance.remove() // elimina il vecchio se si rilancia la ricerca
     }
     const redIcon = L.divIcon({
         className: 'custom-search-marker',
@@ -282,6 +318,7 @@ const placeSearchMarker = (lat, lon, name, openPopup = false) => {
     if (openPopup) searchMarkerInstance.openPopup()
 }
 
+// Distrugge gli oggetti della mappa grande e sblocca la View 
 const closeMapFullscreen = () => {
     isMapFullscreen.value = false
     document.body.style.overflow = ''
@@ -292,13 +329,15 @@ const closeMapFullscreen = () => {
     if (searchMarkerInstance) {
         searchMarkerInstance = null
     }
-    Object.keys(markersRefs).forEach(key => delete markersRefs[key])
+    Object.keys(markersRefs).forEach(key => delete markersRefs[key]) // Clean array mem pointer
 }
 
+// Redirezionamento finale alla route che analizza un singolo specifico garage
 const goToDetail = (garage) => {
     const queryParams = {}
     if (checkIn.value) queryParams.inizio = checkIn.value
     if (checkOut.value) queryParams.fine = checkOut.value
+
     router.push({
         name: 'garage-detail',
         params: { id: garage.id_garage },
@@ -306,6 +345,7 @@ const goToDetail = (garage) => {
     })
 }
 
+// Callback invocato se l'utente autocompleta la destinazione dalla text bar Search
 const handleSuggestionSelected = (place) => {
     if (fullMapInstance && place.lat && place.lon) {
         fullMapInstance.flyTo([place.lat, place.lon], 14, { duration: 1.5 })
@@ -319,13 +359,8 @@ const handleSuggestionSelected = (place) => {
     <div class="garage-wrapper">
         <section class="search-area">
             <div class="search-container">
-                <SearchBar 
-                    v-model:location="searchLocation" 
-                    v-model:checkIn="checkIn" 
-                    v-model:checkOut="checkOut"
-                    :hasDateError="hasDateError" 
-                    @suggestion-selected="handleSuggestionSelected" 
-                />
+                <SearchBar v-model:location="searchLocation" v-model:checkIn="checkIn" v-model:checkOut="checkOut"
+                    :hasDateError="hasDateError" @suggestion-selected="handleSuggestionSelected" />
             </div>
         </section>
 
@@ -345,7 +380,8 @@ const handleSuggestionSelected = (place) => {
                                         <div class="fs-left-half">
                                             <div class="fs-col-filters">
                                                 <div class="fs-panel-header">
-                                                    <h3 style="display: flex; justify-content: space-between; width: 100%;">
+                                                    <h3
+                                                        style="display: flex; justify-content: space-between; width: 100%;">
                                                         Filtri
                                                         <button @click="resetFilters" class="reset-btn"
                                                             style="color: white;">Reset</button>
@@ -368,7 +404,8 @@ const handleSuggestionSelected = (place) => {
                                                     <div class="sort-dropdown-wrapper" style="min-width: 120px">
                                                         <button class="sort-trigger sort-trigger-light"
                                                             @click="isSortDropdownOpenFS = !isSortDropdownOpenFS">
-                                                            <span style="font-size: 0.8rem;"><strong>{{ getSortLabel() }}</strong></span>
+                                                            <span style="font-size: 0.8rem;"><strong>{{ getSortLabel()
+                                                                    }}</strong></span>
                                                             <svg :class="['sort-chevron', { 'rotated': isSortDropdownOpenFS }]"
                                                                 viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                                                 stroke-width="2.5" stroke-linecap="round"
@@ -376,10 +413,17 @@ const handleSuggestionSelected = (place) => {
                                                                 <polyline points="6 9 12 15 18 9" />
                                                             </svg>
                                                         </button>
-                                                        <ul v-if="isSortDropdownOpenFS" class="sort-menu sort-menu-right">
-                                                            <li><a class="sort-menu-item" @click="ordinamento = 'distanza'; isSortDropdownOpenFS = false">Distanza</a></li>
-                                                            <li><a class="sort-menu-item" @click="ordinamento = 'prezzo'; isSortDropdownOpenFS = false">Prezzo</a></li>
-                                                            <li><a class="sort-menu-item" @click="ordinamento = 'recensioni'; isSortDropdownOpenFS = false">Recensioni</a></li>
+                                                        <ul v-if="isSortDropdownOpenFS"
+                                                            class="sort-menu sort-menu-right">
+                                                            <li><a class="sort-menu-item"
+                                                                    @click="ordinamento = 'distanza'; isSortDropdownOpenFS = false">Distanza</a>
+                                                            </li>
+                                                            <li><a class="sort-menu-item"
+                                                                    @click="ordinamento = 'prezzo'; isSortDropdownOpenFS = false">Prezzo</a>
+                                                            </li>
+                                                            <li><a class="sort-menu-item"
+                                                                    @click="ordinamento = 'recensioni'; isSortDropdownOpenFS = false">Recensioni</a>
+                                                            </li>
                                                         </ul>
                                                     </div>
                                                 </div>
@@ -392,19 +436,23 @@ const handleSuggestionSelected = (place) => {
                                                             <img v-if="garage.foto_urls && garage.foto_urls.length > 0"
                                                                 :src="garage.foto_urls[0]" class="mini-image"
                                                                 alt="Foto Garage" />
-                                                            <div v-else class="gcard-letter-box">{{ garage.nome.charAt(0) }}</div>
+                                                            <div v-else class="gcard-letter-box">{{
+                                                                garage.nome.charAt(0) }}</div>
                                                         </div>
                                                         <div class="mini-details">
                                                             <h4>{{ garage.nome }}</h4>
                                                             <p>{{ garage.indirizzo.slice(0, 30) }}...</p>
                                                             <p v-if="garage.displayPOIName">
-                                                                a {{ garage.displayDistanceLabel }} da {{ garage.displayPOIName }}
+                                                                a {{ garage.displayDistanceLabel }} da {{
+                                                                garage.displayPOIName }}
                                                             </p>
-                                                            <span class="mini-price">€{{ getDisplayPrice(garage) }}/ora</span>
+                                                            <span class="mini-price">€{{ getDisplayPrice(garage)
+                                                                }}/ora</span>
                                                         </div>
                                                     </div>
 
-                                                    <div v-if="elementiVisibiliFS < garagesFiltrati.length" class="load-more-container">
+                                                    <div v-if="elementiVisibiliFS < garagesFiltrati.length"
+                                                        class="load-more-container">
                                                         <button @click="caricaAltriFS" class="btn-load-more">
                                                             Mostra altri risultati
                                                         </button>
@@ -428,7 +476,8 @@ const handleSuggestionSelected = (place) => {
                                                         placeholder="Cerca sulla mappa..."
                                                         @suggestion-selected="handleSuggestionSelected" />
                                                 </div>
-                                                <button class="fs-reset-view" @click="resetMapView" title="Ripristina visuale">
+                                                <button class="fs-reset-view" @click="resetMapView"
+                                                    title="Ripristina visuale">
                                                     <span style="font-size: 1.2rem;"><img src="../assets/refresh.svg"
                                                             class="icon-card" alt="Pin"
                                                             style="transform:translateX(3px) translateY(-0.5px) scale(1.7)" /></span>
@@ -484,9 +533,14 @@ const handleSuggestionSelected = (place) => {
                             </button>
 
                             <ul v-if="isSortDropdownOpenMain" class="sort-menu">
-                                <li><a class="sort-menu-item" @click="ordinamento = 'distanza'; isSortDropdownOpenMain = false">Distanza</a></li>
-                                <li><a class="sort-menu-item" @click="ordinamento = 'prezzo'; isSortDropdownOpenMain = false">Prezzo</a></li>
-                                <li><a class="sort-menu-item" @click="ordinamento = 'recensioni'; isSortDropdownOpenMain = false">Recensioni</a></li>
+                                <li><a class="sort-menu-item"
+                                        @click="ordinamento = 'distanza'; isSortDropdownOpenMain = false">Distanza</a>
+                                </li>
+                                <li><a class="sort-menu-item"
+                                        @click="ordinamento = 'prezzo'; isSortDropdownOpenMain = false">Prezzo</a></li>
+                                <li><a class="sort-menu-item"
+                                        @click="ordinamento = 'recensioni'; isSortDropdownOpenMain = false">Recensioni</a>
+                                </li>
                             </ul>
                         </div>
                     </div>
@@ -525,10 +579,12 @@ const handleSuggestionSelected = (place) => {
                                 <div class="gcard-services">
                                     <span class="service-badge info">
                                         <img src="../assets/orologio.svg" class="icon-card" alt="Orario" />
-                                        {{ garage.is24h ? '24/7' : garage.orarioapertura.slice(0, 5) + ' - ' + garage.orariochiusura.slice(0, 5) }}
+                                        {{ garage.is24h ? '24/7' : garage.orarioapertura.slice(0, 5) + ' - ' +
+                                        garage.orariochiusura.slice(0, 5) }}
                                     </span>
                                     <span v-if="garage.altezzamassima" class="service-badge info">
-                                        <img src="../assets/altezza_massima.svg" class="icon-card" alt="Altezza massima" />
+                                        <img src="../assets/altezza_massima.svg" class="icon-card"
+                                            alt="Altezza massima" />
                                         Max: {{ garage.altezzamassima }}m
                                     </span>
                                     <span v-if="garage.hasCoperto" class="service-badge feature">
@@ -536,11 +592,13 @@ const handleSuggestionSelected = (place) => {
                                         Coperto
                                     </span>
                                     <span v-if="garage.hasElettrico" class="service-badge feature">
-                                        <img src="../assets/electricity.svg" class="icon-card" alt="Ricarica elettrica" />
+                                        <img src="../assets/electricity.svg" class="icon-card"
+                                            alt="Ricarica elettrica" />
                                         Ricarica
                                     </span>
                                     <span v-if="garage.hasDisabili" class="service-badge feature">
-                                        <img src="../assets/handicap.svg" class="icon-card" alt="Accessibile disabili" />
+                                        <img src="../assets/handicap.svg" class="icon-card"
+                                            alt="Accessibile disabili" />
                                         Disabili
                                     </span>
                                 </div>
@@ -549,7 +607,8 @@ const handleSuggestionSelected = (place) => {
                             <div class="gcard-right">
                                 <div class="gcard-price-block">
                                     <span class="price-label">
-                                        {{ filterTipoVeicolo === 'ALL' ? 'TARIFFA BASE' : 'TARIFFA ' + filterTipoVeicolo }}
+                                        {{ filterTipoVeicolo === 'ALL' ? 'TARIFFA BASE' : 'TARIFFA ' + filterTipoVeicolo
+                                        }}
                                     </span>
                                     <span class="price-value">€{{ getDisplayPrice(garage) }}/ora</span>
                                 </div>
@@ -568,8 +627,8 @@ const handleSuggestionSelected = (place) => {
 
                     <div v-if="garagesFiltrati.length > 0" class="mt-4 px-2 pagination-container">
                         <Pagination v-model:paginaCorrente="paginaCorrente"
-                            v-model:elementiPerPagina="elementiPerPagina"
-                            :totaleElementi="totaleElementiPaginazione" @cambio-pagina="handlePageChange" />
+                            v-model:elementiPerPagina="elementiPerPagina" :totaleElementi="totaleElementiPaginazione"
+                            @cambio-pagina="handlePageChange" />
                     </div>
                 </template>
             </main>
@@ -909,8 +968,13 @@ body {
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 /* FULLSCREEN */
@@ -1268,9 +1332,17 @@ body {
 }
 
 @keyframes pulse-red {
-    0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
-    70% { box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+    0% {
+        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+    }
+
+    70% {
+        box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+    }
 }
 
 .sort-dropdown-wrapper {

@@ -1,14 +1,17 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-//import svg password
+
 import eyeUrl from '../icons/eye-open.svg'
 import eyeClosedUrl from '../icons/eye-closed.svg'
+
 import { authStore } from '../store/auth.js'
 import { alertStore } from '../store/alert.js'
+
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 
+// Variabili reattive per tutti i campi del modulo di registrazione
 const nome = ref('')
 const cognome = ref('')
 const cf = ref('')
@@ -17,37 +20,43 @@ const email = ref('')
 const telefono = ref('')
 const password = ref('')
 const passwordConfirm = ref('')
+
+// Variabili di stato per controllare la visibilità delle due password
 const isPasswordVisible1 = ref(false)
 const isPasswordVisible2 = ref(false)
 
+// Flag per visualizzare i messaggi di errore sulle password
 const passwordError = ref(false)
 
 const router = useRouter()
 
+// Funzione asincrona chiamata alla sottomissione del form di registrazione
 const handleRegister = async () => {
+    // Reset degli errori prima di ogni nuovo tentativo
     passwordError.value = false
     alertStore.pulisci()
 
-    // Controllo campi obbligatori vuoti
+    // Validazione base: Controllo campi obbligatori vuoti o contenenti solo spazi
     if (!nome.value.trim() || !cognome.value.trim() || !nomeUtente.value.trim() || !email.value.trim() || !password.value) {
         alertStore.mostra('error', "Compila tutti i campi obbligatori.")
         return
     }
 
-    // Controllo uguaglianza password
+    // Validazione Password: le due password inserite devono essere identiche
     if (password.value !== passwordConfirm.value) {
         passwordError.value = true
         return
     }
 
-    // Controllo lunghezza password
+    // Validazione Password: lunghezza minima di sicurezza
     if (password.value.length < 5) {
         alertStore.mostra('error', "La password deve contenere almeno 5 caratteri.")
         return
     }
 
-    // Controllo Codice Fiscale
+    // Validazione Codice Fiscale (se fornito, dato che è opzionale)
     if (cf.value && cf.value.trim()) {
+        // Regex per il formato standard italiano del Codice Fiscale
         const cfRegex = /^[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]$/i;
         if (!cfRegex.test(cf.value.trim())) {
             alertStore.mostra('error', "Il formato del Codice Fiscale non è valido")
@@ -55,9 +64,11 @@ const handleRegister = async () => {
         }
     }
 
-    // Controllo Telefono
+    // Validazione Telefono (se fornito)
     if (telefono.value && telefono.value.trim()) {
+        // Rimuove eventuali spazi o trattini per il controllo regex
         const telPulito = telefono.value.trim().replace(/[\s-]/g, '')
+        // Accetta prefissi internazionali opzionali e richiede da 9 a 10 cifre
         const telRegex = /^(\+39|0039)?\d{9,10}$/;
         if (!telRegex.test(telPulito) || telPulito.length > 15) {
             alertStore.mostra('error', "Il numero di telefono non è valido. Inserisci un numero di 9 o 10 cifre.")
@@ -65,6 +76,7 @@ const handleRegister = async () => {
         }
     }
 
+    // Creazione del payload da inviare al server. Vengono formattati e puliti i dati.
     const payload = {
         nome: nome.value.trim(),
         cognome: cognome.value.trim(),
@@ -72,20 +84,22 @@ const handleRegister = async () => {
         email: email.value.trim(),
         telefono: telefono.value.trim() || null,
         password: password.value,
-        codiceFiscale: cf.value.trim().toUpperCase() || null,
+        codiceFiscale: cf.value.trim().toUpperCase() || null, // Forza il CF in maiuscolo
     }
 
+    // Chiamata all'API di registrazione tramite lo store
     const data = await authStore.register(payload)
 
     if (data.success) {
         console.log('Registrazione e login automatico riusciti')
         alertStore.mostra('success', 'Registrazione avvenuta con successo. Benvenuto su Parkly!')
 
-        // Attendiamo un secondo prima di reindirizzare, così l'utente vede l'alert
+        // Attendiamo un secondo e mezzo per dare tempo all'utente di leggere il messaggio di successo prima del redirect
         setTimeout(() => {
             router.push('/')
         }, 1500)
     } else {
+        // Mostra il messaggio di errore proveniente dal backend (es. email già in uso)
         alertStore.mostra('error', data.error || 'Errore durante la registrazione')
     }
 }
@@ -230,7 +244,7 @@ const handleRegister = async () => {
 .register-hero {
     background: radial-gradient(circle at center, #002d5e 0%, #001D3D 100%);
     color: #ffffff;
-  text-align: center;
+    text-align: center;
     padding: 3rem 2rem 16rem;
 }
 

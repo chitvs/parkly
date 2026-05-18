@@ -5,45 +5,51 @@ import { walletStore } from '../store/wallet.js'
 import { garageStore } from '../store/garage.js'
 import { alertStore } from '../store/alert.js'
 import { prenotazioniStore } from '../store/prenotazioni.js'
+// Importazione di Bootstrap per la gestione manuale dei Modali
 import * as bootstrap from 'bootstrap'
 import 'bootstrap-icons/font/bootstrap-icons.css'
 
+// Importazione dei componenti standard del layout
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 import ChatBox from '../components/ChatBox.vue'
 import { getSocket } from '../composables/useChat.js'
 
-// foto profilo standard
+// Foto profilo di default usata se l'utente non ne ha una
 import defaultAvatarUrl from '../assets/default-avatar.png'
 
-// Componenti Dashboard
+// Componenti specifici della Dashboard divisi per tab logici
 import DashboardStats from '../components/gestore/DashboardStats.vue'
 import DashboardGarageList from '../components/gestore/DashboardGarageList.vue'
 import DashboardStato from '../components/gestore/DashboardStato.vue'
 import DashboardStorico from '../components/gestore/DashboardStorico.vue'
 import DashboardGarageForm from '../components/gestore/DashboardGarageForm.vue'
 
+// Controlla se l'utente loggato ha effettivamente il ruolo di GESTORE
 const isGestore = computed(() => authStore.utente?.ruolo === 'GESTORE')
 
-const vistaAttiva = ref('garage')
-const isLoading = ref(false)
-const staSalvando = ref(false)
-const reRenderKey = ref(0)
-const isGarageDropdownOpen = ref(false)
-const isSidebarOpen = ref(false) // variabile per il menu mobile
+// -- Variabili di stato per il controllo della UI --
+const vistaAttiva = ref('garage') // Gestisce il tab attualmente visualizzato
+const isLoading = ref(false) // Stato di caricamento generale
+const staSalvando = ref(false) // Stato di caricamento specifico per i bottoni di salvataggio
+const reRenderKey = ref(0) // Chiave per forzare il re-rendering di componenti figli se necessario
+const isGarageDropdownOpen = ref(false) // Toggle per il menu a tendina della sidebar
+const isSidebarOpen = ref(false) // Toggle per la sidebar nei dispositivi mobili
 
-// Collegamenti ai dati dello Store
+// Collegamenti reattivi ai dati presenti nel garageStore
 const mieiGarage = computed(() => garageStore.mieiGarage || [])
 const postiPerGarage = computed(() => garageStore.postiPerGarage || {})
 const occupazioneGarage = computed(() => garageStore.occupazioneGarage || {})
 const allerteStato = computed(() => garageStore.allerteStato || [])
-const storicoPrenotazioni = ref([])
+const storicoPrenotazioni = ref([]) // Mantiene localmente lo storico delle prenotazioni
 
+// Computed property per gestire il filtro globale del garage selezionato tramite lo store
 const idGarageSelezionatoGlobale = computed({
   get: () => garageStore.idGarageSelezionato,
   set: (val) => garageStore.setGarageSelezionato(val)
 })
 
+// Filtra la lista dei garage in base a quello selezionato nella tendina globale (o li mostra tutti)
 const mieiGarageFiltrati = computed(() => {
   if (idGarageSelezionatoGlobale.value === 'TUTTI') {
     return mieiGarage.value;
@@ -51,12 +57,14 @@ const mieiGarageFiltrati = computed(() => {
   return mieiGarage.value.filter(g => Number(g.id_garage) === Number(idGarageSelezionatoGlobale.value));
 })
 
+// Filtra lo storico prenotazioni in base al garage selezionato per le statistiche e lo storico
 const storicoPrenotazioniFiltrato = computed(() => {
   if (idGarageSelezionatoGlobale.value === 'TUTTI') {
     return storicoPrenotazioni.value;
   }
   return storicoPrenotazioni.value.filter(p => Number(p.id_garage) === Number(idGarageSelezionatoGlobale.value));
 })
+
 
 const formattaPerInputDate = (d) => {
   const y = d.getFullYear()
@@ -65,6 +73,7 @@ const formattaPerInputDate = (d) => {
   return `${y}-${m}-${day}`
 }
 
+// Stato della chat
 const chatSelezionata = ref(null)
 let socket = null
 
@@ -76,14 +85,15 @@ const handleNuovoMessaggio = (msg) => {
   }
 }
 
+// Apre il popup della chat per una specifica prenotazione e resetta i messaggi non letti
 const apriChat = async (prenotazione) => {
   const idGarage = Number(prenotazione.id_garage)
   const idCliente = Number(prenotazione.id_utente)
   if (!idGarage || !idCliente || isNaN(idGarage) || isNaN(idCliente)) return
 
   prenotazione.nonletti = 0
-  chatSelezionata.value = null
-  await nextTick()
+  chatSelezionata.value = null // Forza il reset del componente chat
+  await nextTick() // Attende l'aggiornamento del DOM
   chatSelezionata.value = {
     idPrenotazione: Number(prenotazione.id_prenotazione),
     idGarage,
@@ -92,23 +102,28 @@ const apriChat = async (prenotazione) => {
   }
 }
 
+// Chiude la finestra della chat
 const chiudiChat = () => { chatSelezionata.value = null }
 
+// Variabili per la gestione dell'inserimento e modifica di un garage
 const isEditing = ref(false)
 const idGarageInModifica = ref(null)
 const garageInModifica = ref(null)
 
-// Ricevitore per le foto caricate nel form figlio
+// Array reattivo che riceve i file immagine dal componente figlio "DashboardGarageForm"
 const fotoDaCaricare = ref([])
 
+// Callback emessa dal figlio quando l'utente seleziona nuove immagini
 const handleFotoDalComponente = (files) => {
   fotoDaCaricare.value = files
 }
 
+// Prepara il form di creazione per operare in modalità "Modifica", caricando i posti esistenti di quel garage
 const preparaModifica = async (garage) => {
   alertStore.pulisci()
   const res = await garageStore.fetchPosti(garage.id_garage)
 
+  // Assegna i dati correnti del garage, unendo l'elenco dei posti per popolare la griglia/planimetria
   garageInModifica.value = {
     ...garage,
     posti_raw: res.success ? res.posti : []
@@ -120,26 +135,27 @@ const preparaModifica = async (garage) => {
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-// Logica Two-Step (Store Database + Foto Store Supabase)
+// Processo in due step per il salvataggio di un garage: 1) Salva i dati testuali su DB, 2) Carica le foto su Supabase Storage
 const salvaNuovoGarage = async (payload) => {
   alertStore.pulisci()
   staSalvando.value = true
 
   try {
-    // STEP 1: Creazione/Modifica Testo Garage tramite Store
+    // STEP 1: Creazione o Modifica Testo Garage e posti tramite lo Store
     const res = isEditing.value
       ? await garageStore.updateGarage(idGarageInModifica.value, payload)
       : await garageStore.createGarage(payload)
 
     if (res.success || res.garage) {
-      // Otteniamo il nuovo ID in base a come lo store restituisce l'oggetto
+      // Identifica il nuovo ID a prescindere se si tratta di update o create
       const nuovoIdGarage = isEditing.value ? idGarageInModifica.value : (res.garage?.id_garage || res.data?.id_garage)
 
-      // STEP 2: Caricamento Immagini tramite la chiamata allo store
+      // STEP 2: Caricamento Immagini.
       if (fotoDaCaricare.value.length > 0 && nuovoIdGarage) {
         const formData = new FormData()
         fotoDaCaricare.value.forEach(file => formData.append('foto_garage', file))
 
+        // Invoca l'endpoint specifico per il bucket delle immagini
         const resFoto = await garageStore.uploadPhotos(nuovoIdGarage, formData)
 
         if (!resFoto.success) {
@@ -147,16 +163,16 @@ const salvaNuovoGarage = async (payload) => {
         }
       }
 
-      // Pulizia form
+      // Svuota lo stato locale del form dopo il successo
       isEditing.value = false
       idGarageInModifica.value = null
       garageInModifica.value = null
       fotoDaCaricare.value = []
 
-      // Refresh dei dati tramite store
+      // Ricarica tutti i dati della dashboard per riflettere le modifiche
       await garageStore.caricaDashboardGestore()
       alertStore.mostra('success', isEditing.value ? 'Garage aggiornato!' : 'Garage pubblicato!')
-      vistaAttiva.value = 'garage'
+      vistaAttiva.value = 'garage' // Riporta l'utente alla lista dei suoi garage
     } else {
       alertStore.mostra('error', res.error || 'Errore durante il salvataggio')
     }
@@ -168,23 +184,26 @@ const salvaNuovoGarage = async (payload) => {
   }
 }
 
+// Variabili per gestire l'apertura del modale di sicurezza per la disattivazione garage
 const showConfirmDisableModal = ref(false);
 const garageDaDisattivare = ref(null);
 
+// Funzione richiamata dallo switch On/Off nella lista garage
 const cambiaStatoGarage = async (garage) => {
   const nuovoStato = !garage.isattivo;
 
+  // Se l'intento è disattivare, apriamo il modale di conferma per prevenire errori accidentali
   if (nuovoStato === false) {
-    // Invece del confirm, apriamo il modal
     garageDaDisattivare.value = garage;
     showConfirmDisableModal.value = true;
     return;
   }
 
-  // Se è un'attivazione, procediamo direttamente
+  // Se è un'attivazione, procediamo direttamente senza chiedere conferma
   await eseguiCambioStato(garage, true);
 };
 
+// Effettua la chiamata API per l'attivazione/disattivazione e aggiorna l'interfaccia
 const eseguiCambioStato = async (garage, stato) => {
   alertStore.pulisci();
   try {
@@ -204,7 +223,7 @@ const eseguiCambioStato = async (garage, stato) => {
   }
 };
 
-// --- Funzioni per gestire le azioni del Modal ---
+// Esegue effettivamente la disattivazione dopo il click su "Conferma" nel modale
 const confermaDisattivazione = async () => {
   if (garageDaDisattivare.value) {
     await eseguiCambioStato(garageDaDisattivare.value, false);
@@ -212,27 +231,32 @@ const confermaDisattivazione = async () => {
   chiudiModalDisattivazione();
 };
 
+// Ripristina le variabili del modale
 const chiudiModalDisattivazione = () => {
   showConfirmDisableModal.value = false;
   garageDaDisattivare.value = null;
 };
 
+// Funzione invocata dal tab "Stato" per filtrare e colorare la mappa in base a una specifica fascia oraria
 const aggiornaMappaOrari = async ({ inizio, fine }) => {
   const iIso = new Date(inizio).toISOString()
   const fIso = new Date(fine).toISOString()
   await garageStore.aggiornaMappaOrariGestore(iIso, fIso)
 }
 
+// Riferimenti per attivare la modale di istruzioni bootstrap via JS
 const infoModalElement = ref(null)
 let infoModalInstance = null
 const openInfoModal = () => { if (infoModalInstance) infoModalInstance.show() }
 
+// Variabili e stato per la gestione del blocco/manutenzione di un singolo posto auto
 const showMaintenanceModal = ref(false)
 const maintenanceError = ref('')
 const postoDaGestire = ref(null)
 const manutenzioneData = ref({ inizio: '', fine: '', motivazione: '' })
-const currentMaintenanceStep = ref(1);
+const currentMaintenanceStep = ref(1); // Gestisce la UI in due step per il blocco del posto
 
+// Inizializza la procedura di blocco (step 1) assegnando i valori orari di default
 const apriGestionePosto = (posto) => {
   postoDaGestire.value = posto;
   currentMaintenanceStep.value = 1;
@@ -244,6 +268,7 @@ const apriGestionePosto = (posto) => {
   showMaintenanceModal.value = true;
 };
 
+// Invia l'azione di manutenzione al backend
 const salvaManutenzione = async () => {
   maintenanceError.value = ''
   const res = await garageStore.addMaintenance(postoDaGestire.value.id_garage, postoDaGestire.value.id_posto, manutenzioneData.value)
@@ -257,6 +282,7 @@ const salvaManutenzione = async () => {
   }
 }
 
+// Rimuove un blocco di manutenzione in corso
 const rimuoviManutenzione = async () => {
   maintenanceError.value = ''
   const idManutenzione = postoDaGestire.value?.manutenzione?.id_manutenzione;
@@ -274,41 +300,51 @@ const rimuoviManutenzione = async () => {
   }
 };
 
+// Eseguito appena la dashboard viene creata
 onMounted(async () => {
   isLoading.value = true
   try {
+    // Carica simultaneamente le info wallet e i dati principali dei garage tramite Promise.all
     await Promise.all([
       walletStore.contabilizzaRicavi(),
       walletStore.caricaSaldoSospeso(),
       garageStore.caricaDashboardGestore(),
     ])
+    // Successivamente carica lo storico prenotazioni per popolare le tabelle e statistiche
     const res = await prenotazioniStore.getPrenotazioniGestore()
     if (res && res.data) {
       storicoPrenotazioni.value = Array.isArray(res.data) ? res.data : (res.data.prenotazioni || [])
     } else if (res) {
       storicoPrenotazioni.value = res.prenotazioni || res
     }
+    // Decide quale tab mostrare di default: "aggiungi" se è un nuovo gestore senza garage
     if (mieiGarage.value.length === 0) vistaAttiva.value = 'aggiungi'
     else vistaAttiva.value = 'garage'
   } finally {
     isLoading.value = false
   }
 
+  // Inizializza istanza Bootstrap Modal per poterla chiamare 
   if (infoModalElement.value) {
     infoModalInstance = new bootstrap.Modal(infoModalElement.value)
   }
+  // Collega i socket chat al mount per ricevere messaggi in tempo reale
   socket = getSocket()
   if (socket) socket.on('nuovo_messaggio', handleNuovoMessaggio)
 })
 
+// Cleanup al momento della distruzione del componente (navigazione altrove)
 onUnmounted(() => {
   if (infoModalInstance) infoModalInstance.dispose()
   if (socket) socket.off('nuovo_messaggio', handleNuovoMessaggio)
 })
 
+// Osserva i cambi di tab
 watch(vistaAttiva, (newVal) => {
-  alertStore.pulisci() // Pulisce gli alert globali cambiando vista
-  isSidebarOpen.value = false // chiude il menu mobile al cambio di vista
+  alertStore.pulisci() // Pulisce gli alert globali cambiando vista per non portarseli dietro
+  isSidebarOpen.value = false // chiude automaticamente il menu mobile se un utente cambia vista
+
+  // Se non siamo più nel tab 'aggiungi', puliamo le variabili di modifica per sicurezza
   if (newVal !== 'aggiungi') {
     idGarageInModifica.value = null
     garageInModifica.value = null
@@ -316,24 +352,30 @@ watch(vistaAttiva, (newVal) => {
   }
 })
 
+// Array di configurazione per il menu laterale superiore
 const navTop = [
   { id: 'garage', label: 'I miei Garage', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>' },
   { id: 'aggiungi', label: 'Aggiungi Garage', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' },
 ]
 
+// Array di configurazione per il menu laterale inferiore (statistiche etc.)
 const navBottom = [
   { id: 'statistiche', label: 'Statistiche', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>' },
   { id: 'stato', label: 'Stato Corrente', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>' },
   { id: 'storico', label: 'Storico Prenotazioni', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>' },
 ]
 
+// Nasconde le voci relative a statistiche e storico se il gestore non possiede ancora alcun garage
 const showNavBottom = computed(() => mieiGarage.value.length > 0)
 
 const menuFiltrato = computed(() => mieiGarage.value.length === 0 ? navItems.filter(i => i.id === 'aggiungi') : navItems)
 
+// Filtra tutte le prenotazioni future collegate al posto attualmente selezionato per la manutenzione
 const prenotazioniPostoSelezionato = computed(() => {
   if (!postoDaGestire.value || !storicoPrenotazioni.value) return [];
   const oraAttuale = new Date();
+
+  // Mostra solo le prenotazioni in corso o future (stato ATTIVA e finesosta > di adesso)
   return storicoPrenotazioni.value
     .filter(p =>
       p.id_posto === postoDaGestire.value.id_posto &&
@@ -343,13 +385,15 @@ const prenotazioniPostoSelezionato = computed(() => {
     .sort((a, b) => new Date(a.iniziososta) - new Date(b.iniziososta));
 });
 
+// Verifica che il range di date immesso per la manutenzione abbia senso cronologico
 const isManutenzioneValida = computed(() => {
   if (!manutenzioneData.value.inizio || !manutenzioneData.value.fine) return false;
   const inizio = new Date(manutenzioneData.value.inizio);
   const fine = new Date(manutenzioneData.value.fine);
-  return fine > inizio;
+  return fine > inizio; // Fine deve essere dopo inizio
 });
 
+// Utility di formattazione data per mostrare stringhe leggibili come "10 apr 14:30"
 const formattaDataLeggibile = (dataIso) => {
   return new Intl.DateTimeFormat('it-IT', {
     day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
@@ -467,8 +511,9 @@ const formattaDataLeggibile = (dataIso) => {
             @toggle-stato="cambiaStatoGarage" />
 
           <DashboardStato v-if="vistaAttiva === 'stato'" :key="'stato-' + reRenderKey" :miei-garage="mieiGarageFiltrati"
-            :posti-per-garage="postiPerGarage" :occupazione-garage="occupazioneGarage" :allerte-stato="allerteStato" :prenotazioni="storicoPrenotazioniFiltrato"
-            @verifica-disponibilita="aggiornaMappaOrari" @manage-posto="apriGestionePosto" />
+            :posti-per-garage="postiPerGarage" :occupazione-garage="occupazioneGarage" :allerte-stato="allerteStato"
+            :prenotazioni="storicoPrenotazioniFiltrato" @verifica-disponibilita="aggiornaMappaOrari"
+            @manage-posto="apriGestionePosto" />
 
           <DashboardStorico v-if="vistaAttiva === 'storico'" :prenotazioni="storicoPrenotazioniFiltrato"
             @apri-chat="apriChat" />
@@ -545,7 +590,7 @@ const formattaDataLeggibile = (dataIso) => {
                   <div class="d-flex justify-content-between mb-2 small">
                     <span class="text-muted">Fine:</span>
                     <span class="fw-bold text-danger">{{ formattaDataLeggibile(postoDaGestire.manutenzione?.fine)
-                    }}</span>
+                      }}</span>
                   </div>
                   <div class="pt-2 mt-2 border-top small">
                     <span class="text-muted d-block mb-1">Motivazione:</span>

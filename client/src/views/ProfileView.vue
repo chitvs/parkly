@@ -5,88 +5,100 @@ import { authStore } from '../store/auth.js'
 import { alertStore } from '../store/alert.js'
 import * as bootstrap from 'bootstrap'
 
-import Header from '../components/Header.vue' 
+import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 
-// Importiamo le icone SVG per le password
 import eyeUrl from '../icons/eye-open.svg'
 import eyeClosedUrl from '../icons/eye-closed.svg'
 import IconKey from '../icons/IconKey.vue'
 
-//foto profilo standard
+// Foto profilo standard usata come fallback se l'utente non ne ha caricata una
 import defaultAvatarUrl from '../assets/default-avatar.png'
 
 const router = useRouter()
 
 // --- DATI PROFILO ---
+// originalData conserva i dati originali dal server per verificare se ci sono state modifiche
 const originalData = ref({ nome: '', cognome: '', nomeUtente: '', email: '', telefono: '', codiceFiscale: '', fotoProfilo_URL: '' })
+// formData è l'oggetto reattivo collegato ai campi di input del modulo (v-model)
 const formData = reactive({ nome: '', cognome: '', nomeUtente: '', email: '', telefono: '', codiceFiscale: '', fotoProfilo_URL: '' })
 
 // --- DATI CAMBIO PASSWORD ---
+// Variabili reattive per i campi del form di cambio password
 const pwdCurrent = ref('')
 const pwdNew = ref('')
 const pwdConfirm = ref('')
+// Flag per evidenziare errori di mismatch tra le password
 const pwdError = ref(false)
+// Messaggio di errore generale (es. password attuale errata)
 const pwdGeneralError = ref('')
+// Riferimenti per gestire il modale Bootstrap del cambio password
 const modalPwdElement = ref(null)
 let modalPwdInstance = null
 
-// Variabili per il controllo del modale di eliminazione account
+// Variabile per il controllo della visibilità del modale di eliminazione account
 const showConfirmDeleteModal = ref(false)
 
-// Variabili per mostrare/nascondere le password
+// Variabili di stato (booleane) per mostrare/nascondere le password nei rispettivi input
 const showCurrentPwd = ref(false)
 const showNewPwd = ref(false)
 const showConfirmPwd = ref(false)
 
 onMounted(async () => {
-  // Inizializza il Modal di Bootstrap
+  // Inizializza l'istanza del Modal se l'elemento HTML esiste
   if (modalPwdElement.value) {
     modalPwdInstance = new bootstrap.Modal(modalPwdElement.value)
   }
 
-  // Caricamento Dati
+  // Caricamento asincrono dei dati del profilo dal server tramite authStore
   const response = await authStore.getProfile()
   if (response.success) {
     const userDb = response.data
+    // Mappatura sicura dei dati provenienti dal database
     const datiDalServer = {
       nome: userDb.nome || '',
       cognome: userDb.cognome || '',
       nomeUtente: userDb.nomeutente || '',
       email: userDb.email || '',
       telefono: userDb.telefono || '',
-      codiceFiscale: userDb.codicefiscale || '', 
-      fotoProfilo_URL: userDb.fotoprofilo_url || '' 
+      codiceFiscale: userDb.codicefiscale || '',
+      fotoProfilo_URL: userDb.fotoprofilo_url || ''
     }
+    // Salvataggio dei dati sia nello stato originale che in quello modificabile
     originalData.value = { ...datiDalServer }
     Object.assign(formData, datiDalServer)
   } else {
+    // Gestione errore nel caso in cui non sia possibile caricare il profilo
     alertStore.mostra('error', response.error || "Impossibile caricare il profilo")
   }
 })
 
 onUnmounted(() => {
+  // Distrugge l'istanza del modale per evitare memory leaks
   if (modalPwdInstance) modalPwdInstance.dispose()
 })
 
-//serve per attivare tasto "salva modifiche"
+// Computed property: restituisce true solo se almeno un campo è diverso dai dati originali
+// Serve per disabilitare il tasto "Salva Modifiche" quando non c'è nulla da salvare
 const hasChanges = computed(() => {
   return formData.nome !== originalData.value.nome ||
-         formData.cognome !== originalData.value.cognome ||
-         formData.nomeUtente !== originalData.value.nomeUtente ||
-         formData.email !== originalData.value.email ||
-         formData.telefono !== originalData.value.telefono ||
-         formData.codiceFiscale !== originalData.value.codiceFiscale;
+    formData.cognome !== originalData.value.cognome ||
+    formData.nomeUtente !== originalData.value.nomeUtente ||
+    formData.email !== originalData.value.email ||
+    formData.telefono !== originalData.value.telefono ||
+    formData.codiceFiscale !== originalData.value.codiceFiscale;
 })
 
-//salvo i nuovi dati
+// Funzione chiamata al submit del form per salvare i nuovi dati anagrafici
 const handleSave = async () => {
-  if (!hasChanges.value) return 
+  if (!hasChanges.value) return // Blocco di sicurezza
   alertStore.pulisci()
 
   try {
+    // Invio dei nuovi dati all'API tramite lo store
     const response = await authStore.updateProfile(formData)
     if (response.success) {
+      // Aggiorna originalData per riflettere le nuove modifiche ed evitare di mostrare il tasto salva
       originalData.value = { ...formData }
       alertStore.mostra('success', "Modifiche salvate con successo!")
       window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -100,25 +112,29 @@ const handleSave = async () => {
   }
 }
 
-//salvo la nuova foto profilo
+// Funzione richiamata al caricamento di un file nell'input dell'immagine profilo
 const handleFileUpload = async (event) => {
   const file = event.target.files[0];
   if (!file) return;
 
   alertStore.pulisci()
+  // Crea l'oggetto FormData per supportare il caricamento del file binario
   const data = new FormData();
-  data.append('avatar', file); 
+  data.append('avatar', file);
 
   try {
-    // Chiamata centralizzata allo store!
+    // Chiamata centralizzata allo store per gestire l'upload su Supabase 
     const result = await authStore.uploadAvatar(data);
 
     if (result.success) {
+      // Aggiornamento immediato dell'UI con il nuovo URL restituito dal server
       formData.fotoProfilo_URL = result.url;
       originalData.value.fotoProfilo_URL = result.url;
+
+      // Sincronizzazione dell'oggetto utente nello store e nel localStorage
       if (authStore.utente) {
         authStore.utente.fotoProfilo_URL = result.url;
-        localStorage.setItem('utente', JSON.stringify(authStore.utente)); 
+        localStorage.setItem('utente', JSON.stringify(authStore.utente));
       }
       alertStore.mostra('success', "Foto profilo aggiornata!");
     } else {
@@ -129,19 +145,22 @@ const handleFileUpload = async (event) => {
   }
 }
 
-// logica per l'eliminazione dell'account
+// Prepara e apre il modale di conferma per l'eliminazione dell'account
 const handleDeleteAccount = () => {
   alertStore.pulisci()
   showConfirmDeleteModal.value = true
 }
 
+// Esegue l'effettiva eliminazione dell'account dopo la conferma dal modale
 const confirmDeleteAccount = async () => {
-  showConfirmDeleteModal.value = false
+  showConfirmDeleteModal.value = false // Chiude il modale
   alertStore.pulisci()
+
+  // Richiesta allo store
   const response = await authStore.deleteAccount();
   if (response.success) {
     alertStore.mostra('success', "Account eliminato con successo.");
-    router.push('/'); // Rimanda alla home
+    router.push('/'); // Reindirizzamento alla homepage dopo la cancellazione
   } else {
     alertStore.mostra('error', response.error || "Errore durante l'eliminazione dell'account.");
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -155,7 +174,8 @@ const openPwdModal = () => {
   }
 }
 
-// Forza la pulizia del DOM per rimuovere lo sfondo grigio bloccato
+// Funzione di utility per pulire forzatamente il DOM dagli stili del modale Bootstrap
+// Utile in caso di bug di Bootstrap in cui lo sfondo scuro (backdrop) non viene rimosso
 const forceCleanupModal = () => {
   document.body.classList.remove('modal-open')
   document.body.style = ''
@@ -163,7 +183,7 @@ const forceCleanupModal = () => {
   if (backdrop) backdrop.remove()
 }
 
-// Chiude il modal in modo sicuro aspettando l'animazione
+// Chiude il modal del cambio password aspettando la fine dell'animazione CSS
 const closePwdModal = () => {
   return new Promise((resolve) => {
     if (!modalPwdElement.value.classList.contains('show')) {
@@ -171,13 +191,14 @@ const closePwdModal = () => {
       return
     }
 
+    // Ascolta l'evento nativo di bootstrap per intervenire appena il modale è chiuso
     modalPwdElement.value.addEventListener(
       'hidden.bs.modal',
       () => {
         forceCleanupModal()
         resolve()
       },
-      { once: true }
+      { once: true } // { once: true } garantisce che l'event listener venga rimosso dopo l'uso
     )
 
     modalPwdInstance.hide()
@@ -185,34 +206,39 @@ const closePwdModal = () => {
 }
 
 // --- LOGICA CAMBIO PASSWORD ---
+// Gestisce l'invio del form per il reset della password
 const submitChangePassword = async () => {
+  // Reset preventivo degli errori
   pwdError.value = false;
   pwdGeneralError.value = '';
 
+  // Controllo validità: la nuova password deve essere diversa dalla vecchia
   if (pwdNew.value === pwdCurrent.value) {
     pwdGeneralError.value = "La nuova password non può essere identica a quella attuale.";
     return;
   }
 
+  // Controllo validità: i due campi della nuova password devono coincidere
   if (pwdNew.value !== pwdConfirm.value) {
     pwdError.value = true;
     return;
   }
 
+  // Chiamata all'API tramite store
   const response = await authStore.changePassword(pwdCurrent.value, pwdNew.value);
 
   if (response.success) {
-    // Chiudi il modal prima, poi mostra l'alert globale
+    // Chiude il modal, aspetta l'animazione e poi mostra l'alert 
     await closePwdModal();
     alertStore.mostra('success', "Password cambiata con successo!");
-    
-    // Pulisci i campi
+
+    // Pulisce i campi per questioni di sicurezza
     pwdCurrent.value = '';
     pwdNew.value = '';
     pwdConfirm.value = '';
     pwdGeneralError.value = '';
   } else {
-    // L'errore generale lo mostriamo dentro il modal
+    // L'errore generale viene mostrato direttamente dentro il modale (es: vecchia password sbagliata)
     pwdGeneralError.value = response.error || "Errore durante il cambio password.";
   }
 }
@@ -230,20 +256,18 @@ const submitChangePassword = async () => {
           <p class="text-muted mb-4 text-center">Modifica le tue informazioni personali</p>
 
           <div class="text-center mb-4 pb-3 border-bottom">
-            <img 
-              :src="formData.fotoProfilo_URL || defaultAvatarUrl" 
-              alt="Foto Profilo" 
-              class="rounded-circle mb-3 shadow-sm" 
-              style="width: 120px; height: 120px; object-fit: cover; border: 3px solid var(--primary-blue, #00408A);"
-              >
+            <img :src="formData.fotoProfilo_URL || defaultAvatarUrl" alt="Foto Profilo"
+              class="rounded-circle mb-3 shadow-sm"
+              style="width: 120px; height: 120px; object-fit: cover; border: 3px solid var(--primary-blue, #00408A);">
             <div>
               <label class="form-label fw-semibold mb-2">Cambia foto profilo</label>
-              <input type="file" @change="handleFileUpload" accept="image/*" class="form-control form-control-sm w-75 mx-auto">
+              <input type="file" @change="handleFileUpload" accept="image/*"
+                class="form-control form-control-sm w-75 mx-auto">
             </div>
           </div>
 
           <form @submit.prevent="handleSave">
-            
+
             <div class="row g-3 mb-3">
               <div class="col-md-6">
                 <label class="form-label fw-semibold">Nome</label>
@@ -256,8 +280,8 @@ const submitChangePassword = async () => {
             </div>
 
             <div class="mb-3">
-                <label class="form-label fw-semibold">Nome Utente</label>
-                <input type="text" class="form-control" v-model="formData.nomeUtente" required>
+              <label class="form-label fw-semibold">Nome Utente</label>
+              <input type="text" class="form-control" v-model="formData.nomeUtente" required>
             </div>
 
             <div class="mb-3">
@@ -276,32 +300,26 @@ const submitChangePassword = async () => {
             </div>
 
             <div class="d-flex justify-content-between mt-4 pt-3 border-top">
-              <button 
-                type="button" 
-                class="btn btn-outline-secondary btn-lg px-3"
-                @click="openPwdModal"
-              >
+              <button type="button" class="btn btn-outline-secondary btn-lg px-3" @click="openPwdModal">
                 <IconKey size="20" class="me-2" />
                 Cambia Password
               </button>
 
-              <button 
-                type="submit" 
-                class="btn btn-primary btn-lg px-4" 
-                :disabled="!hasChanges"
-              >
-              <i class="bi bi-floppy me-1"></i>
+              <button type="submit" class="btn btn-primary btn-lg px-4" :disabled="!hasChanges">
+                <i class="bi bi-floppy me-1"></i>
                 Salva Modifiche
               </button>
             </div>
-            
+
           </form>
 
           <div class="mt-5 border-top pt-4 text-center">
             <p class="text-muted small mb-3">
-              Una volta eliminato l'account, non potrai più recuperarlo. Tutte le tue sessioni verranno chiuse e perderai l'accesso al tuo saldo residuo.
+              Una volta eliminato l'account, non potrai più recuperarlo. Tutte le tue sessioni verranno chiuse e
+              perderai l'accesso al tuo saldo residuo.
             </p>
-            <button @click="handleDeleteAccount" class="btn btn-outline-danger btn-lg px-4 " style="border-radius: 12px;">
+            <button @click="handleDeleteAccount" class="btn btn-outline-danger btn-lg px-4 "
+              style="border-radius: 12px;">
               <i class="bi bi-trash3 me-1"></i>
               Elimina Account
             </button>
@@ -316,12 +334,14 @@ const submitChangePassword = async () => {
         <div class="modal-content parkly-modal">
           <div class="modal-header border-0">
             <h5 class="modal-title fw-bold title-color mx-auto mt-2">Sicurezza Account</h5>
-            <button type="button" class="btn-close position-absolute end-0 me-3 mt-3" data-bs-dismiss="modal" aria-label="Close"></button>
+            <button type="button" class="btn-close position-absolute end-0 me-3 mt-3" data-bs-dismiss="modal"
+              aria-label="Close"></button>
           </div>
-          
+
           <div class="modal-body px-4 pb-5">
-            <p class="text-muted text-center mb-4">Inserisci la tua password attuale per poterne impostare una nuova.</p>
-            
+            <p class="text-muted text-center mb-4">Inserisci la tua password attuale per poterne impostare una nuova.
+            </p>
+
             <div v-if="pwdGeneralError" class="alert error mb-4 text-start">
               {{ pwdGeneralError }}
             </div>
@@ -329,64 +349,36 @@ const submitChangePassword = async () => {
             <form @submit.prevent="submitChangePassword">
               <div class="mb-3">
                 <div class="input-group password-group">
-                  <input
-                    :type="showCurrentPwd ? 'text' : 'password'"
-                    class="form-control password-field"
-                    placeholder="Password Attuale"
-                    v-model="pwdCurrent"
-                    required
-                  />
-                  <button
-                    class="btn toggle-password-btn"
-                    type="button"
-                    @click="showCurrentPwd = !showCurrentPwd"
-                    tabindex="-1"
-                  >
+                  <input :type="showCurrentPwd ? 'text' : 'password'" class="form-control password-field"
+                    placeholder="Password Attuale" v-model="pwdCurrent" required />
+                  <button class="btn toggle-password-btn" type="button" @click="showCurrentPwd = !showCurrentPwd"
+                    tabindex="-1">
                     <img :src="showCurrentPwd ? eyeClosedUrl : eyeUrl" class="password-icon" />
                   </button>
                 </div>
               </div>
-              
+
               <div class="mb-3 mt-4">
                 <div class="input-group password-group" :class="{ 'is-invalid-group': pwdError }">
-                  <input
-                    :type="showNewPwd ? 'text' : 'password'"
-                    class="form-control password-field"
-                    placeholder="Nuova Password"
-                    v-model="pwdNew"
-                    required
-                  />
-                  <button
-                    class="btn toggle-password-btn"
-                    type="button"
-                    @click="showNewPwd = !showNewPwd"
-                    tabindex="-1"
-                  >
+                  <input :type="showNewPwd ? 'text' : 'password'" class="form-control password-field"
+                    placeholder="Nuova Password" v-model="pwdNew" required />
+                  <button class="btn toggle-password-btn" type="button" @click="showNewPwd = !showNewPwd" tabindex="-1">
                     <img :src="showNewPwd ? eyeClosedUrl : eyeUrl" class="password-icon" />
                   </button>
                 </div>
               </div>
-              
+
               <div class="mb-2">
                 <div class="input-group password-group" :class="{ 'is-invalid-group': pwdError }">
-                  <input
-                    :type="showConfirmPwd ? 'text' : 'password'"
-                    class="form-control password-field"
-                    placeholder="Conferma Nuova Password"
-                    v-model="pwdConfirm"
-                    required
-                  />
-                  <button
-                    class="btn toggle-password-btn"
-                    type="button"
-                    @click="showConfirmPwd = !showConfirmPwd"
-                    tabindex="-1"
-                  >
+                  <input :type="showConfirmPwd ? 'text' : 'password'" class="form-control password-field"
+                    placeholder="Conferma Nuova Password" v-model="pwdConfirm" required />
+                  <button class="btn toggle-password-btn" type="button" @click="showConfirmPwd = !showConfirmPwd"
+                    tabindex="-1">
                     <img :src="showConfirmPwd ? eyeClosedUrl : eyeUrl" class="password-icon" />
                   </button>
                 </div>
               </div>
-              
+
               <div v-if="pwdError" class="mb-3">
                 <small class="text-danger ms-1">Le password non corrispondono!</small>
               </div>
@@ -459,84 +451,93 @@ const submitChangePassword = async () => {
 </template>
 
 <style scoped>
+.page-wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
 
-.page-wrapper { 
-  display: flex; 
-  flex-direction: column; 
-  min-height: 100vh; 
+.title-color {
+  color: var(--primary-blue, #00408A);
+  letter-spacing: -0.5px;
 }
-.title-color { 
-  color: var(--primary-blue, #00408A); 
-  letter-spacing: -0.5px; 
+
+.form-label {
+  font-size: 14px;
+  color: #495057;
+  margin-bottom: 6px;
 }
-.form-label { 
-  font-size: 14px; 
-  color: #495057; 
-  margin-bottom: 6px; 
-}
+
 .form-control {
-  height: 52px; 
-  border-radius: 12px; 
+  height: 52px;
+  border-radius: 12px;
   border: 1px solid #E0E0E0;
-  padding: 10px 18px; 
-  font-size: 15px; 
-  transition: all 0.2s ease; 
+  padding: 10px 18px;
+  font-size: 15px;
+  transition: all 0.2s ease;
   background-color: #fafafa;
 }
-input[type="file"].form-control-sm { 
-  height: auto; 
-  padding: 8px 12px; 
-  font-size: 13px; 
-  border-radius: 8px; 
+
+input[type="file"].form-control-sm {
+  height: auto;
+  padding: 8px 12px;
+  font-size: 13px;
+  border-radius: 8px;
 }
-.form-control:focus { 
-  border-color: var(--primary-blue, #00408A); 
-  box-shadow: 0 0 0 4px rgba(0, 64, 138, 0.1); 
-  outline: none; 
-  background-color: #ffffff; 
+
+.form-control:focus {
+  border-color: var(--primary-blue, #00408A);
+  box-shadow: 0 0 0 4px rgba(0, 64, 138, 0.1);
+  outline: none;
+  background-color: #ffffff;
 }
 
 .btn-primary {
-  background-color: var(--primary-blue, #00408A); 
-  border: none; 
-  border-radius: 12px; 
-  height: 55px; 
-  font-weight: 600; 
-  font-size: 16px; 
+  background-color: var(--primary-blue, #00408A);
+  border: none;
+  border-radius: 12px;
+  height: 55px;
+  font-weight: 600;
+  font-size: 16px;
   transition: all 0.2s;
 }
 
-.btn-primary:hover:not(:disabled) { 
-  background-color: #00336E; 
-  transform: translateY(-1px); 
+.btn-primary:hover:not(:disabled) {
+  background-color: #00336E;
+  transform: translateY(-1px);
 }
-.btn-primary:active:not(:disabled) { 
-  transform: translateY(0); 
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
 }
-.btn-primary:disabled { 
-  background-color: #cccccc; 
-  cursor: not-allowed; 
-  opacity: 0.7; 
+
+.btn-primary:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+  opacity: 0.7;
 }
-.btn-outline-secondary { 
-  border-radius: 12px; 
-  height: 55px; 
-  font-weight: 600; 
-  font-size: 16px; 
-  display: flex; 
+
+.btn-outline-secondary {
+  border-radius: 12px;
+  height: 55px;
+  font-weight: 600;
+  font-size: 16px;
+  display: flex;
   align-items: center;
 }
-.btn-outline-danger{
+
+.btn-outline-danger {
   border-radius: 12px;
-  height: 55px; 
-  font-weight: 600; 
+  height: 55px;
+  font-weight: 600;
   font-size: 16px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
-.btn-outline-danger:hover { 
-  color: white !important; 
+
+.btn-outline-danger:hover {
+  color: white !important;
 }
 
 .review-overlay {
@@ -548,6 +549,7 @@ input[type="file"].form-control-sm {
   align-items: center;
   justify-content: center;
 }
+
 .review-modal {
   background: white;
   border-radius: 20px;
@@ -556,14 +558,16 @@ input[type="file"].form-control-sm {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
 }
+
 .review-topbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 1.2rem 1.5rem 0;
 }
+
 .close-btn {
   background: none;
   border: none;
@@ -571,10 +575,12 @@ input[type="file"].form-control-sm {
   cursor: pointer;
   font-size: 1.1rem;
 }
+
 .step-track {
   display: flex;
   gap: 6px;
 }
+
 .step-pip {
   display: block;
   width: 6px;
@@ -582,13 +588,16 @@ input[type="file"].form-control-sm {
   border-radius: 99px;
   background: #e2e8f0;
 }
+
 .step-pip--on {
   width: 20px;
   background: #00408A;
 }
+
 .review-body {
   padding: 1rem 1.75rem 1rem;
 }
+
 .garage-chip {
   display: inline-block;
   font-size: 0.7rem;
@@ -599,21 +608,25 @@ input[type="file"].form-control-sm {
   border-radius: 99px;
   margin-bottom: 1rem;
 }
+
 .modal-title {
   font-size: 1.25rem;
   font-weight: 700;
   margin-bottom: 0.5rem;
 }
+
 .modal-sub {
   font-size: 0.9rem;
   color: #64748b;
   margin-bottom: 1.5rem;
 }
+
 .review-footer {
   padding: 1rem 1.75rem 1.5rem;
   background: #ffffff;
   border-top: 1px solid #f1f5f9;
 }
+
 .cta-btn {
   padding: 12px 16px;
   border-radius: 10px;
@@ -624,41 +637,52 @@ input[type="file"].form-control-sm {
   transition: background 0.15s;
   text-align: center;
 }
+
 .cta-btn--danger {
   background: #dc3545;
   color: white;
 }
+
 .cta-btn--danger:hover {
   background: #c82333;
 }
+
 .cta-btn--ghost {
   background: #f1f5f9;
   color: #475569;
 }
+
 .cta-btn--ghost:hover {
   background: #e2e8f0;
 }
+
 .flex-grow-1 {
   flex-grow: 1;
 }
+
 .overlay-fade-enter-active,
 .overlay-fade-leave-active {
   transition: opacity 0.35s ease;
 }
+
 .overlay-fade-enter-from,
 .overlay-fade-leave-to {
   opacity: 0;
 }
+
 .modal-slide-enter-active {
   transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s ease;
 }
+
 .modal-slide-leave-active {
   transition: transform 0.25s ease, opacity 0.2s ease;
 }
+
 .modal-slide-enter-from {
   transform: translateY(40px) scale(0.96);
   opacity: 0;
 }
+
 .modal-slide-leave-to {
   transform: translateY(20px) scale(0.97);
   opacity: 0;

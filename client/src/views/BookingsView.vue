@@ -1,3 +1,15 @@
+<!--
+  BookingsView.vue
+  ----------------
+  Pagina "Le Tue Prenotazioni" lato utente.
+  Mostra lo storico di tutte le prenotazioni dell'utente con supporto a:
+  - Filtro per stato (ATTIVA / CONCLUSA / ANNULLATA) e per garage
+  - Ordinamento per data di creazione o cronologico
+  - Paginazione
+  - Annullamento con anteprima rimborso (politica a fasce orarie)
+  - Chat in tempo reale con il gestore tramite WebSocket
+  - Modale recensioni multi-step (delegato al composable useRecensione)
+-->
 <script setup>
 import { ref, onMounted, onUnmounted, watch, nextTick, computed, reactive } from 'vue'
 import { prenotazioniStore } from '../store/prenotazioni.js'
@@ -15,44 +27,63 @@ import Pagination from '../components/Pagination.vue'
 import IconCancel from '../icons/IconCancel.vue'
 import IconMessage from '../icons/IconMessage.vue'
 
-// variabili per i filtri e l'ordinamento
+// -- STATO FILTRI E ORDINAMENTO --
+
+
 const filtroStato = ref('') // '' = Tutte, 'ATTIVA', 'CONCLUSA', 'ANNULLATA'
 const filtroGarage = ref('') // '' = Tutti, oppure l'id_garage
 const ordinamento = ref('creazione_desc') // default: data creazione più recente
 
-// variabili per la paginazione
+// -- STATO PAGINAZIONE --
+
+// Pagina attualmente visualizzata (base 1)
 const paginaCorrente = ref(1)
+// Numero di prenotazioni mostrate per pagina
 const elementiPerPagina = ref(5)
 
 
-// Stati reattivi per i dati del componente
-const bookings = ref([]) // Conterrà l'array delle prenotazioni dell'utente
-const isLoading = ref(true) // Gestisce l'UI di caricamento
+// -- STATO PRINCIPALE --
 
-// Import delle funzioni e stati esportati dal composable delle recensioni
+// Array delle prenotazioni dell'utente, popolato da caricaPrenotazioni()
+const bookings = ref([])
+// Flag di caricamento: true mentre la chiamata API è in corso, usato per mostrare lo spinner
+const isLoading = ref(true)
+
+// -- COMPOSABLE RECENSIONI --
+// Import delle funzioni e stati esportati dal composable delle recensioni.
+// Tutta la logica (apertura modale, step, form, invio, eliminazione) è
+// incapsulata in useRecensione per mantenere questo componente leggibile.
 const {
-  showReviewModal,
-  currentStep,
-  selectedBookingForReview,
-  recensioneForm,
-  isStep2Complete,
-  isEditing,
-  iniziaRecensione,
-  apriModifica,
-  chiudiModale,
-  inviaRecensione,
-  eliminaRecensione,
-  reviewError 
+  showReviewModal,           // boolean: visibilità del modale recensione
+  currentStep,               // number: step corrente del modale (1 = voto generale, 2 = categorie, 3 = successo)
+  selectedBookingForReview,  // prenotazione a cui si sta scrivendo la recensione
+  recensioneForm,            // oggetto reattivo con i dati del form (voto, testo, categorie)
+  isStep2Complete,           // computed: true se tutti i voti per categoria sono stati inseriti
+  isEditing,                 // boolean: true se si sta modificando una recensione esistente
+  iniziaRecensione,          // fn(booking, starIniziale): apre il modale al primo step con il voto preselezionato
+  apriModifica,              // fn(booking): apre il modale precompilato con la recensione esistente
+  chiudiModale,              // fn(): chiude il modale e resetta il form
+  inviaRecensione,           // fn(): invia o aggiorna la recensione tramite API
+  eliminaRecensione,         // fn(): elimina la recensione esistente tramite API
+  reviewError                // string: messaggio di errore da mostrare nel modale
 } = useRecensione()
 
-// Stato per gestire la chat aperta 
+// -- STATO CHAT --
+
+// Oggetto della chat attualmente aperta: null = nessuna chat, altrimenti { idPrenotazione, idDestinatario, nomeDestinatario }
 const chatSelezionata = ref(null)
 
-// Variabile per tenere traccia del socket in questa pagina
+// Riferimento al socket WebSocket condiviso, inizializzato in onMounted
 let socket = null;
 
-// --- GESTIONE NOTIFICHE IN TEMPO REALE ---
-// Funzione chiamata ogni volta che il server emette un evento 'nuovo_messaggio'
+// -- GESTIONE NOTIFICHE IN TEMPO REALE --
+
+
+// Handler per l'evento WebSocket 'nuovo_messaggio' emesso dal server.
+// Quando arriva un messaggio, trova la prenotazione corrispondente e,se la chat relativa non è aperta, incrementa il contatore
+// dei messaggi non letti per mostrare il pallino rosso sul bottone "Contatta".
+// msg = Payload del messaggio: { id_prenotazione, ... }
+
 const handleNuovoMessaggio = (msg) => {
   // Cerca la prenotazione di riferimento nell'elenco
   const bookingToUpdate = bookings.value.find(b => Number(b.id_prenotazione) === Number(msg.id_prenotazione));
@@ -66,7 +97,6 @@ const handleNuovoMessaggio = (msg) => {
     }
   }
 }
-
 
 onMounted(async () => {
   // Carica i dati appena il componente viene montato
@@ -84,7 +114,11 @@ onUnmounted(() => {
   }
 })
 
-// Chiamata all'API per prendere le prenotazioni
+// -- FUNZIONI DATI --
+
+
+// Recupera le prenotazioni dell'utente dallo store e le salva in bookings.
+// Mostra un alert globale in caso di errore.
 const caricaPrenotazioni = async () => {
   isLoading.value = true
   alertStore.pulisci() // Puliamo eventuali vecchi errori globali
@@ -98,7 +132,12 @@ const caricaPrenotazioni = async () => {
   isLoading.value = false
 }
 
-// estrae la lista dei garage in cui l'utente ha prenotato almeno una volta
+// -- COMPUTED --
+
+
+// Restituisce la lista univoca dei garage in cui l'utente ha almeno una prenotazione.
+// Utilizzata per popolare il select "Filtra per Garage".
+// Usa una Map per deduplicare gli id_garage in O(n).
 const garageDisponibili = computed(() => {
   const map = new Map()
   bookings.value.forEach(b => {
@@ -109,7 +148,10 @@ const garageDisponibili = computed(() => {
   return Array.from(map, ([id, nome]) => ({ id, nome }))
 })
 
-// applica i filtri e l'ordinamento scelti
+
+// Applica i filtri (stato + garage) e l'ordinamento selezionato dall'utente
+// sull'array completo di prenotazioni. Il risultato alimenta sia la paginazione
+// che il totale mostrato nel componente Pagination.
 const prenotazioniFiltrate = computed(() => {
   // filtriamo
   let risultato = bookings.value.filter(b => {
@@ -142,18 +184,24 @@ const prenotazioniFiltrate = computed(() => {
   return risultato
 })
 
-// logica di Paginazione calcolata sull'array filtrato
+//Ricava il sottoinsieme di prenotazioni da visualizzare nella pagina corrente,
+//calcolato sull'array già filtrato e ordinato da prenotazioniFiltrate.
 const prenotazioniPaginate = computed(() => {
   const inizio = (paginaCorrente.value - 1) * elementiPerPagina.value
   return prenotazioniFiltrate.value.slice(inizio, inizio + elementiPerPagina.value)
 })
 
+// Porta la vista in cima alla pagina (usato dopo cambio pagina)
 const scrollInAlto = () => window.scrollTo({ top: 0, behavior: 'smooth' })
 
-// resetta la pagina a 1 ogni volta che cambia un filtro o l'ordinamento
+// Resetta la pagina a 1 ogni volta che cambia un filtro o l'ordinamento,
+// per evitare di restare su una pagina inesistente dopo il filtering.
 watch([filtroStato, filtroGarage, ordinamento], () => {
   paginaCorrente.value = 1
 })
+
+// -- FUNZIONI DI UTILITÀ --
+
 
 const formatDate = (dateString) => {
   if (!dateString) return ''
@@ -168,6 +216,7 @@ const formatDate = (dateString) => {
   }).format(date)
 }
 
+//Restituisce la classe Bootstrap per il badge colorato dello stato prenotazione.
 const getStatusBadgeClass = (stato) => {
   switch (stato) {
     case 'ATTIVA': return 'bg-success'
@@ -177,9 +226,13 @@ const getStatusBadgeClass = (stato) => {
   }
 }
 
-// Variabili per il modale di annullamento
+// -- ANNULLAMENTO PRENOTAZIONE --
+
+// Flag di visibilità del modale di conferma annullamento
 const showCancelModal = ref(false)
+// Prenotazione selezionata per l'annullamento
 const bookingToCancel = ref(null)
+// Oggetto reattivo che contiene le info sul rimborso mostrate nel modale di conferma
 const infoAnnullamento = reactive({
   rimborso: 0,
   messaggio: '',
@@ -187,7 +240,16 @@ const infoAnnullamento = reactive({
   classe: ''
 })
 
-// Funzione per calcolare il rimborso "al volo" per la UI
+/**
+ * Calcola l'anteprima del rimborso lato client (solo per UI istantanea).
+ * La politica di rimborso è:
+ *  - 100% se mancano più di 12 ore all'inizio sosta OPPURE sono passati meno di 15 min dalla creazione
+ *  - 50%  se la sosta non è ancora iniziata ma mancano meno di 12 ore
+ *  - 0%   se la sosta è già iniziata
+ * NOTA: il calcolo definitivo avviene lato server; questo serve solo per mostrare
+ * un'anteprima immediata prima della chiamata API.
+ *
+ */
 const calcolaAnteprimaAnnullamento = (booking) => {
   const oraAttuale = new Date()
   const inizioSosta = new Date(booking.iniziososta)
@@ -215,6 +277,12 @@ const calcolaAnteprimaAnnullamento = (booking) => {
   }
 }
 
+/**
+ * Apre il modale di conferma annullamento per una prenotazione.
+ * Prima di mostrare il modale chiama l'API di anteprima per ottenere
+ * il calcolo rimborso aggiornato dal server (più accurato del calcolo client).
+ *
+ */
 const apriModaleAnnullamento = async (booking) => {
   bookingToCancel.value = booking
   // Chiamata all'API di anteprima che abbiamo appena aggiornato
@@ -225,7 +293,11 @@ const apriModaleAnnullamento = async (booking) => {
   }
 }
 
-// Gestione della cancellazione di una prenotazione
+/**
+ * Esegue l'annullamento effettivo dopo la conferma dell'utente nel modale.
+ * In caso di successo aggiorna lo stato della prenotazione localmente (senza rifare
+ * la chiamata GET) e mostra il messaggio con l'importo rimborsato.
+ */
 const handleConfirmCancel = async () => {
   if (!bookingToCancel.value) return
   alertStore.pulisci()
@@ -244,6 +316,9 @@ const handleConfirmCancel = async () => {
   }
 }
 
+// -- GESTIONE RECENSIONI --
+
+//Chiude il modale, ricarica le prenotazioni (per aggiornare il flag ha_recensito) e mostra il messaggio di conferma globale.
 const chiudiEAggiorna = async () => {
   chiudiModale()
   await caricaPrenotazioni()
@@ -251,6 +326,9 @@ const chiudiEAggiorna = async () => {
   // possiamo lanciare il messaggio di successo qui per informare che tutto è andato bene
   alertStore.mostra('success', 'La tua recensione è stata registrata correttamente.')
 }
+
+//Gestisce l'eliminazione di una recensione esistente.
+//Delega la chiamata API al composable e, in caso di successo,ricarica le prenotazioni e mostra il feedback all'utente.
 
 const handleElimina = async () => {
   const success = await eliminaRecensione()
@@ -260,10 +338,15 @@ const handleElimina = async () => {
   }
 }
 
+// Blocca/sblocca lo scroll del body quando il modale recensione è aperto,
+// per evitare che lo sfondo scorra mentre si interagisce con il modale.
 watch(showReviewModal, (val) => {
   document.body.style.overflow = val ? 'hidden' : ''
 })
 
+// -- CONFIGURAZIONE CATEGORIE RECENSIONE --
+// Definisce le categorie valutabili nel secondo step del modale recensione.
+// Ogni elemento mappa a un campo del form tramite l'id.
 const categories = [
   { id: 'posizione', label: 'Posizione', icon: 'bi bi-geo-alt' },
   { id: 'qualitaPrezzo', label: 'Prezzo', icon: 'bi bi-tag' },
@@ -272,13 +355,16 @@ const categories = [
   { id: 'sicurezza', label: 'Sicurezza', icon: 'bi bi-shield-check' },
 ]
 
-// Gestione dell'apertura del componente ChatBox
+// -- GESTIONE CHAT --
+
+//Apre la ChatBox per la prenotazione selezionata.
+//Azzera il contatore dei messaggi non letti e forza il re-mount del componente ChatBox 
+//impostando prima chatSelezionata a null e aspettando un tick di Vue, così il componente riparte da uno stato pulito
 const apriChat = async (booking) => {
   // Rimuove il pallino rosso (notifica letta)
   booking.nonletti = 0;
 
-  // Tecnica per forzare il re-mount del componente figlio (ChatBox):
-  // Impostandolo a null lo rimuoviamo dal DOM
+  // Tecnica per forzare il re-mount del componente figlio (ChatBox): Impostandolo a null lo rimuoviamo dal DOM
   chatSelezionata.value = null;
 
   // Aspetta un "tick" del ciclo di rendering di Vue per assicurarsi che il DOM sia aggiornato
@@ -292,6 +378,7 @@ const apriChat = async (booking) => {
   }
 }
 
+//Chiude la ChatBox corrente azzerando chatSelezionata.
 const chiudiChat = () => {
   chatSelezionata.value = null
 }
@@ -380,27 +467,19 @@ const chiudiChat = () => {
                   </span>
 
                   <!-- Pulsante Annulla  -->
-                  <button 
-                      v-if="booking.stato === 'ATTIVA'" 
-                      @click="apriModaleAnnullamento(booking)" 
-                      class="custom-btn btn-cancel"
-                      title="Annulla Prenotazione"
-                  >
-                  <IconCancel width="18" height="18" />
-                  Annulla
+                  <button v-if="booking.stato === 'ATTIVA'" @click="apriModaleAnnullamento(booking)"
+                    class="custom-btn btn-cancel" title="Annulla Prenotazione">
+                    <IconCancel width="18" height="18" />
+                    Annulla
                   </button>
 
                   <!-- Pulsante Chat -->
-                  <button 
-                    v-if="booking.stato === 'ATTIVA'" 
-                    @click="apriChat(booking)" 
-                    class="custom-btn btn-chat"
-                    title="Contatta il gestore"
-                  >
+                  <button v-if="booking.stato === 'ATTIVA'" @click="apriChat(booking)" class="custom-btn btn-chat"
+                    title="Contatta il gestore">
                     <!-- Pallino notifica-->
                     <span v-if="booking.nonletti > 0" class="chat-notification-dot"></span>
-                      <IconMessage width="18" height="18" />
-                        Contatta
+                    <IconMessage width="18" height="18" />
+                    Contatta
                   </button>
 
                   <!-- Pulsante Recensioni-->
