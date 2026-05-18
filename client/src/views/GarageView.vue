@@ -13,6 +13,9 @@ import { alertStore } from '../store/alert.js'
 import L from 'leaflet' // Importazione libreria di mapping
 import 'leaflet/dist/leaflet.css'
 
+const router = useRouter()
+const route = useRoute()
+
 // Coordinate di default  in assenza di altri dati
 const MAP_CENTER = [41.9028, 12.4964]
 // URL base per i tile gratuiti di OpenStreetMap
