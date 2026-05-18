@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { authStore } from '../store/auth.js'
 import { walletStore } from '../store/wallet.js'
 import { alertStore } from '../store/alert.js'
@@ -63,6 +63,11 @@ const formattaTitolare = () => {
     formRicarica.titolare = formRicarica.titolare.replace(/[^a-zA-ZÀ-ÿ\s']/g, '').toUpperCase()
 }
 
+const formattaIntestatario = () => {
+    // rimuove numeri e caratteri non validi
+    prelievoForm.intestatario = prelievoForm.intestatario.replace(/[^a-zA-ZÀ-ÿ\s']/g, '').toUpperCase()
+}
+
 const formattaNumeroCarta = () => {
     let val = formRicarica.numeroCarta.replace(/\D/g, '')
     val = val.replace(/(.{4})/g, '$1 ').trim()
@@ -96,6 +101,15 @@ const limitaImporto = () => {
         formRicarica.importo = 1000
     } else if (formRicarica.importo < 0) {
         formRicarica.importo = 0
+    }
+}
+
+const limitaImportoPrelievo = () => {
+    // se l'utente digita un numero maggiore del saldo attuale, lo forziamo al massimo disponibile
+    if (prelievoForm.importo > saldoAttuale.value) {
+        prelievoForm.importo = saldoAttuale.value
+    } else if (prelievoForm.importo < 0) {
+        prelievoForm.importo = 0
     }
 }
 
@@ -187,6 +201,14 @@ const prelievoForm = reactive({
     coordinate: ''
 })
 
+// Intercetta il cambio tab per mostrare l'allerta di saldo insufficiente globale
+watch(tabAttiva, (nuovaTab) => {
+    alertStore.pulisci()
+    if (nuovaTab === 'prelievo' && saldoAttuale.value < 5) {
+        alertStore.mostra('error', "Saldo insufficiente per richiedere un prelievo. Il minimo è di 5,00€.")
+    }
+})
+
 const formattaCoordinate = () => {
     if (prelievoForm.metodo === 'Bonifico Bancario') {
         // Rimuove spazi e caratteri speciali, converte in maiuscolo
@@ -220,6 +242,13 @@ const handlePrelievo = async () => {
     }
 
     if (prelievoForm.metodo === 'Bonifico Bancario') {
+        // validazione Intestatario Conto (almeno due parole: nome e cognome)
+        const paroleIntestatario = prelievoForm.intestatario.trim().split(/\s+/)
+        if (paroleIntestatario.length < 2) {
+            alertStore.mostra('error', "Inserisci sia il nome che il cognome dell'intestatario del conto.")
+            return
+        }
+
         const ibanRegex = /^[A-Z]{2}\d{2}[A-Z0-9]{1,30}$/
         const ibanPulito = prelievoForm.coordinate.replace(/\s/g, '').toUpperCase()
         if (!ibanRegex.test(ibanPulito)) {
@@ -341,15 +370,10 @@ const handlePrelievo = async () => {
 
                         <form v-else-if="tabAttiva === 'prelievo'" @submit.prevent="handlePrelievo">
 
-                            <div v-if="saldoAttuale < 5" class="info-prelievo"
-                                style="border-left: 3px solid #c62828; color: #c62828; background: #fff5f5;">
-                                Saldo insufficiente per richiedere un prelievo. Il minimo è di 5,00€.
-                            </div>
-
                             <div class="form-group highlight-box">
                                 <label>Importo da prelevare (€)</label>
                                 <input type="number" step="0.01" min="5" class="amount-input"
-                                    v-model.number="prelievoForm.importo" :max="saldoAttuale" placeholder="es. 50.00"
+                                    v-model.number="prelievoForm.importo" :max="saldoAttuale" @input="limitaImportoPrelievo" placeholder="es. 50.00"
                                     required>
                                 <small class="hint-text">Disponibile: {{ formattaValuta(saldoAttuale) }}</small>
                             </div>
@@ -367,7 +391,7 @@ const handlePrelievo = async () => {
                             <div class="form-group" v-if="prelievoForm.metodo === 'Bonifico Bancario'">
                                 <label>Intestatario del Conto</label>
                                 <input type="text" v-model="prelievoForm.intestatario"
-                                    @input="prelievoForm.intestatario = prelievoForm.intestatario.toUpperCase()"
+                                    @input="formattaIntestatario"
                                     placeholder="MARIO ROSSI" required>
                             </div>
 
@@ -379,7 +403,7 @@ const handlePrelievo = async () => {
                                     required>
                             </div>
 
-                            <button type="submit" class="btn fill w-100" :disabled="isLoading">
+                            <button type="submit" class="btn fill w-100" :disabled="isLoading || saldoAttuale < 5">
                                 {{ isLoading ? 'Elaborazione...' : 'Conferma Prelievo' }}
                             </button>
 
@@ -457,13 +481,12 @@ const handlePrelievo = async () => {
     --primary-blue: #00408A;
     --deep-blue: #042571;
     --border-light: #e0e0e0;
-    --bg-light: #f8f9fa;
     --text-dark: #333;
     --white: #ffffff;
 }
 
 .page-container {
-    background: var(--bg-light, #f8f9fa);
+    background: #ffffff;
     min-height: 100vh;
     font-family: 'Inter', -apple-system, sans-serif;
     display: flex;
@@ -475,7 +498,7 @@ const handlePrelievo = async () => {
 }
 
 .basic-hero.centered-hero {
-    background: linear-gradient(135deg, #00408A 0%, #042571 100%);
+    background: radial-gradient(circle at center, #002d5e 0%, #001D3D 100%);
     color: var(--white, #fff);
     padding: 56px 20px 48px;
     text-align: center;
@@ -836,44 +859,5 @@ const handlePrelievo = async () => {
     background: white;
     color: var(--primary-blue);
     border-bottom: 2px solid var(--primary-blue);
-}
-
-.info-prelievo {
-    font-size: 0.75rem;
-    color: #666;
-    margin: 15px 0;
-    padding: 10px;
-    background: #f9f9f9;
-    border-radius: 6px;
-}
-
-
-.tx-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.1rem;
-    flex-shrink: 0;
-    line-height: 0;
-}
-
-.tx-icon i {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0;
-    padding: 0;
-}
-
-.icon-pending {
-    background-color: #FFF4E5;
-    color: #FF9800;
-}
-
-.text-pending {
-    color: #e98c00 !important;
 }
 </style>
