@@ -12,10 +12,8 @@ import Footer from '../components/Footer.vue'
 import ChatBox from '../components/ChatBox.vue'
 import { getSocket } from '../composables/useChat.js'
 
-// foto profilo standard
 import defaultAvatarUrl from '../assets/default-avatar.png'
 
-// Componenti Dashboard
 import DashboardStats from '../components/gestore/DashboardStats.vue'
 import DashboardGarageList from '../components/gestore/DashboardGarageList.vue'
 import DashboardStato from '../components/gestore/DashboardStato.vue'
@@ -29,9 +27,8 @@ const isLoading = ref(false)
 const staSalvando = ref(false)
 const reRenderKey = ref(0)
 const isGarageDropdownOpen = ref(false)
-const isSidebarOpen = ref(false) // variabile per il menu mobile
+const isSidebarOpen = ref(false) 
 
-// Collegamenti ai dati dello Store
 const mieiGarage = computed(() => garageStore.mieiGarage || [])
 const storicoPrenotazioni = computed(() => garageStore.storicoPrenotazioni || [])
 const postiPerGarage = computed(() => garageStore.postiPerGarage || {})
@@ -97,7 +94,6 @@ const isEditing = ref(false)
 const idGarageInModifica = ref(null)
 const garageInModifica = ref(null)
 
-// Ricevitore per le foto caricate nel form figlio
 const fotoDaCaricare = ref([])
 
 const handleFotoDalComponente = (files) => {
@@ -119,22 +115,18 @@ const preparaModifica = async (garage) => {
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-// Logica Two-Step (Store Database + Foto Store Supabase)
 const salvaNuovoGarage = async (payload) => {
   alertStore.pulisci()
   staSalvando.value = true
 
   try {
-    // STEP 1: Creazione/Modifica Testo Garage tramite Store
     const res = isEditing.value
       ? await garageStore.updateGarage(idGarageInModifica.value, payload)
       : await garageStore.createGarage(payload)
 
     if (res.success || res.garage) {
-      // Otteniamo il nuovo ID in base a come lo store restituisce l'oggetto
       const nuovoIdGarage = isEditing.value ? idGarageInModifica.value : (res.garage?.id_garage || res.data?.id_garage)
 
-      // STEP 2: Caricamento Immagini tramite la chiamata allo store
       if (fotoDaCaricare.value.length > 0 && nuovoIdGarage) {
         const formData = new FormData()
         fotoDaCaricare.value.forEach(file => formData.append('foto_garage', file))
@@ -146,13 +138,11 @@ const salvaNuovoGarage = async (payload) => {
         }
       }
 
-      // Pulizia form
       isEditing.value = false
       idGarageInModifica.value = null
       garageInModifica.value = null
       fotoDaCaricare.value = []
 
-      // Refresh dei dati tramite store
       await garageStore.caricaDashboardGestore()
       alertStore.mostra('success', isEditing.value ? 'Garage aggiornato!' : 'Garage pubblicato!')
       vistaAttiva.value = 'garage'
@@ -174,13 +164,11 @@ const cambiaStatoGarage = async (garage) => {
   const nuovoStato = !garage.isattivo;
 
   if (nuovoStato === false) {
-    // Invece del confirm, apriamo il modal
     garageDaDisattivare.value = garage;
     showConfirmDisableModal.value = true;
     return;
   }
 
-  // Se è un'attivazione, procediamo direttamente
   await eseguiCambioStato(garage, true);
 };
 
@@ -203,7 +191,6 @@ const eseguiCambioStato = async (garage, stato) => {
   }
 };
 
-// --- Funzioni per gestire le azioni del Modal ---
 const confermaDisattivazione = async () => {
   if (garageDaDisattivare.value) {
     await eseguiCambioStato(garageDaDisattivare.value, false);
@@ -301,8 +288,8 @@ onUnmounted(() => {
 })
 
 watch(vistaAttiva, (newVal) => {
-  alertStore.pulisci() // Pulisce gli alert globali cambiando vista
-  isSidebarOpen.value = false // chiude il menu mobile al cambio di vista
+  alertStore.pulisci() 
+  isSidebarOpen.value = false 
   if (newVal !== 'aggiungi') {
     idGarageInModifica.value = null
     garageInModifica.value = null
@@ -366,10 +353,8 @@ const formattaDataLeggibile = (dataIso) => {
     </div>
 
     <div v-else class="dashboard-layout">
-      <!-- Overlay menu mobile -->
       <div class="sidebar-overlay" :class="{ 'd-block': isSidebarOpen }" @click="isSidebarOpen = false"></div>
 
-      <!-- Barra mobile con hamburger -->
       <div class="mobile-topbar d-md-none">
         <button class="hamburger-btn" @click="isSidebarOpen = true">
           <i class="bi bi-list fs-3"></i>
@@ -454,8 +439,10 @@ const formattaDataLeggibile = (dataIso) => {
         </div>
 
         <template v-else>
-          <DashboardStats v-if="vistaAttiva === 'statistiche'" :miei-garage="mieiGarageFiltrati"
-            :storico-prenotazioni="storicoPrenotazioniFiltrato" />
+          <div class="stats-container">
+            <DashboardStats v-if="vistaAttiva === 'statistiche'" :miei-garage="mieiGarageFiltrati"
+              :storico-prenotazioni="storicoPrenotazioniFiltrato" />
+          </div>
 
           <DashboardGarageList v-if="vistaAttiva === 'garage'" :miei-garage="mieiGarage" @modifica="preparaModifica"
             @toggle-stato="cambiaStatoGarage" />
@@ -703,7 +690,6 @@ const formattaDataLeggibile = (dataIso) => {
   flex: 1;
 }
 
-/* Stili Mobile Header */
 .mobile-topbar {
   display: none;
   align-items: center;
@@ -943,9 +929,7 @@ const formattaDataLeggibile = (dataIso) => {
 }
 
 @keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+  to { transform: rotate(360deg); }
 }
 
 .chat-popup-container {
@@ -963,15 +947,8 @@ const formattaDataLeggibile = (dataIso) => {
 }
 
 @keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .info-list {
@@ -1198,15 +1175,8 @@ const formattaDataLeggibile = (dataIso) => {
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateX(10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+  from { opacity: 0; transform: translateX(10px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
 .step-wrapper {
@@ -1304,7 +1274,6 @@ const formattaDataLeggibile = (dataIso) => {
   color: #00408A;
 }
 
-/* MEDIA QUERIES PER MOBILE / TABLET */
 @media (max-width: 768px) {
   .dashboard-layout {
     flex-direction: column;
@@ -1318,7 +1287,6 @@ const formattaDataLeggibile = (dataIso) => {
     position: fixed;
     top: 0;
     left: -280px;
-    /* Nasconde la sidebar */
     width: 280px;
     height: 100vh;
     z-index: 1050;
@@ -1328,11 +1296,25 @@ const formattaDataLeggibile = (dataIso) => {
 
   .sidebar.sidebar-open {
     left: 0;
-    /* Mostra la sidebar */
   }
 
   .main-content {
     padding: 20px 16px;
+  }
+  
+  .stats-container {
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+  
+  :deep(.dashboard-stats-wrapper) {
+    width: 100%;
+  }
+  
+  :deep(.chart-container), :deep(canvas) {
+    max-width: 100% !important;
+    height: auto !important;
   }
 }
 </style>

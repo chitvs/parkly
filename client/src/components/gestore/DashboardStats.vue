@@ -175,11 +175,11 @@ const chartDataRevenuePerGarage = computed(() => ({
             </div>
 
             <div class="stats-filters">
-                <div class="form-group stats-filters__group">
+                <div class="form-group stats-filters__group date-wrap">
                     <label class="form-label stats-filters__label">Dal</label>
                     <input type="date" class="form-input stats-filters__date" v-model="filtroInizio">
                 </div>
-                <div class="form-group stats-filters__group">
+                <div class="form-group stats-filters__group date-wrap">
                     <label class="form-label stats-filters__label">Al</label>
                     <input type="date" class="form-input stats-filters__date" v-model="filtroFine">
                 </div>
@@ -208,7 +208,7 @@ const chartDataRevenuePerGarage = computed(() => ({
                             Date(filtroFine).toLocaleDateString('it-IT') }}
                     </p>
                 </div>
-                <div class="chart-body">
+                <div class="chart-body responsive-chart-wrap">
                     <Line v-if="chartDataRevenue.labels.length" :data="chartDataRevenue" :options="chartOptions" />
                     <div v-else class="chart-empty">Seleziona un intervallo di date per visualizzare il trend</div>
                 </div>
@@ -218,7 +218,7 @@ const chartDataRevenuePerGarage = computed(() => ({
                 <div class="chart-header">
                     <h3 class="chart-title">Stato Prenotazioni</h3>
                 </div>
-                <div class="chart-body chart-body--centered">
+                <div class="chart-body chart-body--centered responsive-chart-wrap">
                     <Doughnut v-if="prenotazioniFiltrate.length" :data="chartDataStato" :options="chartOptions" />
                     <div v-else class="chart-empty">Dati insufficienti</div>
                 </div>
@@ -231,7 +231,7 @@ const chartDataRevenuePerGarage = computed(() => ({
                     <div class="chart-header chart-header--center">
                         <h3 class="chart-title">Confronto Incassi per Garage</h3>
                     </div>
-                    <div class="chart-body">
+                    <div class="chart-body responsive-chart-wrap">
                         <Bar v-if="mieiGarage.length" :data="chartDataRevenuePerGarage" :options="chartOptions" />
                         <div v-else class="chart-empty">Nessun garage registrato</div>
                     </div>
@@ -240,7 +240,7 @@ const chartDataRevenuePerGarage = computed(() => ({
                     <div class="chart-header chart-header--center">
                         <h3 class="chart-title">Qualità Media (Recensioni storiche)</h3>
                     </div>
-                    <div class="chart-body">
+                    <div class="chart-body responsive-chart-wrap">
                         <Radar :data="chartDataRadar" :options="chartOptionsRadar" />
                     </div>
                 </template>
@@ -486,6 +486,38 @@ const chartDataRevenuePerGarage = computed(() => ({
 
     .charts-row {
         grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .stats-page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 20px;
+    }
+
+    .stats-filters {
+        width: 100%;
+        gap: 8px; 
+    }
+    .date-wrap {
+        flex: 1;
+        min-width: 0; 
+    }
+    .stats-filters__date {
+        width: 100%; 
+        padding: 0 8px; 
+        font-size: 0.85rem;
+    }
+    .responsive-chart-wrap {
+        position: relative;
+        width: 100%;
+        height: 220px !important; 
+        max-width: 100vw;
+    }
+    
+    .chart-card {
+        padding: 15px; 
     }
 }
 </style>
