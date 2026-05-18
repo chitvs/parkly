@@ -4,6 +4,7 @@ import { authStore } from '../store/auth.js'
 import { walletStore } from '../store/wallet.js'
 import { garageStore } from '../store/garage.js'
 import { alertStore } from '../store/alert.js'
+import { prenotazioniStore } from '../store/prenotazioni.js'
 import * as bootstrap from 'bootstrap'
 import 'bootstrap-icons/font/bootstrap-icons.css'
 
@@ -33,10 +34,10 @@ const isSidebarOpen = ref(false) // variabile per il menu mobile
 
 // Collegamenti ai dati dello Store
 const mieiGarage = computed(() => garageStore.mieiGarage || [])
-const storicoPrenotazioni = computed(() => garageStore.storicoPrenotazioni || [])
 const postiPerGarage = computed(() => garageStore.postiPerGarage || {})
 const occupazioneGarage = computed(() => garageStore.occupazioneGarage || {})
 const allerteStato = computed(() => garageStore.allerteStato || [])
+const storicoPrenotazioni = ref([])
 
 const idGarageSelezionatoGlobale = computed({
   get: () => garageStore.idGarageSelezionato,
@@ -280,8 +281,13 @@ onMounted(async () => {
       walletStore.contabilizzaRicavi(),
       walletStore.caricaSaldoSospeso(),
       garageStore.caricaDashboardGestore(),
-      garageStore.caricaStoricoGestore(),
     ])
+    const res = await prenotazioniStore.getPrenotazioniGestore()
+    if (res && res.data) {
+      storicoPrenotazioni.value = Array.isArray(res.data) ? res.data : (res.data.prenotazioni || [])
+    } else if (res) {
+      storicoPrenotazioni.value = res.prenotazioni || res
+    }
     if (mieiGarage.value.length === 0) vistaAttiva.value = 'aggiungi'
     else vistaAttiva.value = 'garage'
   } finally {
