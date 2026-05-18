@@ -10,7 +10,8 @@
  *
  * Endpoint protetti (richiedono ruolo GESTORE):
  * GET /garages-gestore                                                            - Garage del gestore loggato
- * PUT /garages-gestore/:id                                                        - Modifica garage 
+ * POST /garages-gestore                                                           - Crea un nuovo garage
+ * PUT /garages-gestore/:id                                                        - Modifica garage
  * POST /:id/upload-photos                                                         - Caricamento foto
  * POST /garages-gestore/:id/posti/:id_posto/manutenzione                          - Aggiunge blocco manutenzione
  * DELETE /garages-gestore/:idGarage/posti/:idPosto/manutenzione/:idManutenzione   - Rimuove manutenzione
@@ -142,6 +143,123 @@ router.get("/garages-gestore", isGestore, async (req, res) => {
   } catch (err) {
     console.error("[garage] Errore GET /garages-gestore:", err);
     res.status(500).json({ error: "Errore interno del server." });
+  }
+});
+
+// POST /api/garage/garages-gestore
+// Crea un nuovo garage per il gestore loggato
+router.post("/garages-gestore", isGestore, async (req, res) => {
+  try {
+    const idGestore = req.session.utente.id;
+    const body = req.body;
+
+    const {
+      nome,
+      descrizione,
+      indirizzo,
+      via,
+      civico,
+      cap,
+      citta,
+      provincia,
+      latitudine,
+      longitudine,
+      tariffabase,
+      tariffamoto,
+      tariffafurgone,
+      sovrapprezzoelettrica,
+      scontodisabili,
+      altezzamassima,
+      orarioapertura,
+      orariochiusura,
+      is24h,
+      mappatestuale,
+      posti,
+      nrighe,
+      ncolonne,
+    } = body;
+
+    // Controllo campi obbligatori
+    if (!nome || !indirizzo || !tariffabase || !latitudine || !longitudine) {
+      return res.status(400).json({ error: "Campi obbligatori mancanti." });
+    }
+
+    const apertura = is24h ? "00:00" : orarioapertura || "08:00";
+    const chiusura = is24h ? "23:59" : orariochiusura || "20:00";
+
+    const result = await db.tx(async (t) => {
+      // Inserisce l'anagrafica del nuovo garage
+      const nuovoGarage = await t.one(
+        `INSERT INTO Garage (
+            ID_Gestore, Nome, Descrizione, Indirizzo, Via, Civico, Cap,
+            Citta, Provincia, Latitudine, Longitudine, AltezzaMassima,
+            TariffaAuto, TariffaMoto, TariffaFurgone, SovrapprezzoElettrica,
+            ScontoDisabili, OrarioApertura, OrarioChiusura, Is24h, 
+            MappaTestuale, NRighe, NColonne, IsAttivo
+         ) VALUES (
+            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
+            $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, TRUE
+         ) RETURNING *`,
+        [
+          idGestore,
+          nome,
+          descrizione || null,
+          indirizzo,
+          via || null,
+          civico || null,
+          cap || null,
+          citta || null,
+          provincia || null,
+          latitudine,
+          longitudine,
+          altezzamassima || null,
+          tariffabase,
+          tariffamoto || null,
+          tariffafurgone || null,
+          sovrapprezzoelettrica || null,
+          scontodisabili || null,
+          apertura,
+          chiusura,
+          is24h || false,
+          mappatestuale || null,
+          nrighe || 0,
+          ncolonne || 0,
+        ],
+      );
+
+      // Inserisce i posti auto dalla planimetria (se presenti)
+      if (Array.isArray(posti) && posti.length > 0) {
+        for (const posto of posti) {
+          await t.none(
+            `INSERT INTO PostoAuto (
+                ID_Garage, CodicePosto, TipoVeicolo, IsDisabili, IsElettrica, IsCoperto, IsAttivo
+             ) VALUES ($1, $2, $3, $4, $5, $6, TRUE)`,
+            [
+              nuovoGarage.id_garage,
+              posto.codice,
+              posto.tipo || "AUTO",
+              posto.isDisabili || false,
+              posto.isElettrica || false,
+              posto.isCoperto !== undefined ? posto.isCoperto : true,
+            ],
+          );
+        }
+      }
+
+      return nuovoGarage;
+    });
+
+    res.json({ success: true, garage: result });
+  } catch (err) {
+    console.error("[garage] Errore POST nuovo garage:", err);
+    if (err.code === "23505") {
+      return res
+        .status(400)
+        .json({ error: "Errore: codici dei posti duplicati." });
+    }
+    res
+      .status(500)
+      .json({ error: "Errore interno durante la creazione del garage." });
   }
 });
 
