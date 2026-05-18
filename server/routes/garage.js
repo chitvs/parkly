@@ -11,7 +11,7 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SER
 // configura Multer (handler per le foto prima di mandarle a Supabase)
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Ritorna la lista di tutti i garage
+// Ritorna la lista di tutti i garage (FILTRATA DAI CLONI CON DISTINCT ON)
 router.get("/", async (req, res) => {
   try {
     const { inizio, fine } = req.query;
@@ -20,7 +20,7 @@ router.get("/", async (req, res) => {
 
     if (inizio && fine) {
       query = `
-        SELECT 
+        SELECT DISTINCT ON (g.nome)
             g.*,
             g.TariffaAuto AS tariffabase, 
             json_strip_nulls(json_build_object(
@@ -63,11 +63,12 @@ router.get("/", async (req, res) => {
                 AND ($2::timestamp::time >= g.orarioapertura OR $2::timestamp::time <= g.orariochiusura)
             )
         )
+        ORDER BY g.nome, g.id_garage ASC
       `;
       params = [inizio, fine];
     } else {
       query = `
-        SELECT 
+        SELECT DISTINCT ON (g.nome)
             g.*,
             g.TariffaAuto AS tariffabase, 
             json_strip_nulls(json_build_object(
@@ -91,6 +92,7 @@ router.get("/", async (req, res) => {
             GROUP BY id_garage
         ) p ON g.id_garage = p.id_garage
         WHERE g.isattivo = TRUE
+        ORDER BY g.nome, g.id_garage ASC
       `;
     }
 
@@ -132,15 +134,13 @@ router.post('/:id/upload-photos', isGestore, upload.array('foto_garage', 10), as
 
     const urlsCaricate = [];
 
-    // Loop per caricare ogni singola foto su Supabase
     for (const file of files) {
       const estensione = file.originalname.split('.').pop();
-      // Organizzo i file per cartella usando l'ID del garage
       const nomeFile = `${idGarage}/${Date.now()}_${Math.random().toString(36).substring(7)}.${estensione}`;
 
       const { error } = await supabase
         .storage
-        .from('garage-photos') 
+        .from('garage-photos')
         .upload(nomeFile, file.buffer, {
           contentType: file.mimetype,
           upsert: false
@@ -148,12 +148,10 @@ router.post('/:id/upload-photos', isGestore, upload.array('foto_garage', 10), as
 
       if (error) throw error;
 
-      // Recupero l'URL pubblico
       const { data: publicUrlData } = supabase.storage.from('garage-photos').getPublicUrl(nomeFile);
       urlsCaricate.push(publicUrlData.publicUrl);
     }
 
-    // Salvo gli URL nel database (aggiungendoli all'array esistente o creandolo)
     await db.none(
       'UPDATE Garage SET Foto_URLs = array_cat(COALESCE(Foto_URLs, ARRAY[]::TEXT[]), $1) WHERE ID_Garage = $2',
       [urlsCaricate, idGarage]
@@ -279,7 +277,7 @@ router.get("/:id/posti", async (req, res) => {
     `;
     const rows = await db.any(queryComplessa, [id, inizio, fine]);
     const posti = formattaPosti(rows);
-    
+
     res.json({ success: true, posti });
   } catch (err) {
     console.error("Errore SQL:", err);
@@ -502,17 +500,14 @@ router.post('/garages-gestore/:id/posti/:id_posto/manutenzione', isGestore, asyn
         const { inizio, fine, motivazione } = req.body;
         const idGestore = req.session.utente.id;
 
-        if (!inizio || !fine) return res.status(400).json({ error: 'Date obbligatorie' });
+    if (!inizio || !fine) return res.status(400).json({ error: 'Date obbligatorie' });
 
-        await db.tx(async t => {
-            // 1. Verifica che il garage sia suo
-            const checkProprieta = await t.oneOrNone(`
+    await db.tx(async t => {
+      const checkProprieta = await t.oneOrNone(`
                 SELECT g.ID_Garage 
                 FROM Garage g JOIN PostoAuto p ON g.ID_Garage = p.ID_Garage 
                 WHERE g.ID_Garage = $1 AND p.ID_Posto = $2 AND g.ID_Gestore = $3
             `, [id, id_posto, idGestore]);
-            
-            if (!checkProprieta) throw new Error('Posto non trovato o non autorizzato');
 
             // 2. Troviamo le prenotazioni attive in conflitto e verifichiamo se qualcuna è GIÀ iniziata
             const prenotazioniCoinvolte = await t.any(`
@@ -550,14 +545,14 @@ router.post('/garages-gestore/:id/posti/:id_posto/manutenzione', isGestore, asyn
                 INSERT INTO ManutenzionePosto (ID_Posto, Inizio, Fine, Motivazione)
                 VALUES ($1, $2, $3, $4)
             `, [id_posto, inizio, fine, motivazione || null]);
-        });
+    });
 
         res.json({ success: true, message: 'Manutenzione avviata. Le eventuali prenotazioni future in conflitto sono state annullate e rimborsate.' });
 
-    } catch (error) {
-        console.error('Errore manutenzione:', error);
-        res.status(400).json({ error: error.message || 'Errore interno' });
-    }
+  } catch (error) {
+    console.error('Errore manutenzione:', error);
+    res.status(400).json({ error: error.message || 'Errore interno' });
+  }
 });
 
 // DELETE /api/garage/garages-gestore/:idGarage/posti/:idPosto/manutenzione/:idManutenzione
