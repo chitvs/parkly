@@ -1,17 +1,30 @@
+/**
+ * Gestisce lo stato reattivo di tutti i filtri di ricerca per i garage 
+ * (prezzo, tipologia veicolo, servizi, raggio di ricerca) e fornisce 
+ * la logica per valutare se un singolo garage rispetta i criteri scelti.
+ */
+
 import { ref } from 'vue'
 
 export function useGarageFilters() {
-    
+
+    // STATO DEI FILTRI 
+    // Filtri booleani
     const filter24h = ref(false)
-    const maxPrice = ref(25)
-    const minHeight = ref(0)
     const filterCoperto = ref(false)
     const filterElettrico = ref(false)
     const filterDisabili = ref(false)
-    const filterTipoVeicolo = ref('ALL') // può essere 'ALL', 'AUTO', 'MOTO', 'FURGONE'
-    const raggioKm = ref(2)
+    // Filtri quantitativi
+    const maxPrice = ref(25)
+    const minHeight = ref(0)
+    const raggioKm = ref(2) // N.B. il filtraggio spaziale e delegato a useSpatialSearch.js
+    // Filtri selettivi
+    const filterTipoVeicolo = ref('ALL')
     const ordinamento = ref('distanza')
 
+    // AZIONI
+
+    // Resetta tutti i filtri ai loro valori predefiniti
     const resetTechnicalFilters = () => {
         filter24h.value = false
         filterCoperto.value = false
@@ -19,13 +32,16 @@ export function useGarageFilters() {
         filterDisabili.value = false
         maxPrice.value = 25
         minHeight.value = 0
-        filterTipoVeicolo.value = 'ALL'
         raggioKm.value = 2
+        filterTipoVeicolo.value = 'ALL'
         ordinamento.value = 'distanza'
     }
 
+    // Valuta se un garage passa tutti i filtri impostati dall'utente
     const passaFiltriTecnici = (g) => {
-        // capiamo quale tariffa guardare per questo garage
+
+        // Calcolo del prezzo
+        // Iniziamo con la tariffa di base come riferimento standard
         let tariffaDiRiferimento = Number(g.tariffabase);
 
         // se il backend ci ha mandato l'oggetto con le tariffe e abbiamo un veicolo specifico selezionato
@@ -35,12 +51,12 @@ export function useGarageFilters() {
             if (tariffaSpecifica) {
                 tariffaDiRiferimento = Number(tariffaSpecifica);
             } else {
-                // se cerco MOTO e questo garage non ha prezzi per MOTO, teoricamente lo escludiamo
-                // ma in realtà questo garage verrà già bloccato dal filtro in fondo (includes)
-                tariffaDiRiferimento = Infinity; 
+                // Se il garage non ha tariffe per questo veicolo impostiamo infinity per far fallire matematicamente il confronto
+                tariffaDiRiferimento = Infinity;
             }
         }
-
+        
+        // Il garage verrà riportato solo se passarà tutti i criteri selezionati
         return (!filter24h.value || g.is24h) &&
             tariffaDiRiferimento <= maxPrice.value &&
             (!minHeight.value || (g.altezzamassima && Number(g.altezzamassima) >= minHeight.value)) &&
@@ -50,6 +66,7 @@ export function useGarageFilters() {
             (filterTipoVeicolo.value === 'ALL' || g.tipiDisponibili?.includes(filterTipoVeicolo.value))
     }
 
+    // Return degli stati e dei metodi
     return {
         filter24h,
         maxPrice,

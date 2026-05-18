@@ -1,5 +1,6 @@
 import { ref, onUnmounted } from 'vue';
 import { io } from 'socket.io-client';
+import { apiFetch } from '../utils/apiClient.js';
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
 
@@ -43,9 +44,7 @@ export function useChat(idPrenotazione, idDestinatario) {
     staCaricando.value = true;
     try {
       // Chiamata REST API per recuperare i vecchi messaggi dal database
-      const res = await fetch(`${SERVER_URL}/api/messaggi/${idPrenotazione}`, {
-        credentials: 'include', //invia cookie sessione 
-      });
+      const res = await apiFetch(`/api/messaggi/${idPrenotazione}`);
       if (!res.ok) throw new Error('Errore nel caricamento dello storico');
       messaggi.value = await res.json();
     } catch (err) {
