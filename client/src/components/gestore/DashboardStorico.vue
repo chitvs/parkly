@@ -99,7 +99,7 @@ watch(() => props.prenotazioni, () => {
             </div>
         </div>
 
-        <div class="pagination-container mt-4" v-if="prenotazioni.length > 0">
+        <div class="pagination-container" v-if="prenotazioni.length > 0">
             <Pagination v-model:paginaCorrente="paginaCorrente" v-model:elementiPerPagina="elementiPerPagina"
                 :totaleElementi="prenotazioni.length" @cambio-pagina="scrollInAlto" />
         </div>
@@ -314,11 +314,8 @@ watch(() => props.prenotazioni, () => {
     border: 2px solid #fff;
 }
 
-.mt-4 {
-    margin-top: 1.5rem;
-}
-
 .pagination-container {
     margin-top: auto !important;
+    padding-top: 2rem;
 }
 </style>
