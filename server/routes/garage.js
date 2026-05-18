@@ -11,7 +11,7 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SER
 // configura Multer (handler per le foto prima di mandarle a Supabase)
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Ritorna la lista di tutti i garage
+// Ritorna la lista di tutti i garage (FILTRATA DAI CLONI CON DISTINCT ON)
 router.get("/", async (req, res) => {
   try {
     const { inizio, fine } = req.query;
@@ -20,7 +20,7 @@ router.get("/", async (req, res) => {
 
     if (inizio && fine) {
       query = `
-        SELECT 
+        SELECT DISTINCT ON (g.nome)
             g.*,
             g.TariffaAuto AS tariffabase, 
             json_strip_nulls(json_build_object(
@@ -63,11 +63,12 @@ router.get("/", async (req, res) => {
                 AND ($2::timestamp::time >= g.orarioapertura OR $2::timestamp::time <= g.orariochiusura)
             )
         )
+        ORDER BY g.nome, g.id_garage ASC
       `;
       params = [inizio, fine];
     } else {
       query = `
-        SELECT 
+        SELECT DISTINCT ON (g.nome)
             g.*,
             g.TariffaAuto AS tariffabase, 
             json_strip_nulls(json_build_object(
@@ -91,6 +92,7 @@ router.get("/", async (req, res) => {
             GROUP BY id_garage
         ) p ON g.id_garage = p.id_garage
         WHERE g.isattivo = TRUE
+        ORDER BY g.nome, g.id_garage ASC
       `;
     }
 
@@ -121,8 +123,8 @@ router.post('/garages-gestore', isGestore, async (req, res) => {
     const {
       nome, descrizione, indirizzo, via, civico, cap, citta, provincia, latitudine, longitudine,
       tariffabase, tariffamoto, tariffafurgone, sovrapprezzoelettrica, scontodisabili,
-      altezzamassima, orarioapertura, orariochiusura, is24h, mappatestuale, posti, 
-      nrighe, ncolonne 
+      altezzamassima, orarioapertura, orariochiusura, is24h, mappatestuale, posti,
+      nrighe, ncolonne
     } = req.body;
 
     if (!nome || !indirizzo || !tariffabase || !latitudine || !longitudine) {
@@ -175,11 +177,8 @@ router.post('/garages-gestore', isGestore, async (req, res) => {
               (ID_Garage, CodicePosto, TipoVeicolo, IsDisabili, IsElettrica, IsCoperto)
              VALUES ($1, $2, $3, $4, $5, $6)`,
             [
-              garage.id_garage,
-              posto.codice,
-              posto.tipo || 'AUTO',
-              posto.isDisabili || false,
-              posto.isElettrica || false,
+              garage.id_garage, posto.codice, posto.tipo || 'AUTO',
+              posto.isDisabili || false, posto.isElettrica || false,
               posto.isCoperto !== undefined ? posto.isCoperto : true
             ]
           );
@@ -194,7 +193,7 @@ router.post('/garages-gestore', isGestore, async (req, res) => {
   } catch (error) {
     console.error("Errore creazione garage e posti:", error);
     if (error.code === '23505') {
-       return res.status(400).json({ error: 'Errore: Codici dei posti duplicati o non validi.' });
+      return res.status(400).json({ error: 'Errore: Codici dei posti duplicati o non validi.' });
     }
     res.status(500).json({ error: 'Errore interno del server durante il salvataggio.' });
   }
@@ -217,15 +216,13 @@ router.post('/:id/upload-photos', isGestore, upload.array('foto_garage', 10), as
 
     const urlsCaricate = [];
 
-    // Loop per caricare ogni singola foto su Supabase
     for (const file of files) {
       const estensione = file.originalname.split('.').pop();
-      // Organizzo i file per cartella usando l'ID del garage
       const nomeFile = `${idGarage}/${Date.now()}_${Math.random().toString(36).substring(7)}.${estensione}`;
 
       const { error } = await supabase
         .storage
-        .from('garage-photos') 
+        .from('garage-photos')
         .upload(nomeFile, file.buffer, {
           contentType: file.mimetype,
           upsert: false
@@ -233,12 +230,10 @@ router.post('/:id/upload-photos', isGestore, upload.array('foto_garage', 10), as
 
       if (error) throw error;
 
-      // Recupero l'URL pubblico
       const { data: publicUrlData } = supabase.storage.from('garage-photos').getPublicUrl(nomeFile);
       urlsCaricate.push(publicUrlData.publicUrl);
     }
 
-    // Salvo gli URL nel database (aggiungendoli all'array esistente o creandolo)
     await db.none(
       'UPDATE Garage SET Foto_URLs = array_cat(COALESCE(Foto_URLs, ARRAY[]::TEXT[]), $1) WHERE ID_Garage = $2',
       [urlsCaricate, idGarage]
@@ -359,7 +354,7 @@ router.get("/:id/posti", async (req, res) => {
     `;
     const rows = await db.any(queryComplessa, [id, inizio, fine]);
     const posti = formattaPosti(rows);
-    
+
     res.json({ success: true, posti });
   } catch (err) {
     console.error("Errore SQL:", err);
@@ -420,7 +415,7 @@ router.put('/garages-gestore/:id', isGestore, async (req, res) => {
     const {
       nome, descrizione, indirizzo, via, civico, cap, citta, provincia, latitudine, longitudine,
       tariffabase, tariffamoto, tariffafurgone, sovrapprezzoelettrica, scontodisabili,
-      altezzamassima, orarioapertura, orariochiusura, is24h, mappatestuale, posti, nrighe, ncolonne 
+      altezzamassima, orarioapertura, orariochiusura, is24h, mappatestuale, posti, nrighe, ncolonne
     } = req.body;
 
     if (!nome || !indirizzo || !tariffabase || !latitudine || !longitudine) {
@@ -475,8 +470,8 @@ router.put('/garages-gestore/:id', isGestore, async (req, res) => {
               IsCoperto = EXCLUDED.IsCoperto,
               IsAttivo = TRUE
           `, [
-            idGarage, posto.codice, posto.tipo || 'AUTO', 
-            posto.isDisabili || false, posto.isElettrica || false, 
+            idGarage, posto.codice, posto.tipo || 'AUTO',
+            posto.isDisabili || false, posto.isElettrica || false,
             posto.isCoperto !== undefined ? posto.isCoperto : true
           ]);
         }
@@ -501,40 +496,37 @@ router.post('/garages-gestore/:id/posti/:id_posto/manutenzione', isGestore, asyn
         const { inizio, fine, motivazione } = req.body;
         const idGestore = req.session.utente.id;
 
-        if (!inizio || !fine) return res.status(400).json({ error: 'Date obbligatorie' });
+    if (!inizio || !fine) return res.status(400).json({ error: 'Date obbligatorie' });
 
-        await db.tx(async t => {
-            // 1. Verifica che il garage sia suo
-            const checkProprieta = await t.oneOrNone(`
+    await db.tx(async t => {
+      const checkProprieta = await t.oneOrNone(`
                 SELECT g.ID_Garage 
                 FROM Garage g JOIN PostoAuto p ON g.ID_Garage = p.ID_Garage 
                 WHERE g.ID_Garage = $1 AND p.ID_Posto = $2 AND g.ID_Gestore = $3
             `, [id, id_posto, idGestore]);
-            
-            if (!checkProprieta) throw new Error('Posto non trovato o non autorizzato');
 
-            // 2. Controllo conflitti con prenotazioni attive
-            const occupato = await t.oneOrNone(`
+      if (!checkProprieta) throw new Error('Posto non trovato o non autorizzato');
+
+      const occupato = await t.oneOrNone(`
                 SELECT ID_Prenotazione FROM Prenotazione 
                 WHERE ID_Posto = $1 AND Stato = 'ATTIVA'
                 AND (InizioSosta, FineSosta) OVERLAPS ($2::timestamp, $3::timestamp)
             `, [id_posto, inizio, fine]);
 
-            if (occupato) throw new Error('Impossibile disabilitare: sono presenti prenotazioni attive in questo periodo.');
+      if (occupato) throw new Error('Impossibile disabilitare: sono presenti prenotazioni attive in questo periodo.');
 
-            // 3. Inserimento
-            await t.none(`
+      await t.none(`
                 INSERT INTO ManutenzionePosto (ID_Posto, Inizio, Fine, Motivazione)
                 VALUES ($1, $2, $3, $4)
             `, [id_posto, inizio, fine, motivazione || null]);
-        });
+    });
 
-        res.json({ success: true, message: 'Posto disabilitato con successo per il periodo selezionato.' });
+    res.json({ success: true, message: 'Posto disabilitato con successo per il periodo selezionato.' });
 
-    } catch (error) {
-        console.error('Errore manutenzione:', error);
-        res.status(400).json({ error: error.message || 'Errore interno' });
-    }
+  } catch (error) {
+    console.error('Errore manutenzione:', error);
+    res.status(400).json({ error: error.message || 'Errore interno' });
+  }
 });
 
 // DELETE /api/garage/garages-gestore/:idGarage/posti/:idPosto/manutenzione/:idManutenzione
@@ -568,6 +560,39 @@ router.delete('/garages-gestore/:idGarage/posti/:idPosto/manutenzione/:idManuten
         console.error(err.message);
         res.status(500).json({ success: false, error: "Errore interno del server: " + err.message });
     }
+
+    const idGestore = utenteLoggato.id || utenteLoggato.id_utente;
+    const { idGarage, idPosto, idManutenzione } = req.params;
+
+    if (!idGestore) {
+      throw new Error("ID Gestore risultante è undefined!");
+    }
+
+    const checkGarage = await db.oneOrNone(
+      'SELECT 1 FROM Garage WHERE ID_Garage = $1 AND ID_Gestore = $2',
+      [idGarage, idGestore]
+    );
+
+    if (!checkGarage) {
+      console.log("Errore: Il garage non appartiene a questo gestore");
+      return res.status(403).json({ success: false, error: "Non hai i permessi per gestire questo garage" });
+    }
+
+    const result = await db.result(
+      'DELETE FROM ManutenzionePosto WHERE ID_Manutenzione = $1 AND ID_Posto = $2',
+      [idManutenzione, idPosto]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ success: false, error: "Manutenzione non trovata (forse già eliminata)" });
+    }
+
+    res.json({ success: true, message: "Manutenzione rimossa. Il posto è di nuovo disponibile." });
+  } catch (err) {
+    console.error("!!! ERRORE CRASH IN DELETE MANUTENZIONE !!!");
+    console.error(err.message);
+    res.status(500).json({ success: false, error: "Errore interno del server: " + err.message });
+  }
 });
 
 module.exports = router;

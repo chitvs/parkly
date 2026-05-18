@@ -14,6 +14,8 @@ const utenti = [
   { email: 'simona.r@email.com',     password: 'cliente123' },
   { email: 'davide.m@email.com',     password: 'cliente123' },
   { email: 'giada.s@email.com',      password: 'cliente123' },
+  { email: 'marco.b@garage.it', password: 'gestore123' },
+  { email: 'laura.r@garage.it',    password: 'gestore123' }
 ];
 
 async function main() {
