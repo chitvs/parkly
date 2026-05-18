@@ -263,6 +263,40 @@ watch(sliderTime, (newTime) => {
         }
     });
 });
+
+// Calcola l'occupazione in tempo reale sul frontend per la planimetria
+const postiDinamici = computed(() => {
+    const mappa = {};
+    
+    for (const garage of props.mieiGarage) {
+        const idG = garage.id_garage;
+        const posti = props.postiPerGarage[idG] || [];
+        
+        // Capisce se stiamo guardando il calendario manuale o lo slider temporale
+        const tempoDaEsaminare = (usaDateManuali.value[idG] && filtriDate.value[idG]?.inizio)
+            ? new Date(filtriDate.value[idG].inizio)
+            : sliderTime.value;
+
+        // Inietta "is_occupato" in ogni singolo posto incrociando i dati
+        mappa[idG] = posti.map(posto => {
+            const occupatoOra = props.prenotazioni.some(p => {
+                const isStessoPosto = Number(p.id_posto) === Number(posto.id_posto);
+                const stato = p.stato ? String(p.stato).trim().toUpperCase() : '';
+                
+                if (!isStessoPosto || (stato !== 'ATTIVA' && stato !== 'CONFERMATA')) return false;
+                
+                const inizio = new Date(p.iniziososta ? p.iniziososta.replace(' ', 'T') : '');
+                const fine = new Date(p.finesosta ? p.finesosta.replace(' ', 'T') : '');
+                
+                return !isNaN(inizio.getTime()) && inizio <= tempoDaEsaminare && fine > tempoDaEsaminare;
+            });
+            
+            // Restituisce il posto con la sovrascrittura in tempo reale
+            return { ...posto, is_occupato: occupatoOra };
+        });
+    }
+    return mappa;
+});
 </script>
 
 <template>
@@ -462,7 +496,7 @@ watch(sliderTime, (newTime) => {
                                     di inizio e fine.</div>
                             </div>
                         </div>
-                        <PlanimetriaGarage :posti="postiPerGarage[garage.id_garage] || []"
+                        <PlanimetriaGarage :posti="postiDinamici[garage.id_garage] || []"
                             :mappaTestuale="garage.mappatestuale" :isGestoreMode="true"
                             @manage="$emit('manage-posto', $event)" />
                     </div>
@@ -515,7 +549,7 @@ watch(sliderTime, (newTime) => {
 
 .sticky-nav {
     position: sticky;
-    top: 80px;
+    top: 88px;
     z-index: 100;
     box-shadow: 0 10px 30px rgba(0, 32, 74, 0.08);
 }
