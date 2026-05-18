@@ -12,7 +12,6 @@ const props = defineProps({
 
 defineEmits(['modifica', 'toggle-stato'])
 
-// Logica paginazione
 const paginaCorrente = ref(1)
 const elementiPerPagina = ref(5)
 
@@ -40,52 +39,54 @@ watch(() => props.mieiGarage, () => {
         </div>
 
         <div class="table-card">
-            <table class="parkly-table">
-                <thead>
-                    <tr>
-                        <th style="width: 50px;">#</th>
-                        <th>Nome Garage</th>
-                        <th>Indirizzo</th>
-                        <th style="width: 160px; text-align: center;">Stato</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="(garage, index) in mieiGaragePaginati" :key="garage.id_garage">
-                        <td class="td-muted">{{ index + 1 + (paginaCorrente - 1) * elementiPerPagina }}</td>
+            <div class="table-responsive-container">
+                <table class="parkly-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">#</th>
+                            <th>Nome Garage</th>
+                            <th>Indirizzo</th>
+                            <th style="width: 160px; text-align: center;">Stato</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(garage, index) in mieiGaragePaginati" :key="garage.id_garage">
+                            <td class="td-muted td-num" data-label="#">{{ index + 1 + (paginaCorrente - 1) * elementiPerPagina }}</td>
 
-                        <td class="td-bold">
-                            <div class="d-flex align-items-center gap-2">
-                                <RouterLink :to="`/garage/${garage.id_garage}`" class="garage-link">
-                                    {{ garage.nome }}
-                                </RouterLink>
-                                <button @click="$emit('modifica', garage)" class="btn-edit-small"
-                                    title="Modifica Garage">
-                                    <i class="bi bi-pencil-square"></i>
-                                </button>
-                            </div>
-                        </td>
-
-                        <td class="td-muted">{{ garage.indirizzo }}</td>
-
-                        <td>
-                            <label class="status-container" style="cursor: pointer;"
-                                :title="garage.isattivo ? 'Disattiva garage' : 'Attiva garage'">
-                                <span class="status-text" :class="{ 'status-text--active': garage.isattivo }">
-                                    {{ garage.isattivo ? 'Attivo' : 'Disattivo' }}
-                                </span>
-                                <div class="toggle-switch">
-                                    <input type="checkbox" :checked="garage.isattivo"
-                                        @click.prevent="$emit('toggle-stato', garage)">
-                                    <span class="slider round"></span>
+                            <td class="td-bold td-nome" data-label="Nome Garage">
+                                <div class="d-flex align-items-center gap-2">
+                                    <RouterLink :to="`/garage/${garage.id_garage}`" class="garage-link">
+                                        {{ garage.nome }}
+                                    </RouterLink>
+                                    <button @click="$emit('modifica', garage)" class="btn-edit-small"
+                                        title="Modifica Garage">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
                                 </div>
-                            </label>
-                        </td>
-                    </tr>
-                    <tr v-if="mieiGarage.length === 0">
-                        <td colspan="4" class="td-empty">Nessun garage trovato.</td>
-                    </tr>
-                </tbody>
-            </table>
+                            </td>
+
+                            <td class="td-muted td-ind" data-label="Indirizzo">{{ garage.indirizzo }}</td>
+
+                            <td class="td-stato" data-label="Stato">
+                                <label class="status-container" style="cursor: pointer;"
+                                    :title="garage.isattivo ? 'Disattiva garage' : 'Attiva garage'">
+                                    <span class="status-text" :class="{ 'status-text--active': garage.isattivo }">
+                                        {{ garage.isattivo ? 'Attivo' : 'Disattivo' }}
+                                    </span>
+                                    <div class="toggle-switch">
+                                        <input type="checkbox" :checked="garage.isattivo"
+                                            @click.prevent="$emit('toggle-stato', garage)">
+                                        <span class="slider round"></span>
+                                    </div>
+                                </label>
+                            </td>
+                        </tr>
+                        <tr v-if="mieiGarage.length === 0">
+                            <td colspan="4" class="td-empty">Nessun garage trovato.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
         <div class="pagination-container mt-4" v-if="mieiGarage.length > 0">
             <Pagination v-model:paginaCorrente="paginaCorrente" v-model:elementiPerPagina="elementiPerPagina"
@@ -140,6 +141,11 @@ watch(() => props.mieiGarage, () => {
     border: 0.5px solid #E8E8E8;
     border-radius: 12px;
     overflow: hidden;
+}
+
+.table-responsive-container {
+    width: 100%;
+    overflow-x: auto;
 }
 
 .parkly-table {
@@ -225,7 +231,6 @@ watch(() => props.mieiGarage, () => {
     color: #00204A;
 }
 
-/* --- Layout Contenitore Stato --- */
 .status-container {
     display: flex;
     align-items: center;
@@ -239,19 +244,15 @@ watch(() => props.mieiGarage, () => {
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: #C0392B;
-    /* Rosso per disattivo */
     min-width: 75px;
-    /* Larghezza fissa per evitare scatti della tabella */
     text-align: right;
     transition: color 0.25s ease;
 }
 
 .status-text--active {
     color: #1E8449;
-    /* Verde per attivo */
 }
 
-/* --- CSS Per il Toggle Switch --- */
 .toggle-switch {
     position: relative;
     display: inline-block;
@@ -309,5 +310,51 @@ input:checked+.slider:before {
 
 .mt-4 {
     margin-top: 1.5rem;
+}
+
+@media (max-width: 768px) {
+    .parkly-table {
+        min-width: 0 !important;
+    }
+    .parkly-table, .parkly-table thead, .parkly-table tbody, .parkly-table th, .parkly-table td, .parkly-table tr {
+        display: block;
+    }
+    .parkly-table thead tr {
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+    }
+    .parkly-table tbody tr {
+        border: 1px solid #E8E8E8;
+        border-radius: 8px;
+        margin: 10px;
+        padding: 8px;
+        background: #fff;
+    }
+    .parkly-table td {
+        border: none;
+        border-bottom: 1px solid #F5F5F5;
+        padding: 10px 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        text-align: right;
+    }
+    .parkly-table td:last-child {
+        border-bottom: none;
+    }
+    .parkly-table td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: #888;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-right: 16px;
+        text-align: left;
+    }
+    .status-container {
+        justify-content: flex-end;
+    }
 }
 </style>
