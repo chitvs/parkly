@@ -707,6 +707,7 @@ const formattaDataLeggibile = (dataIso) => {
 .dashboard-layout {
   display: flex;
   flex: 1;
+  align-items: stretch;
 }
 
 /* Stili Mobile Header */
@@ -925,7 +926,8 @@ const formattaDataLeggibile = (dataIso) => {
 .main-content {
   flex: 1;
   padding: 40px 48px;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .loading-state {

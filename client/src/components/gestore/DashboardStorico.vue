@@ -109,6 +109,9 @@ watch(() => props.prenotazioni, () => {
 <style scoped>
 .vista {
     animation: fadeIn 0.25s ease;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
 }
 
 @keyframes fadeIn {
@@ -313,5 +316,9 @@ watch(() => props.prenotazioni, () => {
 
 .mt-4 {
     margin-top: 1.5rem;
+}
+
+.pagination-container {
+    margin-top: auto !important;
 }
 </style>
