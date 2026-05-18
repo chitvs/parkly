@@ -282,7 +282,7 @@ router.put("/:codice/annulla", isLoggato, async (req, res) => {
       // Recupera la prenotazione con lock per evitare annullamenti concorrenti
       const prenotazione = await t.oneOrNone(
         `SELECT
-            p.ID_Prenotazione, p.PrezzoTotale, p.Stato, g.ID_Gestore,
+            p.ID_Prenotazione, p.ID_Utente, p.PrezzoTotale, p.Stato, g.ID_Gestore,
             (EXTRACT(EPOCH FROM (p.InizioSosta - (NOW() AT TIME ZONE 'Europe/Rome'))) / 3600) AS ore_all_inizio,
             (EXTRACT(EPOCH FROM (NOW() - p.DataCreazione)) / 60)                              AS minuti_dalla_creazione
          FROM Prenotazione p
