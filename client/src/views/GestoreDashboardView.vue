@@ -167,6 +167,46 @@ const salvaNuovoGarage = async (payload) => {
   }
 }
 
+const cambiaStatoGarage = async (garage) => {
+  const nuovoStato = !garage.isattivo;
+  
+  // Se l'utente sta cercando di DISATTIVARE il garage, chiediamo conferma
+  if (nuovoStato === false) {
+      const confermato = confirm(
+          "ATTENZIONE: Stai per disattivare l'intero garage.\n\n" +
+          "TUTTE le prenotazioni future attive verranno ANNULLATE e rimborsate automaticamente ai clienti al 100%.\n" +
+          "L'operazione è IRREVERSIBILE.\n\n" +
+          "Sei sicuro di voler procedere?"
+      );
+      
+      // Se clicca "Annulla", blocchiamo l'esecuzione (lo switch tornerà a posto ricaricando i dati sotto)
+      if (!confermato) {
+          await garageStore.caricaDashboardGestore();
+          return;
+      }
+  }
+
+  messaggio.value = null;
+  try {
+    const res = await garageStore.updateGarage(garage.id_garage, { isattivo: nuovoStato });
+    
+    if (res.success || res.garage) {
+      messaggio.value = { 
+          tipo: 'success', 
+          testo: `Garage ${nuovoStato ? 'attivato' : 'disattivato e rimborsi erogati'} con successo!` 
+      };
+      await garageStore.caricaDashboardGestore();
+    } else {
+      messaggio.value = { tipo: 'error', testo: res.error || 'Errore durante il cambio di stato.' };
+      await garageStore.caricaDashboardGestore();
+    }
+  } catch (e) {
+    console.error(e);
+    messaggio.value = { tipo: 'error', testo: 'Errore di rete.' };
+    await garageStore.caricaDashboardGestore();
+  }
+}
+
 const aggiornaMappaOrari = async ({ inizio, fine }) => {
   const iIso = new Date(inizio).toISOString()
   const fIso = new Date(fine).toISOString()
@@ -414,7 +454,7 @@ const formattaDataLeggibile = (dataIso) => {
           <DashboardStats v-if="vistaAttiva === 'statistiche'" :miei-garage="mieiGarageFiltrati"
             :storico-prenotazioni="storicoPrenotazioniFiltrato" />
 
-          <DashboardGarageList v-if="vistaAttiva === 'garage'" :miei-garage="mieiGarage" @modifica="preparaModifica" />
+          <DashboardGarageList v-if="vistaAttiva === 'garage'" :miei-garage="mieiGarage" @modifica="preparaModifica" @toggle-stato="cambiaStatoGarage"/>
 
           <DashboardStato v-if="vistaAttiva === 'stato'" :key="'stato-' + reRenderKey" :miei-garage="mieiGarageFiltrati"
             :posti-per-garage="postiPerGarage" :occupazione-garage="occupazioneGarage" :allerte-stato="allerteStato"

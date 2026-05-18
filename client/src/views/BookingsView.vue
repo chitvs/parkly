@@ -377,7 +377,7 @@ const chiudiChat = () => {
                   <!-- Pulsante Annulla  -->
                   <button 
                       v-if="booking.stato === 'ATTIVA'" 
-                      @click="handleCancelBooking(booking.codiceprenotazione)" 
+                      @click="apriModaleAnnullamento(booking)" 
                       class="custom-btn btn-cancel"
                       title="Annulla Prenotazione"
                   >

@@ -18,12 +18,14 @@ router.post('/', isLoggato, async (req, res) => {
                 throw { isCustom: true, status: 402, message: 'Credito insufficiente per completare la prenotazione.' };
             }
 
-            // 2. Controllo orari garage
+            // 2. Controllo orari garage, stato garage e stato posto
             const checkOrari = await t.one(`
                 SELECT 
-                    g.Is24h, g.OrarioApertura, g.OrarioChiusura,
+                    g.Is24h, g.OrarioApertura, g.OrarioChiusura, 
+                    g.IsAttivo AS garage_attivo, -- NUOVO CONTROLLO
                     g.Nome AS nome_garage, g.ID_Gestore,
-                    p.CodicePosto,
+                    p.CodicePosto, 
+                    p.IsAttivo AS posto_attivo, -- NUOVO CONTROLLO
                     
                     -- Controllo INIZIO
                     (CASE 
@@ -45,6 +47,11 @@ router.post('/', isLoggato, async (req, res) => {
                 JOIN PostoAuto p ON g.ID_Garage = p.ID_Garage
                 WHERE p.ID_Posto = $1
             `, [id_posto, inizio, fine]);
+
+            // BLOCCO DI SICUREZZA: Se il garage o il posto sono stati disattivati nel frattempo
+            if (!checkOrari.garage_attivo || !checkOrari.posto_attivo) {
+                throw { isCustom: true, status: 403, message: "Operazione annullata: questo garage o posto auto è stato appena disabilitato dal gestore." };
+            }
 
             if (!checkOrari.is24h && (!checkOrari.inizio_valido || !checkOrari.fine_valida)) {
                 throw { isCustom: true, status: 400, message: "Gli orari selezionati non rientrano nell'orario di apertura del garage." };
