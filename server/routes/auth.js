@@ -155,6 +155,16 @@ router.put("/change-password", isLoggato, async (req, res) => {
   const { currentPassword, newPassword } = req.body;
 
   try {
+    // La nuova password non può essere uguale alla vecchia
+    if (currentPassword === newPassword) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          error: "La nuova password non può essere identica a quella attuale.",
+        });
+    }
+
     // Recupero l'hash della password attuale dal database
     const utente = await db.oneOrNone(
       `SELECT PasswordHash FROM Utente WHERE id_utente = $1`,
