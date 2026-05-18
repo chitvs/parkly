@@ -1,3 +1,21 @@
+/**
+* Questo file gestisce la navigazione e il routing per tutto il sito.
+* FUNZIONALITÀ PRINCIPALI:
+ * 1. Mappatura delle Rotte: Associa gli URL ai rispettivi componenti Vue.
+ * 2. Lazy Loading: Utilizza l'importazione dinamica `() => import(...)` per 
+ * la maggior parte delle rotte, caricando i componenti solo quando richiesti 
+ * per ottimizzare i tempi di caricamento (Performance).
+ * 3. Gestione Errori: Cattura le rotte inesistenti e reindirizza alla pagina 404.
+ * 4. Scroll Behavior: Assicura che la visualizzazione torni in cima alla pagina 
+ * dopo ogni navigazione (salvo l'uso dei tasti avanti/indietro del browser).
+ * * SICUREZZA E CONTROLLO ACCESSI:
+ * Il `router.beforeEach` intercetta ogni navigazione per applicare le regole 
+ * basate sui "meta" tag delle rotte e sullo stato di `authStore`:
+ * - `requiresAuth`: Impedisce l'accesso a utenti non loggati (es. Profilo, Prenotazioni).
+ * - `role`: Limita l'accesso in base al ruolo dell'utente (CLIENTE o GESTORE).
+ * - `guestOnly`: Impedisce a utenti già loggati di accedere a pagine come la Registrazione.
+*/
+
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import { authStore } from '../store/auth'
