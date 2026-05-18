@@ -167,33 +167,32 @@ const salvaNuovoGarage = async (payload) => {
   }
 }
 
+const showConfirmDisableModal = ref(false);
+const garageDaDisattivare = ref(null);
+
 const cambiaStatoGarage = async (garage) => {
   const nuovoStato = !garage.isattivo;
-  
-  // Se l'utente sta cercando di DISATTIVARE il garage, chiediamo conferma
+
   if (nuovoStato === false) {
-      const confermato = confirm(
-          "ATTENZIONE: Stai per disattivare l'intero garage.\n\n" +
-          "TUTTE le prenotazioni future attive verranno ANNULLATE e rimborsate automaticamente ai clienti al 100%.\n" +
-          "L'operazione è IRREVERSIBILE.\n\n" +
-          "Sei sicuro di voler procedere?"
-      );
-      
-      // Se clicca "Annulla", blocchiamo l'esecuzione (lo switch tornerà a posto ricaricando i dati sotto)
-      if (!confermato) {
-          await garageStore.caricaDashboardGestore();
-          return;
-      }
+    // Invece del confirm, apriamo il modal
+    garageDaDisattivare.value = garage;
+    showConfirmDisableModal.value = true;
+    return;
   }
 
+  // Se è un'attivazione, procediamo direttamente
+  await eseguiCambioStato(garage, true);
+};
+
+const eseguiCambioStato = async (garage, stato) => {
   messaggio.value = null;
   try {
-    const res = await garageStore.updateGarage(garage.id_garage, { isattivo: nuovoStato });
-    
+    const res = await garageStore.updateGarage(garage.id_garage, { isattivo: stato });
+
     if (res.success || res.garage) {
-      messaggio.value = { 
-          tipo: 'success', 
-          testo: `Garage ${nuovoStato ? 'attivato' : 'disattivato e rimborsi erogati'} con successo!` 
+      messaggio.value = {
+        tipo: 'success',
+        testo: `Garage ${stato ? 'attivato' : 'disattivato e rimborsi erogati'} con successo!`
       };
       await garageStore.caricaDashboardGestore();
     } else {
@@ -205,7 +204,20 @@ const cambiaStatoGarage = async (garage) => {
     messaggio.value = { tipo: 'error', testo: 'Errore di rete.' };
     await garageStore.caricaDashboardGestore();
   }
-}
+};
+
+// --- Funzioni per gestire le azioni del Modal ---
+const confermaDisattivazione = async () => {
+  if (garageDaDisattivare.value) {
+    await eseguiCambioStato(garageDaDisattivare.value, false);
+  }
+  chiudiModalDisattivazione();
+};
+
+const chiudiModalDisattivazione = () => {
+  showConfirmDisableModal.value = false;
+  garageDaDisattivare.value = null;
+};
 
 const aggiornaMappaOrari = async ({ inizio, fine }) => {
   const iIso = new Date(inizio).toISOString()
@@ -397,7 +409,7 @@ const formattaDataLeggibile = (dataIso) => {
           <div class="garage-dropdown-wrapper">
             <button class="garage-trigger" @click="isGarageDropdownOpen = !isGarageDropdownOpen">
               <span>{{idGarageSelezionatoGlobale === 'TUTTI' ? 'Tutti i Garage' : mieiGarage.find(g => g.id_garage ===
-                idGarageSelezionatoGlobale)?.nome }}</span>
+                idGarageSelezionatoGlobale)?.nome}}</span>
               <svg :class="['garage-chevron', { 'rotated': isGarageDropdownOpen }]" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="6 9 12 15 18 9" />
@@ -454,7 +466,8 @@ const formattaDataLeggibile = (dataIso) => {
           <DashboardStats v-if="vistaAttiva === 'statistiche'" :miei-garage="mieiGarageFiltrati"
             :storico-prenotazioni="storicoPrenotazioniFiltrato" />
 
-          <DashboardGarageList v-if="vistaAttiva === 'garage'" :miei-garage="mieiGarage" @modifica="preparaModifica" @toggle-stato="cambiaStatoGarage"/>
+          <DashboardGarageList v-if="vistaAttiva === 'garage'" :miei-garage="mieiGarage" @modifica="preparaModifica"
+            @toggle-stato="cambiaStatoGarage" />
 
           <DashboardStato v-if="vistaAttiva === 'stato'" :key="'stato-' + reRenderKey" :miei-garage="mieiGarageFiltrati"
             :posti-per-garage="postiPerGarage" :occupazione-garage="occupazioneGarage" :allerte-stato="allerteStato"
@@ -535,7 +548,7 @@ const formattaDataLeggibile = (dataIso) => {
                   <div class="d-flex justify-content-between mb-2 small">
                     <span class="text-muted">Fine:</span>
                     <span class="fw-bold text-danger">{{ formattaDataLeggibile(postoDaGestire.manutenzione?.fine)
-                      }}</span>
+                    }}</span>
                   </div>
                   <div class="pt-2 mt-2 border-top small">
                     <span class="text-muted d-block mb-1">Motivazione:</span>
@@ -629,7 +642,58 @@ const formattaDataLeggibile = (dataIso) => {
         </Transition>
       </div>
     </Transition>
+    <Transition name="overlay-fade">
+      <div v-if="showConfirmDisableModal" class="review-overlay" @click.self="chiudiModalDisattivazione">
+        <Transition name="modal-slide" appear>
+          <div class="review-modal">
 
+            <div class="review-topbar">
+              <div class="step-track">
+                <span class="step-pip step-pip--on" style="background: #dc3545; width: 20px;"></span>
+              </div>
+              <button class="close-btn" @click="chiudiModalDisattivazione">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+
+            <div class="review-body pt-2 text-center">
+              <div class="mb-3">
+                <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3rem;"></i>
+              </div>
+
+              <span class="garage-chip" style="background: rgba(220, 53, 69, 0.1); color: #dc3545;">
+                Azione Irreversibile
+              </span>
+
+              <h3 class="modal-title" style="color: #c82333;">Sei sicuro?</h3>
+
+              <p class="modal-sub">
+                Stai per disattivare il garage <strong>{{ garageDaDisattivare?.nome }}</strong>.
+              </p>
+
+              <div class="alert error p-3 rounded-4 mb-4 text-start"
+                style="font-size: 0.85rem; border: none; background: #FFF5F5; color: #B91C1C;">
+                <ul class="mb-0 ps-3">
+                  <li>Le prenotazioni future verranno <strong>annullate</strong>.</li>
+                  <li>Verranno emessi <strong>rimborsi automatici</strong> al 100%.</li>
+                  <li>Il garage non sarà più visibile ai nuovi clienti.</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="review-footer d-flex gap-2">
+              <button class="cta-btn cta-btn--ghost flex-grow-1" @click="chiudiModalDisattivazione">
+                Annulla
+              </button>
+              <button class="cta-btn cta-btn--danger flex-grow-1" @click="confermaDisattivazione">
+                Disattiva Ora
+              </button>
+            </div>
+
+          </div>
+        </Transition>
+      </div>
+    </Transition>
     <Footer />
   </div>
 </template>
@@ -912,6 +976,7 @@ const formattaDataLeggibile = (dataIso) => {
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1146,6 +1211,7 @@ const formattaDataLeggibile = (dataIso) => {
     opacity: 0;
     transform: translateX(10px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -1252,24 +1318,26 @@ const formattaDataLeggibile = (dataIso) => {
   .dashboard-layout {
     flex-direction: column;
   }
-  
+
   .mobile-topbar {
     display: flex;
   }
-  
+
   .sidebar {
     position: fixed;
     top: 0;
-    left: -280px; /* Nasconde la sidebar */
+    left: -280px;
+    /* Nasconde la sidebar */
     width: 280px;
     height: 100vh;
     z-index: 1050;
     transition: left 0.3s ease-in-out;
     padding-top: 16px;
   }
-  
+
   .sidebar.sidebar-open {
-    left: 0; /* Mostra la sidebar */
+    left: 0;
+    /* Mostra la sidebar */
   }
 
   .main-content {
