@@ -27,20 +27,21 @@ INSERT INTO Utente (
     CodiceFiscale, 
     Email, 
     PasswordHash, 
-    Telefono
+    Telefono,
+    FotoProfilo_URL
 ) VALUES
-('GESTORE', 'Alessandro', 'Galli', 'aleg', 'GLLLSN70A01H501A', 'alessandro.g@garage.it', '$2b$10$WPKYQS3SIp5VEf4SKRKx3O5HVlY6XMOM1lle/fnGc2/ZKhek5VQu.', '3310000001'),
-('GESTORE', 'Roberta', 'Randi', 'rrandi_gest', 'RNDRRT75B41H501B', 'roberta.r@garage.it', '$2b$10$lN6k5YY30hrFMFHedDL9v.UFgP9VoXScHZbRRk9HmwkLNqnpEJBR2', '3310000002'),
-('GESTORE', 'Fabio', 'Santi', 'fsanti_gest', 'SNTFBA80C01H501C', 'fabio.s@garage.it', '$2b$10$vEVaU1KOg6DeaPoFWA0HBOZffryYgBkdZah.P/h4J6T9KaLQtuzue', '3310000003'),
-('GESTORE', 'Sonia', 'Fabbri', 'sfabbri_gest', 'FBBSNO85D41H501D', 'sonia.f@garage.it', '$2b$10$xEdYdhxpEHU5KuYqGTDJs.y5C5eiicy9jy70qCM5z62/x86pV43MG', '3310000004'),
-('CLIENTE', 'Marco', 'Liberti', 'marcoliberti', 'LBRMRC90E15H501E', 'marco.l@email.com', '$2b$10$WsxqnMAdJjFvYWsm0uPN6OuZ8xkaMibrt3FLvr33f4czAXyfxvc3i', '3400000001'),
-('CLIENTE', 'Chiara', 'Valenti', 'chiaravale', 'VLNCHR92F52H501F', 'chiara.v@email.com', '$2b$10$xxeT0orM5SGPJ67LL1oGgOVwuLYqdyo//nyw0CZHNz.8olX9nNXu2', '3400000002'),
-('CLIENTE', 'Paolo', 'Dessi', 'paolodessi', 'DSSPLA94G10H501G', 'paolo.d@email.com', '$2b$10$ISIhd1D5EU5GPKq3Tr2CIeAkJSATIDPfUSdBQoV05l14muNDSuOh2', '3400000003'),
-('CLIENTE', 'Simona', 'Reale', 'simonareale', 'RLESNO96H50H501H', 'simona.r@email.com', '$2b$10$wrEc8cgwi3KysvKawcYUgePJbVFHwJUlIuropNQwDHL7sDuX8DYui', '3400000004'),
-('CLIENTE', 'Davide', 'Moro', 'davidemoro', 'MRODVD98L20H501I', 'davide.m@email.com', '$2b$10$nLxPdWaiThqojfaCZ5RgGeUq4viZBRg5.CO72k6uu3V1xFtAom6rm', '3400000005'),
-('CLIENTE', 'Giada', 'Serra', 'giadaserra', 'SRRGDA99M45H501L', 'giada.s@email.com', '$2b$10$LXSwRxWPIl0wRboIgW4NSuF3LQ/A6CvyRpVj8QD0Cw/0uWkVwQ.ty', '3400000006'),
-('GESTORE', 'Marco', 'Bianchi', 'mbianchi_gest', 'BNCMRC90E01H501E', 'marco.b@garage.it', '$2b$10$nZ9bYjU7by7KcUORwXeZQekeImuMKpUy2X/EldLu.O/ooTL1pAzCa', '3310000005'),
-('GESTORE', 'Laura', 'Rossi', 'lrossi_gest', 'RSSLRA88F41H501F', 'laura.r@garage.it', '$2b$10$JdwpOEyDJer849Ht8SLHiO2taYwYtlfI6TSk4xefq/1Ee.RfVa022', '3310000006')
+('GESTORE', 'Alessandro', 'Galli', 'aleg', 'GLLLSN70A01H501A', 'alessandro.g@garage.it', '$2b$10$WPKYQS3SIp5VEf4SKRKx3O5HVlY6XMOM1lle/fnGc2/ZKhek5VQu.', '3310000001', 'https://lqztwsihbvojhbiwkwfm.supabase.co/storage/v1/object/public/avatars/bellsprout.png'),
+('GESTORE', 'Roberta', 'Randi', 'rrandi_gest', 'RNDRRT75B41H501B', 'roberta.r@garage.it', '$2b$10$lN6k5YY30hrFMFHedDL9v.UFgP9VoXScHZbRRk9HmwkLNqnpEJBR2', '3310000002', 'https://lqztwsihbvojhbiwkwfm.supabase.co/storage/v1/object/public/avatars/bullbasaur.png'),
+('GESTORE', 'Fabio', 'Santi', 'fsanti_gest', 'SNTFBA80C01H501C', 'fabio.s@garage.it', '$2b$10$vEVaU1KOg6DeaPoFWA0HBOZffryYgBkdZah.P/h4J6T9KaLQtuzue', '3310000003', 'https://lqztwsihbvojhbiwkwfm.supabase.co/storage/v1/object/public/avatars/eevee.png'),
+('GESTORE', 'Sonia', 'Fabbri', 'sfabbri_gest', 'FBBSNO85D41H501D', 'sonia.f@garage.it', '$2b$10$xEdYdhxpEHU5KuYqGTDJs.y5C5eiicy9jy70qCM5z62/x86pV43MG', '3310000004', 'https://lqztwsihbvojhbiwkwfm.supabase.co/storage/v1/object/public/avatars/gamer(1).png'),
+('CLIENTE', 'Marco', 'Liberti', 'marcoliberti', 'LBRMRC90E15H501E', 'marco.l@email.com', '$2b$10$WsxqnMAdJjFvYWsm0uPN6OuZ8xkaMibrt3FLvr33f4czAXyfxvc3i', '3400000001', 'https://lqztwsihbvojhbiwkwfm.supabase.co/storage/v1/object/public/avatars/gamer(2).png'),
+('CLIENTE', 'Chiara', 'Valenti', 'chiaravale', 'VLNCHR92F52H501F', 'chiara.v@email.com', '$2b$10$xxeT0orM5SGPJ67LL1oGgOVwuLYqdyo//nyw0CZHNz.8olX9nNXu2', '3400000002', 'https://lqztwsihbvojhbiwkwfm.supabase.co/storage/v1/object/public/avatars/gamer(3).png'),
+('CLIENTE', 'Paolo', 'Dessi', 'paolodessi', 'DSSPLA94G10H501G', 'paolo.d@email.com', '$2b$10$ISIhd1D5EU5GPKq3Tr2CIeAkJSATIDPfUSdBQoV05l14muNDSuOh2', '3400000003', 'https://lqztwsihbvojhbiwkwfm.supabase.co/storage/v1/object/public/avatars/gamer.png'),
+('CLIENTE', 'Simona', 'Reale', 'simonareale', 'RLESNO96H50H501H', 'simona.r@email.com', '$2b$10$wrEc8cgwi3KysvKawcYUgePJbVFHwJUlIuropNQwDHL7sDuX8DYui', '3400000004', 'https://lqztwsihbvojhbiwkwfm.supabase.co/storage/v1/object/public/avatars/pikachu.png'),
+('CLIENTE', 'Davide', 'Moro', 'davidemoro', 'MRODVD98L20H501I', 'davide.m@email.com', '$2b$10$nLxPdWaiThqojfaCZ5RgGeUq4viZBRg5.CO72k6uu3V1xFtAom6rm', '3400000005', 'https://lqztwsihbvojhbiwkwfm.supabase.co/storage/v1/object/public/avatars/psyduck.png'),
+('CLIENTE', 'Giada', 'Serra', 'giadaserra', 'SRRGDA99M45H501L', 'giada.s@email.com', '$2b$10$LXSwRxWPIl0wRboIgW4NSuF3LQ/A6CvyRpVj8QD0Cw/0uWkVwQ.ty', '3400000006', 'https://lqztwsihbvojhbiwkwfm.supabase.co/storage/v1/object/public/avatars/snorlax.png'),
+('GESTORE', 'Marco', 'Bianchi', 'mbianchi_gest', 'BNCMRC90E01H501E', 'marco.b@garage.it', '$2b$10$nZ9bYjU7by7KcUORwXeZQekeImuMKpUy2X/EldLu.O/ooTL1pAzCa', '3310000005', 'https://lqztwsihbvojhbiwkwfm.supabase.co/storage/v1/object/public/avatars/uifaces-abstract-avatar(1).jpg'),
+('GESTORE', 'Laura', 'Rossi', 'lrossi_gest', 'RSSLRA88F41H501F', 'laura.r@garage.it', '$2b$10$JdwpOEyDJer849Ht8SLHiO2taYwYtlfI6TSk4xefq/1Ee.RfVa022', '3310000006', 'https://lqztwsihbvojhbiwkwfm.supabase.co/storage/v1/object/public/avatars/uifaces-abstract-avatar.jpg')
 ON CONFLICT (CodiceFiscale) DO NOTHING;
 
 -- GARAGE (14 totali)
