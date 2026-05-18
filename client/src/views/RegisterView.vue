@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import eyeUrl from '../icons/eye-open.svg'
 import eyeClosedUrl from '../icons/eye-closed.svg'
 import { authStore } from '../store/auth.js'
+import { alertStore } from '../store/alert.js'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 
@@ -18,16 +19,14 @@ const password = ref('')
 const passwordConfirm = ref('')
 const isPasswordVisible1 = ref(false)
 const isPasswordVisible2 = ref(false)
+
 const passwordError = ref(false)
-const generalError = ref('')
-const successMessage = ref('')
 
 const router = useRouter()
 
 const handleRegister = async () => {
   passwordError.value = false
-  generalError.value = ''
-  successMessage.value = ''
+  alertStore.pulisci()
 
   if (password.value !== passwordConfirm.value) {
     passwordError.value = true
@@ -48,12 +47,14 @@ const handleRegister = async () => {
 
   if (data.success) {
     console.log('Registrazione e login automatico riusciti')
-    successMessage.value = 'Registrazione avvenuta con successo.'
+    alertStore.mostra('success', 'Registrazione avvenuta con successo. Benvenuto su Parkly!')
+    
+    // Attendiamo un secondo prima di reindirizzare, così l'utente vede l'alert
     setTimeout(() => {
       router.push('/')
     }, 1500)
   } else {
-    generalError.value = data.error || 'Errore durante la registrazione'
+    alertStore.mostra('error', data.error || 'Errore durante la registrazione')
   }
 }
 </script>
@@ -88,13 +89,6 @@ const handleRegister = async () => {
 
               <!-- Divisore -->
               <hr class="custom-divider mb-4" />
-
-              <div v-if="generalError" class="alert error mb-4">
-                {{ generalError }}
-              </div>
-              <div v-if="successMessage" class="alert success mb-4">
-                {{ successMessage }}
-              </div>
 
               <form @submit.prevent="handleRegister">
                 <!-- Dati Personali -->
@@ -281,7 +275,6 @@ const handleRegister = async () => {
   background-color: #ffffff;
   outline: none;
 }
-
 
 .register-btn.btn-primary,
 .register-btn {

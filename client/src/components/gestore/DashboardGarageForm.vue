@@ -2,6 +2,7 @@
 import { ref, onMounted, nextTick } from 'vue'
 import { useGarageMapGestore } from '../../composables/useGarageMapGestore'
 import { usePlanimetriaEditor } from '../../composables/usePlanimetriaEditor'
+import { alertStore } from '../../store/alert'
 import PlanimetriaGarage from '../PlanimetriaGarage.vue'
 import electricityIcon from '../../assets/electricity.svg'
 import handicapIcon from '../../assets/handicap.svg'
@@ -30,7 +31,6 @@ const localGarage = ref({
     orarioapertura: '08:00', orariochiusura: '20:00', is24h: false
 })
 const erroriValidazione = ref({})
-const mapInteractionError = ref('')
 
 // Gestione selezione foto
 const fotoSelezionate = ref([])
@@ -86,14 +86,11 @@ const errorePosto = ref('')
 
 const handleAggiungiPosto = () => {
     const codiceAttuale = nuovoPosto.value.codice
-
     const res = aggiungiPostoConfigurato()
-    mapInteractionError.value = ''
 
     if (res && !res.success) {
         errorePosto.value = res.error 
-        mapInteractionError.value = res.error
-
+        alertStore.mostra('error', res.error) // Usiamo lo store
     } else {
         errorePosto.value = ''
 
@@ -113,13 +110,10 @@ const handleAggiungiPosto = () => {
 
 const handleCellaClick = (r, c) => {
     const strumentoUtilizzato = strumentoAttivo.value
-
     const res = clickCella(r, c)
-    mapInteractionError.value = ''
     
     if (res && !res.success) {
-        mapInteractionError.value = res.error
-        alert(res.error) 
+        alertStore.mostra('error', res.error) // Usiamo lo store al posto dell'alert nativo
         return 
     }
 
@@ -201,6 +195,10 @@ const validaForm = () => {
     if (postiConfigurati.value.length === 0) errori.mappatestuale = 'Devi configurare almeno un posto auto.'
     else if (codiciPosizionati.value.size < postiConfigurati.value.length) errori.mappatestuale = 'Devi posizionare TUTTI i posti creati sulla scacchiera.'
 
+    if (Object.keys(errori).length > 0) {
+        alertStore.mostra('error', 'Controlla i campi in rosso prima di procedere.')
+    }
+
     erroriValidazione.value = errori
     return Object.keys(errori).length === 0
 }
@@ -236,7 +234,7 @@ const verificaRidimensionamento = (tipo) => {
     }
 
     if (occupato) {
-        alert("Impossibile ridurre le dimensioni: l'area da rimuovere contiene dei posti. Usa prima lo strumento Gomma per cancellarli.")
+        alertStore.mostra('error', "Impossibile ridurre le dimensioni: l'area da rimuovere contiene dei posti. Usa prima lo strumento Gomma per cancellarli.")
         dimensioniMappa.value[tipo] = tipo === 'righe' ? righeAttuali : colonneAttuali
     } else {
         ridimensionaGriglia()
@@ -457,10 +455,6 @@ const inviaDati = () => {
 
                 <div class="section-header">
                     <h2>Crea i Posti Auto</h2>
-                </div>
-                
-                <div v-if="mapInteractionError" class="alert error text-center mx-auto mb-3" style="max-width: 600px;">
-                    {{ mapInteractionError }}
                 </div>
 
                 <div class="posto-creator">

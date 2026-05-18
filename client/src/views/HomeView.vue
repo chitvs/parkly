@@ -2,6 +2,7 @@
 import { ref, onMounted, nextTick } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
 import { authStore } from '../store/auth.js'
+import { alertStore } from '../store/alert.js'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 import SearchBar from '../components/SearchBar.vue'
@@ -15,9 +16,6 @@ const randomGarages = ref([])
 const scrollContainer = ref(null)
 const canScrollLeft = ref(false)
 const canScrollRight = ref(true)
-
-// Gestione Alert
-const messaggio = ref(null)
 
 onMounted(() => {
     if ('scrollRestoration' in history) {
@@ -52,11 +50,11 @@ const fetchRandomGarages = async () => {
             await nextTick()
             checkScrollBounds()
         } else {
-            messaggio.value = { tipo: 'error', testo: 'Impossibile caricare i garage in evidenza.' }
+            alertStore.mostra('error', 'Impossibile caricare i garage in evidenza.')
         }
     } catch (error) {
         console.error("Errore nel caricamento dei garage in evidenza:", error)
-        messaggio.value = { tipo: 'error', testo: 'Errore di connessione durante il caricamento dei garage.' }
+        alertStore.mostra('error', 'Errore di connessione durante il caricamento dei garage.')
     }
 }
 
@@ -66,12 +64,12 @@ const handleSearch = () => {
         const dataIn = new Date(checkIn.value)
         const dataOut = new Date(checkOut.value)
         if (dataOut <= dataIn) {
-            messaggio.value = { tipo: 'error', testo: 'L\'orario di partenza deve essere successivo a quello di arrivo.' }
+            alertStore.mostra('error', 'L\'orario di partenza deve essere successivo a quello di arrivo.')
             return
         }
     }
 
-    messaggio.value = null
+    alertStore.pulisci()
     router.push({
         name: 'garage',
         query: {
@@ -92,7 +90,7 @@ const goQuick = (loc) => {
 
 const handleDiventaGestore = () => {
     if (!authStore.utente) {
-        messaggio.value = { tipo: 'error', testo: 'Devi essere loggato per poter diventare un gestore.' }
+        alertStore.mostra('error', 'Devi essere loggato per poter diventare un gestore.')
         return
     }
     // Il v-if sulla card nasconde già il bottone ai gestori, quindi qui basta reindirizzare
@@ -152,11 +150,6 @@ const features = [
 <template>
     <div class="home-wrapper">
         <Header />
-
-        <div v-if="messaggio" :class="['alert', messaggio.tipo, 'alert-fixed-top']">
-            {{ messaggio.testo }}
-            <button @click="messaggio = null" class="close-btn">x</button>
-        </div>
 
         <main class="main-content">
 

@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted, watch, nextTick, computed, reactive } from
 import { prenotazioniStore } from '../store/prenotazioni.js'
 import { useRecensione } from '../composables/useRecensione.js'
 import { getSocket } from '../composables/useChat.js'
+import { alertStore } from '../store/alert.js'
 
 import 'bootstrap-icons/font/bootstrap-icons.css'
 import Header from '../components/Header.vue'
@@ -18,7 +19,6 @@ import IconMessage from '../icons/IconMessage.vue'
 const filtroStato = ref('') // '' = Tutte, 'ATTIVA', 'CONCLUSA', 'ANNULLATA'
 const filtroGarage = ref('') // '' = Tutti, oppure l'id_garage
 const ordinamento = ref('creazione_desc') // default: data creazione più recente
-const pageMessage = ref(null)
 
 // variabili per la paginazione
 const paginaCorrente = ref(1)
@@ -42,7 +42,7 @@ const {
   chiudiModale,
   inviaRecensione,
   eliminaRecensione,
-  reviewError
+  reviewError 
 } = useRecensione()
 
 // Stato per gestire la chat aperta 
@@ -87,11 +87,13 @@ onUnmounted(() => {
 // Chiamata all'API per prendere le prenotazioni
 const caricaPrenotazioni = async () => {
   isLoading.value = true
+  alertStore.pulisci() // Puliamo eventuali vecchi errori globali
+
   const response = await prenotazioniStore.getBookings()
   if (response.success) {
     bookings.value = response.data
   } else {
-    pageMessage.value = { tipo: 'error', testo: response.error || "Impossibile caricare le prenotazioni" }
+    alertStore.mostra('error', response.error || "Impossibile caricare le prenotazioni")
   }
   isLoading.value = false
 }
@@ -226,16 +228,18 @@ const apriModaleAnnullamento = async (booking) => {
 // Gestione della cancellazione di una prenotazione
 const handleConfirmCancel = async () => {
   if (!bookingToCancel.value) return
+  alertStore.pulisci()
 
   const response = await prenotazioniStore.cancelBooking(bookingToCancel.value.codiceprenotazione)
 
   if (response.success) {
     bookingToCancel.value.stato = 'ANNULLATA'
     showCancelModal.value = false
-    pageMessage.value = { tipo: 'success', testo: `Prenotazione annullata. Rimborsati: €${infoAnnullamento.rimborso.toFixed(2)}` }
+    alertStore.mostra('success', `Prenotazione annullata. Rimborsati: €${infoAnnullamento.rimborso.toFixed(2)}`)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   } else {
-    pageMessage.value = { tipo: 'error', testo: response.error || "Errore durante l'annullamento" }
+    showCancelModal.value = false
+    alertStore.mostra('error', response.error || "Errore durante l'annullamento")
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 }
@@ -243,12 +247,16 @@ const handleConfirmCancel = async () => {
 const chiudiEAggiorna = async () => {
   chiudiModale()
   await caricaPrenotazioni()
+  // Essendo il componente delle recensioni astratto nel composable, 
+  // possiamo lanciare il messaggio di successo qui per informare che tutto è andato bene
+  alertStore.mostra('success', 'La tua recensione è stata registrata correttamente.')
 }
 
 const handleElimina = async () => {
   const success = await eliminaRecensione()
   if (success) {
     await caricaPrenotazioni()
+    alertStore.mostra('success', 'Recensione eliminata.')
   }
 }
 
@@ -294,9 +302,6 @@ const chiudiChat = () => {
     <Header />
 
     <main class="container py-5 flex-grow-1">
-      <div v-if="pageMessage" :class="['alert', pageMessage.tipo, 'mb-4']">
-        {{ pageMessage.testo }}
-      </div>
 
       <div class="row mb-4">
         <div class="col-12 text-center text-md-start">

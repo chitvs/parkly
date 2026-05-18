@@ -9,6 +9,7 @@ import GarageFilters from '../components/GarageFilters.vue'
 import { useGarages } from '../composables/useGarages.js'
 import { useGarageFilters } from '../composables/useGarageFilters.js'
 import { useSpatialSearch } from '../composables/useSpatialSearch.js'
+import { alertStore } from '../store/alert.js'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
@@ -24,7 +25,8 @@ const hoveredGarageId = ref(null)
 const searchLocation = ref('')
 const checkIn = ref('')
 const checkOut = ref('')
-const searchError = ref('')
+
+const hasDateError = ref(false) 
 
 const mapContainer = ref(null)
 const fullMapContainer = ref(null)
@@ -119,10 +121,13 @@ watch(searchLocation, () => {
 })
 
 watch([checkIn, checkOut], async ([newIn, newOut]) => {
-    searchError.value = ''
+    alertStore.pulisci()
+    hasDateError.value = false
+
     if ((newIn && newOut) || (!newIn && !newOut)) {
         if (newIn && newOut && new Date(newIn) >= new Date(newOut)) {
-            searchError.value = "La data di check-out deve essere successiva a quella di check-in"
+            hasDateError.value = true
+            alertStore.mostra('error', "La data di check-out deve essere successiva a quella di check-in.")
             return
         }
         await fetchGarages(newIn, newOut)
@@ -174,6 +179,8 @@ onMounted(async () => {
 })
 
 const resetFilters = () => {
+    alertStore.pulisci()
+    hasDateError.value = false
     resetTechnicalFilters()
     searchLocation.value = ''
     checkIn.value = ''
@@ -312,12 +319,13 @@ const handleSuggestionSelected = (place) => {
     <div class="garage-wrapper">
         <section class="search-area">
             <div class="search-container">
-                <SearchBar v-model:location="searchLocation" v-model:checkIn="checkIn" v-model:checkOut="checkOut"
-                    :hasDateError="!!searchError" @suggestion-selected="handleSuggestionSelected" />
-                <div v-if="searchError" class="alert error mt-3 mb-0 text-center"
-                    style="max-width: 1000px; margin: 0 auto;">
-                    {{ searchError }}
-                </div>
+                <SearchBar 
+                    v-model:location="searchLocation" 
+                    v-model:checkIn="checkIn" 
+                    v-model:checkOut="checkOut"
+                    :hasDateError="hasDateError" 
+                    @suggestion-selected="handleSuggestionSelected" 
+                />
             </div>
         </section>
 

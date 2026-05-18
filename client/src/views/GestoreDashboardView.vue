@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { authStore } from '../store/auth.js'
 import { walletStore } from '../store/wallet.js'
 import { garageStore } from '../store/garage.js'
+import { alertStore } from '../store/alert.js'
 import * as bootstrap from 'bootstrap'
 import 'bootstrap-icons/font/bootstrap-icons.css'
 
@@ -26,7 +27,6 @@ const isGestore = computed(() => authStore.utente?.ruolo === 'GESTORE')
 const vistaAttiva = ref('garage')
 const isLoading = ref(false)
 const staSalvando = ref(false)
-const messaggio = ref(null)
 const reRenderKey = ref(0)
 const isGarageDropdownOpen = ref(false)
 const isSidebarOpen = ref(false) // variabile per il menu mobile
@@ -105,7 +105,7 @@ const handleFotoDalComponente = (files) => {
 }
 
 const preparaModifica = async (garage) => {
-  messaggio.value = null
+  alertStore.pulisci()
   const res = await garageStore.fetchPosti(garage.id_garage)
 
   garageInModifica.value = {
@@ -121,7 +121,7 @@ const preparaModifica = async (garage) => {
 
 // Logica Two-Step (Store Database + Foto Store Supabase)
 const salvaNuovoGarage = async (payload) => {
-  messaggio.value = null
+  alertStore.pulisci()
   staSalvando.value = true
 
   try {
@@ -154,14 +154,14 @@ const salvaNuovoGarage = async (payload) => {
 
       // Refresh dei dati tramite store
       await garageStore.caricaDashboardGestore()
-      messaggio.value = { tipo: 'success', testo: isEditing.value ? 'Garage aggiornato!' : 'Garage pubblicato!' }
+      alertStore.mostra('success', isEditing.value ? 'Garage aggiornato!' : 'Garage pubblicato!')
       vistaAttiva.value = 'garage'
     } else {
-      messaggio.value = { tipo: 'error', testo: res.error || 'Errore durante il salvataggio' }
+      alertStore.mostra('error', res.error || 'Errore durante il salvataggio')
     }
   } catch (e) {
     console.error(e)
-    messaggio.value = { tipo: 'error', testo: 'Errore di rete o del server.' }
+    alertStore.mostra('error', 'Errore di rete o del server.')
   } finally {
     staSalvando.value = false
   }
@@ -186,23 +186,20 @@ const cambiaStatoGarage = async (garage) => {
       }
   }
 
-  messaggio.value = null;
+  alertStore.pulisci();
   try {
     const res = await garageStore.updateGarage(garage.id_garage, { isattivo: nuovoStato });
     
     if (res.success || res.garage) {
-      messaggio.value = { 
-          tipo: 'success', 
-          testo: `Garage ${nuovoStato ? 'attivato' : 'disattivato e rimborsi erogati'} con successo!` 
-      };
+      alertStore.mostra('success', `Garage ${nuovoStato ? 'attivato' : 'disattivato e rimborsi erogati'} con successo!`);
       await garageStore.caricaDashboardGestore();
     } else {
-      messaggio.value = { tipo: 'error', testo: res.error || 'Errore durante il cambio di stato.' };
+      alertStore.mostra('error', res.error || 'Errore durante il cambio di stato.');
       await garageStore.caricaDashboardGestore();
     }
   } catch (e) {
     console.error(e);
-    messaggio.value = { tipo: 'error', testo: 'Errore di rete.' };
+    alertStore.mostra('error', 'Errore di rete.');
     await garageStore.caricaDashboardGestore();
   }
 }
@@ -239,7 +236,7 @@ const salvaManutenzione = async () => {
   const res = await garageStore.addMaintenance(postoDaGestire.value.id_garage, postoDaGestire.value.id_posto, manutenzioneData.value)
   if (res.success) {
     showMaintenanceModal.value = false
-    messaggio.value = { tipo: 'success', testo: res.message }
+    alertStore.mostra('success', res.message)
     window.scrollTo({ top: 0, behavior: 'smooth' })
     await garageStore.caricaDashboardGestore()
   } else {
@@ -256,7 +253,7 @@ const rimuoviManutenzione = async () => {
 
   if (res.success) {
     showMaintenanceModal.value = false;
-    messaggio.value = { tipo: 'success', testo: res.message };
+    alertStore.mostra('success', res.message)
     window.scrollTo({ top: 0, behavior: 'smooth' })
     await garageStore.caricaDashboardGestore()
   } else {
@@ -292,7 +289,7 @@ onUnmounted(() => {
 })
 
 watch(vistaAttiva, (newVal) => {
-  messaggio.value = null
+  alertStore.pulisci() // Pulisce gli alert globali cambiando vista
   isSidebarOpen.value = false // chiude il menu mobile al cambio di vista
   if (newVal !== 'aggiungi') {
     idGarageInModifica.value = null
@@ -445,12 +442,6 @@ const formattaDataLeggibile = (dataIso) => {
         </div>
 
         <template v-else>
-          <div v-if="messaggio" :class="['alert', messaggio.tipo, 'mb-4']"
-            style="max-width: 960px; margin-left: auto; margin-right: auto;">
-            {{ messaggio.testo }}
-            <button @click="messaggio = null" class="close-btn">×</button>
-          </div>
-
           <DashboardStats v-if="vistaAttiva === 'statistiche'" :miei-garage="mieiGarageFiltrati"
             :storico-prenotazioni="storicoPrenotazioniFiltrato" />
 

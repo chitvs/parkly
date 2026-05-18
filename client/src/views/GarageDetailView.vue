@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { garageStore } from '../store/garage'
 import { authStore } from '../store/auth'
+import { alertStore } from '../store/alert'
 import 'bootstrap-icons/font/bootstrap-icons.css'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
@@ -18,7 +19,6 @@ const targa = ref('')
 const note = ref('')
 const codiceDisabilita = ref('')
 const postoSelezionato = ref(null)
-const messaggio = ref(null)
 const isMapConfirmed = ref(false)
 const isPrenotando = ref(false)
 const indiceFotoAttiva = ref(null)
@@ -65,6 +65,7 @@ onUnmounted(() => {
 watch([checkIn, checkOut], () => {
     isMapConfirmed.value = false
     postoSelezionato.value = null
+    alertStore.pulisci() // Pulisce eventuali errori precedenti quando si cambiano le date
 })
 
 // Estrae le foto in modo sicuro
@@ -144,8 +145,10 @@ const isCudeValido = computed(() => {
 })
 
 const aggiornaMappa = async () => {
+    alertStore.pulisci()
+
     if (!checkIn.value || !checkOut.value) {
-        messaggio.value = { tipo: 'error', testo: 'Inserisci data di arrivo e partenza prima di controllare.' }
+        alertStore.mostra('error', 'Inserisci data di arrivo e partenza prima di controllare.')
         return
     }
 
@@ -154,16 +157,15 @@ const aggiornaMappa = async () => {
     const adesso = new Date()
 
     if (dataArrivo < adesso) {
-        messaggio.value = { tipo: 'error', testo: 'Non puoi prenotare per un orario passato.' }
+        alertStore.mostra('error', 'Non puoi prenotare per un orario passato.')
         return
     }
 
     if (dataPartenza <= dataArrivo) {
-        messaggio.value = { tipo: 'error', testo: 'L\'orario di partenza deve essere successivo a quello di arrivo.' }
+        alertStore.mostra('error', 'L\'orario di partenza deve essere successivo a quello di arrivo.')
         return
     }
 
-    messaggio.value = null
     await garageStore.fetchPosti(props.id, checkIn.value, checkOut.value)
     isMapConfirmed.value = true
     postoSelezionato.value = null
@@ -176,8 +178,8 @@ const resetSelezione = async () => {
     note.value = ''
     postoSelezionato.value = null
     codiceDisabilita.value = ''
-    messaggio.value = null
     isMapConfirmed.value = false
+    alertStore.pulisci()
 
     await garageStore.fetchPosti(props.id, '', '')
 }
@@ -196,14 +198,15 @@ const durataOre = computed(() => {
 
 const gestisciPrenotazione = async () => {
     if (!postoSelezionato.value) return
+    alertStore.pulisci()
 
     if (!isTargaValida.value) {
-        messaggio.value = { tipo: 'error', testo: 'Inserisci una targa valida prima di procedere.' }
+        alertStore.mostra('error', 'Inserisci una targa valida prima di procedere.')
         return
     }
 
     if (postoSelezionato.value.isdisabili && !isCudeValido.value) {
-        messaggio.value = { tipo: 'error', testo: 'Inserisci un codice Contrassegno CUDE valido (es. IT-1234567).' }
+        alertStore.mostra('error', 'Inserisci un codice Contrassegno CUDE valido (es. IT-1234567).')
         return
     }
 
@@ -231,12 +234,13 @@ const gestisciPrenotazione = async () => {
 
         await aggiornaMappa()
 
-        messaggio.value = { tipo: 'success', testo: `Prenotazione avvenuta con successo! Il tuo codice è: ${res.prenotazione.codiceprenotazione}` }
+        alertStore.mostra('success', `Prenotazione avvenuta con successo! Il tuo codice è: ${res.prenotazione.codiceprenotazione}`)
         postoSelezionato.value = null
         targa.value = ''
         note.value = ''
+        window.scrollTo({ top: 0, behavior: 'smooth' })
     } else {
-        messaggio.value = { tipo: 'error', testo: res.error || 'Errore durante la prenotazione' }
+        alertStore.mostra('error', res.error || 'Errore durante la prenotazione')
     }
 }
 
@@ -387,11 +391,6 @@ watch(paginaRecensioniCorrente, () => {
                 </div>
             </section>
 
-            <div v-if="messaggio" :class="['alert', messaggio.tipo]">
-                {{ messaggio.testo }}
-                <button @click="messaggio = null" class="close-btn">x</button>
-            </div>
-
             <div class="layout-grid">
 
                 <div class="left-column">
@@ -404,7 +403,7 @@ watch(paginaRecensioniCorrente, () => {
                                 :mappaTestuale="garageStore.currentGarage?.mappatestuale"
                                 :selectedId="postoSelezionato?.id_posto" :isAnteprima="!isMapConfirmed"
                                 @select="(p) => postoSelezionato = p"
-                                @error="(msg) => messaggio = { tipo: 'error', testo: msg }" />
+                                @error="(msg) => alertStore.mostra('error', msg)" />
                         </div>
                     </div>
 
@@ -708,7 +707,6 @@ watch(paginaRecensioniCorrente, () => {
 </template>
 
 <style scoped>
-/* AGGIUNTA STILI PER LA GALLERIA */
 .gallery-section {
     max-width: 1200px;
     margin: 24px auto 0;
@@ -748,8 +746,6 @@ watch(paginaRecensioniCorrente, () => {
     transform: translateY(-2px);
 }
 
-
-/* STILI PER IL MODAL FOTO */
 .photo-modal {
     position: fixed;
     top: 0;
@@ -795,7 +791,6 @@ watch(paginaRecensioniCorrente, () => {
     background: rgba(255, 255, 255, 0.4);
 }
 
-/* --- VECCHI STILI PRESERVATI --- */
 .page-container {
     background: var(--bg-light);
     min-height: 100vh;
@@ -1518,7 +1513,6 @@ watch(paginaRecensioniCorrente, () => {
     flex-direction: column;
     gap: 20px;
     min-width: 0;
-    /* Previene sbavature e rotture del grid su schermi piccoli */
 }
 
 .sticky-aside {

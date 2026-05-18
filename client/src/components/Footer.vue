@@ -1,41 +1,33 @@
 <script setup>
-import { ref } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
 import { authStore } from '../store/auth.js'
+import { alertStore } from '../store/alert.js'
 import logoInteroUrl from '../assets/LogoParklyInteroBianco.svg'
 import IconGitHub from '../icons/IconGitHub.vue';
 
 const router = useRouter()
-const messaggio = ref(null)
 
 const handleProtectedNavigation = (path, requiresNotGestore = false) => {
     // controlla il login
     if (!authStore.utente) {
-        messaggio.value = { tipo: 'error', testo: 'Devi effettuare l\'accesso per visualizzare questa pagina.' }
+        alertStore.mostra('error', 'Devi effettuare l\'accesso per visualizzare questa pagina.')
         return
     }
 
     // se è "Diventa Gestore", l'utente non deve esserlo già
     if (requiresNotGestore && authStore.utente.ruolo === 'GESTORE') {
-        messaggio.value = { tipo: 'error', testo: 'Sei già un gestore della piattaforma!' }
+        alertStore.mostra('error', 'Sei già un gestore della piattaforma!')
         return
     }
 
-    // tutto ok, naviga
-    messaggio.value = null
+    // tutto ok, puliamo eventuali alert precedenti e navighiamo
+    alertStore.pulisci()
     router.push(path)
 }
 </script>
 
 <template>
   <footer class="main-footer">
-    
-    <!-- Alert Globale del Footer -->
-    <div v-if="messaggio" :class="['alert', messaggio.tipo, 'alert-fixed-bottom']">
-        {{ messaggio.testo }}
-        <button @click="messaggio = null" class="close-btn">x</button>
-    </div>
-
     <div class="footer-container">
       <div class="footer-content">
         

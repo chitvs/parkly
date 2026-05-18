@@ -4,7 +4,8 @@ import { useRouter, useRoute } from 'vue-router'
 import * as bootstrap from 'bootstrap'
 import logoUrl from '../assets/LogoParklyBlu.svg'
 import logoInteroUrl from '../assets/LogoParklyIntero.svg'
-import { authStore } from '../store/auth.js' // Importa lo store
+import { authStore } from '../store/auth.js' // Importa lo store auth
+import { alertStore } from '../store/alert.js' // Importiamo lo store globale degli alert
 
 //foto profilo standard
 import defaultAvatarUrl from '../assets/default-avatar.png'
@@ -86,6 +87,8 @@ const handleLogin = async () => {
 
   if (data.success) {
     await closeLoginModal()
+    // Usiamo l'alert globale per il successo, dato che la modale ora è chiusa
+    alertStore.mostra('success', `Benvenuto su Parkly, ${authStore.utente?.nome}!`)
   } else {
     loginError.value = data.error || 'Credenziali non valide'
   }
@@ -98,6 +101,7 @@ const goToRegister = async () => {
 
 const handleLogout = async () => {
   await authStore.logout()
+  alertStore.mostra('success', 'Ti sei disconnesso correttamente. Arrivederci!')
   router.replace('/')
 }
 </script>
@@ -246,7 +250,7 @@ const handleLogout = async () => {
 </template>
 
 <style scoped>
-
+/* Il CSS originale rimane invariato */
 .main-header {
   display: flex;
   justify-content: space-between;

@@ -2,23 +2,25 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { authStore } from '../store/auth.js'
+import { alertStore } from '../store/alert.js' // Importiamo lo store globale
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 
 const router = useRouter()
 const isLoading = ref(false)
-const errorMessage = ref('')
 
 const confirmUpgrade = async () => {
     isLoading.value = true
-    errorMessage.value = ''
+    alertStore.pulisci() // Pulisce eventuali alert precedenti
 
     const result = await authStore.upgradeToGestore()
 
     if (result.success) {
+        // Mostriamo un feedback positivo prima del redirect
+        alertStore.mostra('success', 'Congratulazioni! Ora sei un Gestore e puoi pubblicare i tuoi garage.')
         router.replace('/')
     } else {
-        errorMessage.value = result.error
+        alertStore.mostra('error', result.error || 'Errore durante l\'operazione.')
     }
 
     isLoading.value = false
@@ -40,10 +42,6 @@ const confirmUpgrade = async () => {
                     </p>
                 </div>
 
-                <div v-if="errorMessage" class="alert error mb-4">
-                    {{ errorMessage }}
-                </div>
-
                 <div class="form-card text-center p-5">
                     <div class="mb-4">
                         <img src="../assets/LogoParklyBlu.svg" style="height: 70px; width: auto;">
@@ -62,7 +60,6 @@ const confirmUpgrade = async () => {
                         ricevere prenotazioni.
                     </p>
 
-                    
                 </div>
 
             </div>
