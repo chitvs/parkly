@@ -16,7 +16,7 @@ export const strategic_places = [
         id: 'p3',
         name: 'Aeroporto Fiumicino',
         synonyms: ['fiumicino', 'fco', 'aeroporto'],
-        coords: { lat: 41.7999, lng: 12.2462 }
+        coords: { lat: 41.7866, lng: 12.2525 }
     },
     {
         id: 'p4',
