@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, nextTick, watch, computed } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, watch, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
@@ -50,11 +50,9 @@ const {
 
 // Restituisce la stringa di prezzo da mostrare formattata, in base al tipo di veicolo ricercato
 const getDisplayPrice = (garage) => {
-    // se l'utente ha selezionato un veicolo specifico e il backend ci ha mandato i dati
     if (filterTipoVeicolo.value !== 'ALL' && garage.tariffeVeicoli && garage.tariffeVeicoli[filterTipoVeicolo.value]) {
         return Number(garage.tariffeVeicoli[filterTipoVeicolo.value]).toFixed(2);
     }
-    // altrimenti mostra la tariffa base generica
     return Number(garage.tariffabase).toFixed(2);
 }
 
@@ -179,7 +177,6 @@ onMounted(async () => {
     if ('scrollRestoration' in history) {
         history.scrollRestoration = 'manual';
     }
-    window.scrollTo({ top: 0, behavior: 'instant' })
 
     // Popola form coi parametri passati via URL (se arriviamo da un reindirizzamento)
     if (route.query.location) searchLocation.value = route.query.location
@@ -476,7 +473,7 @@ const handleSuggestionSelected = (place) => {
                                             <div class="fs-map-controls">
                                                 <div class="fs-floating-search">
                                                     <SearchBar v-model:location="searchLocation" :simple="true"
-                                                        placeholder="Cerca sulla mappa..."
+                                                        placeholder="Cerca mappa..."
                                                         @suggestion-selected="handleSuggestionSelected" />
                                                 </div>
                                                 <button class="fs-reset-view" @click="resetMapView"
@@ -1089,6 +1086,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-shrink: 0;
 }
 
 .fs-panel-header h3 {
@@ -1437,5 +1435,108 @@ body {
     background-color: #f1f5f9;
     color: #006ce4;
     font-weight: 600;
+}
+
+@media (max-width: 768px) {
+    .page-body {
+        flex-direction: column;
+        max-width: 100% !important;
+        margin: 1rem auto;
+        padding: 0 1rem;
+    }
+    
+    .sidebar {
+        width: 100%;
+        position: static; 
+        margin-bottom: 1rem;
+    }
+
+    .garage-card {
+        flex-direction: column;
+        height: auto;
+    }
+    
+    .gcard-thumb {
+        width: 100%;
+        height: 200px;
+    }
+    
+    .gcard-main {
+        padding: 12px;
+    }
+    
+    .gcard-right {
+        width: 100%;
+        border-left: none;
+        border-top: 1px solid #e2e8f0;
+        text-align: left;
+        padding: 12px;
+    }
+    
+    .results-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    .fs-body {
+        flex-direction: column;
+    }
+    
+    .fs-right-half {
+        width: 100%;
+        height: 45%; 
+        order: 1; 
+    }
+
+    .fs-left-half {
+        width: 100%;
+        height: 55%; 
+        border-right: none;
+        border-top: 1px solid #e2e8f0; 
+        order: 2; 
+        flex-direction: column; 
+        overflow-y: auto; 
+    }
+    
+    .fs-col-filters {
+        display: flex; 
+        width: 100%;
+        height: auto; 
+        border-right: none;
+        border-bottom: 2px solid #00408A; 
+    }
+    
+    .fs-col-cards {
+        width: 100%;
+        height: auto;
+    }
+    .fs-left-half .fs-scroll-content {
+        overflow-y: visible;
+        height: auto;
+    }
+    
+    .fs-map-controls {
+        top: 10px;
+        left: 10px;
+        right: 10px;
+        gap: 8px;
+    }
+    
+    .fs-floating-search {
+        flex: 1; 
+        width: auto;
+        padding: 8px 12px;
+    }
+    
+    .fs-floating-search input {
+        font-size: 0.9rem;
+    }
+    
+    .fs-reset-view, .fs-close-circle {
+        width: 40px;
+        height: 40px;
+        margin-left: 0;
+    }
 }
 </style>

@@ -1570,7 +1570,7 @@ watch(paginaRecensioniCorrente, () => {
     height: max-content;
 }
 
-/* Stili per i bottoni di navigazione della modale */
+
 .nav-photo-btn {
     position: absolute;
     top: 50%;
@@ -1602,7 +1602,6 @@ watch(paginaRecensioniCorrente, () => {
     right: 32px;
 }
 
-/* Nascondi i bottoni sui dispositivi mobili molto piccoli per non coprire l'immagine */
 @media (max-width: 600px) {
     .nav-photo-btn {
         width: 40px;
@@ -1617,4 +1616,200 @@ watch(paginaRecensioniCorrente, () => {
         right: 16px;
     }
 }
+
+/* ── MOBILE ────────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+
+    /* Hero: impila sinistra e destra verticalmente */
+    .basic-hero {
+        padding: 24px 0 20px;
+    }
+
+    .hero-top {
+        flex-direction: column;
+        gap: 20px;
+        padding: 0 16px;
+    }
+
+    .hero-left h1 {
+        font-size: 1.3rem;
+        word-break: break-word;
+    }
+
+    .hero-left .descrizione {
+        font-size: 0.82rem;
+        max-width: 100%;
+    }
+
+    .badge-row {
+        gap: 6px;
+    }
+
+    .badge {
+        font-size: 0.7rem;
+        padding: 4px 10px;
+        white-space: normal;
+        word-break: break-word;
+    }
+
+    /* hero-right: allinea a sinistra, larghezza piena */
+    .hero-right {
+        align-items: flex-start;
+        text-align: left;
+        width: 100%;
+    }
+
+    .price-line {
+        gap: 10px;
+    }
+
+    .prezzo-valore-small {
+        font-size: 1.15rem;
+        min-width: auto;
+        text-align: left;
+    }
+
+    .special-line {
+        justify-content: flex-start;
+    }
+
+    /* Galleria: immagini più piccole su mobile */
+    .gallery-section {
+        padding: 0 16px;
+        margin-top: 16px;
+    }
+
+    .gallery-img {
+        height: 160px;
+        min-width: 220px;
+    }
+
+    /* Grid principale: una sola colonna, aside sotto la colonna sinistra */
+    .layout-grid {
+        grid-template-columns: 1fr;
+        padding: 0 16px 32px;
+        margin-top: 16px;
+        gap: 16px;
+    }
+
+    /* L'aside non è più sticky su mobile */
+    .sticky-aside {
+        position: static;
+    }
+
+    /* Riordina aside prima della colonna sinistra (planimetria + recensioni) */
+    .sticky-aside {
+        order: -1;
+    }
+
+    /* Card body: padding ridotto */
+    .card-body {
+        padding: 16px;
+    }
+
+    /* Recensioni: padding ridotto */
+    .reviews-section .card-body {
+        padding: 16px;
+    }
+
+    /* Reviews top row: impila verticalmente con gap minore */
+    .reviews-top-row {
+        flex-direction: column;
+        gap: 24px;
+        padding: 16px;
+    }
+
+    .overall-rating-header {
+        min-width: auto;
+        width: 100%;
+    }
+
+    .overall-rating-header h2.rating-number {
+        font-size: 2.8rem;
+    }
+
+    .average-stars i {
+        font-size: 1.8rem;
+    }
+
+    .rating-ladder {
+        max-width: 100%;
+        width: 100%;
+    }
+
+    /* Categorie: 2 colonne + 1 centrata nell'ultima riga */
+    .categories-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px 0;
+    }
+
+    .category-item {
+        border-left: none;
+        border-top: 1px solid #f1f5f9;
+        padding: 10px 8px;
+    }
+
+    .category-item:nth-child(1),
+    .category-item:nth-child(2) {
+        border-top: none;
+    }
+
+    .cat-label {
+        font-size: 0.78rem;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .cat-val {
+        font-size: 1.2rem;
+    }
+
+    /* Griglia commenti: una sola colonna */
+    .comments-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    /* Altezza minima reviews wrapper: adattiva */
+    .reviews-wrapper {
+        min-height: auto;
+    }
+
+    /* Padding commento */
+    .comment-card {
+        padding: 14px;
+    }
+
+    .user-name {
+        font-size: 0.95rem;
+    }
+
+    .comment-text {
+        font-size: 0.9rem;
+    }
+
+    /* Modale foto: pulsanti navigazione più piccoli */
+    .close-photo-btn {
+        top: 16px;
+        right: 16px;
+        width: 36px;
+        height: 36px;
+        font-size: 1rem;
+    }
+
+    /* Modale recensione: occupa quasi tutto lo schermo */
+    .review-modal {
+        width: 95vw;
+        max-height: 85vh;
+    }
+
+    .modal-header-row {
+        padding: 16px 16px 12px;
+    }
+
+    .modal-comment-body {
+        padding: 14px 16px 20px;
+    }
+}
+
 </style>

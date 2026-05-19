@@ -416,10 +416,8 @@ const formattaDataLeggibile = (dataIso) => {
     </div>
 
     <div v-else class="dashboard-layout">
-      <!-- Overlay menu mobile -->
       <div class="sidebar-overlay" :class="{ 'd-block': isSidebarOpen }" @click="isSidebarOpen = false"></div>
 
-      <!-- Barra mobile con hamburger -->
       <div class="mobile-topbar d-md-none">
         <button class="hamburger-btn" @click="isSidebarOpen = true">
           <i class="bi bi-list fs-3"></i>
@@ -504,8 +502,10 @@ const formattaDataLeggibile = (dataIso) => {
         </div>
 
         <template v-else>
-          <DashboardStats v-if="vistaAttiva === 'statistiche'" :miei-garage="mieiGarageFiltrati"
-            :storico-prenotazioni="storicoPrenotazioniFiltrato" />
+          <div class="stats-container">
+            <DashboardStats v-if="vistaAttiva === 'statistiche'" :miei-garage="mieiGarageFiltrati"
+              :storico-prenotazioni="storicoPrenotazioniFiltrato" />
+          </div>
 
           <DashboardGarageList v-if="vistaAttiva === 'garage'" :miei-garage="mieiGarage" @modifica="preparaModifica"
             @toggle-stato="cambiaStatoGarage" />
@@ -755,7 +755,6 @@ const formattaDataLeggibile = (dataIso) => {
   align-items: stretch;
 }
 
-/* Stili Mobile Header */
 .mobile-topbar {
   display: none;
   align-items: center;
@@ -996,9 +995,7 @@ const formattaDataLeggibile = (dataIso) => {
 }
 
 @keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+  to { transform: rotate(360deg); }
 }
 
 .chat-popup-container {
@@ -1016,15 +1013,8 @@ const formattaDataLeggibile = (dataIso) => {
 }
 
 @keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .info-list {
@@ -1251,15 +1241,8 @@ const formattaDataLeggibile = (dataIso) => {
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateX(10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+  from { opacity: 0; transform: translateX(10px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
 .step-wrapper {
@@ -1357,7 +1340,6 @@ const formattaDataLeggibile = (dataIso) => {
   color: #00408A;
 }
 
-/* MEDIA QUERIES PER MOBILE / TABLET */
 @media (max-width: 768px) {
   .dashboard-layout {
     flex-direction: column;
@@ -1371,7 +1353,6 @@ const formattaDataLeggibile = (dataIso) => {
     position: fixed;
     top: 0;
     left: -280px;
-    /* Nasconde la sidebar */
     width: 280px;
     height: 100vh;
     z-index: 1050;
@@ -1381,11 +1362,25 @@ const formattaDataLeggibile = (dataIso) => {
 
   .sidebar.sidebar-open {
     left: 0;
-    /* Mostra la sidebar */
   }
 
   .main-content {
     padding: 20px 16px;
+  }
+  
+  .stats-container {
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+  
+  :deep(.dashboard-stats-wrapper) {
+    width: 100%;
+  }
+  
+  :deep(.chart-container), :deep(canvas) {
+    max-width: 100% !important;
+    height: auto !important;
   }
 }
 </style>

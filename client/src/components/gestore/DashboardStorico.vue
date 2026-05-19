@@ -132,6 +132,7 @@ watch(() => props.prenotazioni, () => {
     margin: 0 auto;
     padding: 0 1rem;
     box-sizing: border-box;
+    overflow-x: hidden; 
 }
 
 .page-header {
@@ -163,6 +164,7 @@ watch(() => props.prenotazioni, () => {
 .table-responsive-container {
     width: 100%;
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch; 
 }
 
 .parkly-table {
@@ -239,7 +241,6 @@ watch(() => props.prenotazioni, () => {
     text-align: center !important;
 }
 
-/* Badges */
 .badge {
     display: inline-block;
     padding: 4px 12px;
@@ -278,7 +279,6 @@ watch(() => props.prenotazioni, () => {
     letter-spacing: 0.06em;
 }
 
-/* Bottoni Chat */
 .btn-chat {
     position: relative;
     display: inline-flex;
@@ -317,5 +317,14 @@ watch(() => props.prenotazioni, () => {
 .pagination-container {
     margin-top: auto !important;
     padding-top: 2rem;
+}
+
+.pagination-container {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    overflow: visible;
+    padding: 10px 0;
 }
 </style>

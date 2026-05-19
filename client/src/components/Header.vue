@@ -4,8 +4,8 @@ import { useRouter, useRoute } from 'vue-router'
 import * as bootstrap from 'bootstrap'
 import logoUrl from '../assets/LogoParklyBlu.svg'
 import logoInteroUrl from '../assets/LogoParklyIntero.svg'
-import { authStore } from '../store/auth.js' // Importa lo store auth
-import { alertStore } from '../store/alert.js' // Importiamo lo store globale degli alert
+import { authStore } from '../store/auth.js' 
+import { alertStore } from '../store/alert.js'
 
 //foto profilo standard
 import defaultAvatarUrl from '../assets/default-avatar.png'
@@ -377,8 +377,6 @@ const handleLogout = async () => {
   height: 15px;
 }
 
-/* --- STILI DROPDOWN --- */
-
 .parkly-dropdown {
   border-radius: 14px;
   min-width: 220px;
@@ -402,5 +400,44 @@ const handleLogout = async () => {
 .parkly-dropdown .dropdown-item.text-danger:hover {
   background-color: #fee2e2;
   color: #dc3545 !important;
+}
+
+@media (max-width: 600px) {
+  .main-header {
+    padding: 0.9rem 1rem;
+  }
+
+  .logo-image {
+    height: 38px;
+  }
+
+  .right-section {
+    gap: 0.6rem;
+  }
+
+  .nav-item {
+    display: none;
+  }
+
+  .auth-buttons-group {
+    gap: 0.5rem;
+  }
+
+  .login-btn,
+  .register-btn {
+    padding: 0 0.9rem;
+    font-size: 0.85rem;
+    height: 40px;
+  }
+
+  .user-name-btn {
+    padding: 0 0.8rem;
+    font-size: 0.85rem;
+    height: 40px;
+  }
+
+  .user-name-btn span {
+    display: none;
+  }
 }
 </style>
