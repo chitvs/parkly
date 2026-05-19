@@ -337,6 +337,10 @@ const handleRegister = async () => {
     outline: none;
 }
 
+#cf::placeholder {
+    text-transform: none;
+}
+
 .register-btn.btn-primary,
 .register-btn {
     background-color: #00408a;
