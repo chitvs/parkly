@@ -202,6 +202,26 @@ onMounted(async () => {
     }
 })
 
+onUnmounted(() => {
+    // Ripristina sempre lo scorrimento della pagina quando il componente muore
+    document.body.style.overflow = ''
+
+    // Distruggi in modo sicuro le istanze della mappa
+    if (fullMapInstance) {
+        fullMapInstance.remove()
+        fullMapInstance = null
+    }
+    
+    if (mapInstance) {
+        mapInstance.remove()
+        mapInstance = null
+    }
+
+    // Pulisci i reference dei marker
+    searchMarkerInstance = null
+    Object.keys(markersRefs).forEach(key => delete markersRefs[key])
+})
+
 const resetFilters = () => {
     alertStore.pulisci()
     hasDateError.value = false
