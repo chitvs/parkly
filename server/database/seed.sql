@@ -17,7 +17,7 @@
  *   Clienti -> password: cliente123
  *   Gli hash bcrypt sono generati da scripts/hashSeed.js
  */
-
+TRUNCATE TABLE Transazione, Recensione, Prenotazione, PostoAuto, Garage, Utente RESTART IDENTITY CASCADE;
 -- UTENTI (12 totali, 6 gestori e 6 clienti)
 INSERT INTO Utente (
     Ruolo, 
@@ -609,7 +609,44 @@ INSERT INTO Prenotazione (
 (7, 211, 'PR-NEW05', 'KK555KK', 'Giornata al mare', '2026-05-15 08:00:00', '2026-05-15 18:00:00', 30.00, 'CONCLUSA'),
 (8, 221, 'PR-NEW06', 'JJ666JJ', 'Volo Ryanair', '2026-05-10 06:00:00', '2026-05-15 12:00:00', 48.00, 'CONCLUSA'),
 (9, 235, 'PR-NEW07', 'XX111XX', 'Concerto stadio', '2026-05-14 18:00:00', '2026-05-15 00:30:00', 32.50, 'CONCLUSA'),
-(10, 253, 'PR-NEW08', 'YY222YY', 'Visita parenti', '2026-05-16 10:00:00', '2026-05-16 12:00:00', 5.00,  'CONCLUSA')
+(10, 253, 'PR-NEW08', 'YY222YY', 'Visita parenti', '2026-05-16 10:00:00', '2026-05-16 12:00:00', 5.00,  'CONCLUSA'),
+(5, 127, 'PR-JOO22OPQ', 'DA999DA', '', '2026-05-20 07:30:00', '2026-05-20 18:00:00', '52.50', 'ATTIVA'),
+(5, 128, 'PR-CEYUPP3F', 'AA333DD', '', '2026-05-20 07:30:00', '2026-05-20 18:00:00', '52.50', 'ATTIVA'), 
+(5, 132, 'PR-NC5U6IZ3', 'PO555GO', '', '2026-05-20 07:30:00', '2026-05-20 15:00:00', '15.00', 'ATTIVA'), 
+(5, 208, 'PR-V5W54LJV', 'DD999FF', '', '2026-05-21 09:00:00', '2026-05-21 15:00:00', '48.00', 'ATTIVA'), 
+(1, 121, 'PR-E3RG73QR', 'AA777AA', '', '2026-05-20 10:00:00', '2026-05-20 12:00:00', '6.00', 'ATTIVA'), 
+(1, 150, 'PR-ZCLEFWUC', 'AA999AA', '', '2026-05-20 10:00:00', '2026-05-20 12:00:00', '6.00', 'ATTIVA'), 
+(5, 206, 'PR-PP69BBEX', 'PO543GO', '', '2026-05-20 09:00:00', '2026-05-21 01:00:00', '64.00', 'ATTIVA'), 
+(1, 141, 'PR-WBBJYE1V', 'AA444AA', '', '2026-05-20 10:00:00', '2026-05-20 12:00:00', '6.00', 'ATTIVA'), 
+(1, 146, 'PR-Z02R2HZT', 'AA555BB', '', '2026-05-20 14:00:00', '2026-05-20 17:00:00', '9.00', 'ATTIVA'), 
+(1, 150, 'PR-76XNXFPU', 'AA222AA', '', '2026-05-20 14:00:00', '2026-05-20 17:00:00', '9.00', 'ATTIVA'), 
+(1, 148, 'PR-8N4DYV3O', 'AA999AA', '',  '2026-05-20 14:00:00', '2026-05-20 17:00:00', '9.00', 'ATTIVA'), 
+(1, 111, 'PR-R9U4JH4J', 'AA111BB', '',  '2026-05-20 18:00:00', '2026-05-20 21:00:00', '15.00', 'ATTIVA'), 
+(5, 30, 'PR-2ZDEUJEK', 'DA999PO', '', '2026-05-20 11:00:00', '2026-05-20 18:00:00', '49.00', 'ATTIVA'), 
+(1, 133, 'PR-HT8YMT0I', 'EE777EE', '',  '2026-05-20 18:00:00', '2026-05-20 21:00:00', '6.00', 'ATTIVA'), 
+(5, 127, 'PR-B6RHPRQE', 'EL111ET', '',  '2026-05-21 11:00:00', '2026-05-21 18:00:00', '70.00', 'ATTIVA'), 
+(1, 145, 'PR-TFDHSYE3', 'KK555KK', '',  '2026-05-20 18:00:00', '2026-05-20 21:00:00', '9.00', 'ATTIVA'), 
+(5, 138, 'PR-AVXGWVRM', 'FF888FF', '',  '2026-05-20 07:00:00', '2026-05-20 22:00:00', '45.00', 'ATTIVA'), 
+(1, 111, 'PR-3DYN7WLG', 'AA999AA', '',  '2026-05-20 22:00:00', '2026-05-21 01:30:00', '17.50', 'ATTIVA'), 
+(1, 126, 'PR-ZP85OYHW', 'EE777EE', '',  '2026-05-20 22:00:00', '2026-05-21 01:30:00', '17.50', 'ATTIVA'), 
+(1, 127, 'PR-V0X7HCSM', 'JJ000JJ', '', '2026-05-20 22:00:00', '2026-05-21 01:30:00', '17.50', 'ATTIVA'), 
+(1, 111, 'PR-NXXUTXS6', 'AA888AA', '',  '2026-05-21 08:30:00', '2026-05-21 12:30:00', '20.00', 'ATTIVA'), 
+(1, 130, 'PR-S0Y2CE32', 'AA999AA', '',  '2026-05-21 08:30:00', '2026-05-21 12:30:00', '12.00', 'ATTIVA'), 
+(1, 135, 'PR-NJ88RYNZ', 'KK333KK', '',  '2026-05-21 08:30:00', '2026-05-21 12:30:00', '8.00', 'ATTIVA'), 
+(9, 136, 'PR-2XPKC4DH', 'LO444LO', '',  '2026-05-21 10:00:00', '2026-05-21 18:00:00', '24.00', 'ATTIVA'), 
+(8, 109, 'PR-RV9PA27F', 'AA233DD', '',  '2026-05-21 10:00:00', '2026-05-21 12:00:00', '10.00', 'ATTIVA'), 
+(8, 110, 'PR-85FGRJIE', 'BB222VV', '', '2026-05-21 10:00:00', '2026-05-21 12:00:00', '10.00', 'ATTIVA'), 
+(8, 119, 'PR-0YNW9HLJ', 'TT777RR', '', '2026-05-21 10:00:00', '2026-05-21 12:00:00', '6.00', 'ATTIVA'), 
+(8, 120, 'PR-G1D108GW', 'FF666JJ', '', '2026-05-21 10:00:00', '2026-05-21 12:00:00', '6.00', 'ATTIVA'), 
+(8, 201, 'PR-BB3NP83D', 'AA333AA', '', '2026-05-21 10:00:00', '2026-05-21 12:00:00', '22.00', 'ATTIVA'), 
+(8, 202, 'PR-U3PPHIPD', 'BB777NN', '', '2026-05-21 10:00:00', '2026-05-21 12:00:00', '22.00', 'ATTIVA'), 
+(8, 203, 'PR-3K75PS9H', 'GG666GG', '', '2026-05-21 10:00:00', '2026-05-21 12:00:00', '8.00', 'ATTIVA'), 
+(7, 204, 'PR-DYPU65V5', 'VV463MM', '',  '2026-05-21 10:00:00', '2026-05-21 12:00:00', '16.00', 'ATTIVA'), 
+(7, 209, 'PR-5BO3FYJ0', 'MM374LL', '', '2026-05-21 10:00:00', '2026-05-21 12:00:00', '16.00', 'ATTIVA'), 
+(7, 206, 'PR-4NZSN5HH', 'LL444LL', '', '2026-05-21 10:00:00', '2026-05-21 12:00:00', '8.00', 'ATTIVA'), 
+(5, 207, 'PR-3LQWVMQ4', 'MO555TO', '', '2026-05-21 11:00:00', '2026-05-21 12:00:00', '4.00', 'ATTIVA'), 
+(5, 205, 'PR-VDGH5333', 'TU435HI', '', '2026-05-21 11:00:00', '2026-05-21 12:00:00', '8.00', 'ATTIVA'), 
+(5, 210, 'PR-244KFMZ6', 'NA081PO', '', '2026-05-21 11:00:00', '2026-05-21 12:00:00', '8.00', 'ATTIVA')
 ON CONFLICT (CodicePrenotazione) DO NOTHING;
 
 -- TRANSAZIONI
@@ -866,10 +903,47 @@ INSERT INTO Transazione (
 (7, 213, 'PRENOTAZIONE', -30.00, 'Pagamento prenotazione PR-NEW05'),
 (8, 214, 'PRENOTAZIONE', -48.00, 'Pagamento prenotazione PR-NEW06'),
 (9, 215, 'PRENOTAZIONE', -32.50, 'Pagamento prenotazione PR-NEW07'),
-(10, 216, 'PRENOTAZIONE', -5.00, 'Pagamento prenotazione PR-NEW08');
+(10, 216, 'PRENOTAZIONE', -5.00, 'Pagamento prenotazione PR-NEW08'),
+(5, 217, 'PRENOTAZIONE', '-52.50', 'Pagamento prenotazione PR-JOO22OPQ'),
+(5, 218, 'PRENOTAZIONE', '-52.50', 'Pagamento prenotazione PR-CEYUPP3F'),
+(5, 219, 'PRENOTAZIONE', '-15.00', 'Pagamento prenotazione PR-NC5U6IZ3'),
+(5, 220, 'PRENOTAZIONE', '-48.00', 'Pagamento prenotazione PR-V5W54LJV'),
+(1, 221, 'PRENOTAZIONE', '-6.00', 'Pagamento prenotazione PR-E3RG73QR'),
+(1, 222, 'PRENOTAZIONE', '-6.00', 'Pagamento prenotazione PR-ZCLEFWUC'),
+(5, 223, 'PRENOTAZIONE', '-64.00', 'Pagamento prenotazione PR-PP69BBEX'),
+(1, 224, 'PRENOTAZIONE', '-6.00', 'Pagamento prenotazione PR-WBBJYE1V'),
+(1, 225, 'PRENOTAZIONE', '-9.00', 'Pagamento prenotazione PR-Z02R2HZT'),
+(1, 226, 'PRENOTAZIONE', '-9.00', 'Pagamento prenotazione PR-76XNXFPU'),
+(1, 227, 'PRENOTAZIONE', '-9.00', 'Pagamento prenotazione PR-8N4DYV3O'),
+(1, 228, 'PRENOTAZIONE', '-15.00', 'Pagamento prenotazione PR-R9U4JH4J'),
+(5, 229, 'PRENOTAZIONE', '-49.00', 'Pagamento prenotazione PR-2ZDEUJEK'),
+(1, 230, 'PRENOTAZIONE', '-6.00', 'Pagamento prenotazione PR-HT8YMT0I'),
+(5, 231, 'PRENOTAZIONE', '-70.00', 'Pagamento prenotazione PR-B6RHPRQE'),
+(1, 232, 'PRENOTAZIONE', '-9.00', 'Pagamento prenotazione PR-TFDHSYE3'),
+(5, 233, 'PRENOTAZIONE', '-45.00', 'Pagamento prenotazione PR-AVXGWVRM'),
+(1, 234, 'PRENOTAZIONE', '-17.50', 'Pagamento prenotazione PR-3DYN7WLG'),
+(1, 235, 'PRENOTAZIONE', '-17.50', 'Pagamento prenotazione PR-ZP85OYHW'),
+(1, 236, 'PRENOTAZIONE', '-17.50', 'Pagamento prenotazione PR-V0X7HCSM'),
+(1, 237, 'PRENOTAZIONE', '-20.00', 'Pagamento prenotazione PR-NXXUTXS6'),
+(1, 238, 'PRENOTAZIONE', '-12.00', 'Pagamento prenotazione PR-S0Y2CE32'),
+(1, 239, 'PRENOTAZIONE', '-8.00', 'Pagamento prenotazione PR-NJ88RYNZ'),
+(9, 240, 'PRENOTAZIONE', '-24.00', 'Pagamento prenotazione PR-2XPKC4DH'),
+(8, 241, 'PRENOTAZIONE', '-10.00', 'Pagamento prenotazione PR-RV9PA27F'),
+(8, 242, 'PRENOTAZIONE', '-10.00', 'Pagamento prenotazione PR-85FGRJIE'),
+(8, 243, 'PRENOTAZIONE', '-6.00', 'Pagamento prenotazione PR-0YNW9HLJ'),
+(8, 244, 'PRENOTAZIONE', '-6.00', 'Pagamento prenotazione PR-G1D108GW'),
+(8, 245, 'PRENOTAZIONE', '-22.00', 'Pagamento prenotazione PR-BB3NP83D'),
+(8, 246, 'PRENOTAZIONE', '-22.00', 'Pagamento prenotazione PR-U3PPHIPD'),
+(8, 247, 'PRENOTAZIONE', '-8.00', 'Pagamento prenotazione PR-3K75PS9H'),
+(7, 248, 'PRENOTAZIONE', '-16.00', 'Pagamento prenotazione PR-DYPU65V5'),
+(7, 249, 'PRENOTAZIONE', '-16.00', 'Pagamento prenotazione PR-5BO3FYJ0'),
+(7, 250, 'PRENOTAZIONE', '-8.00', 'Pagamento prenotazione PR-4NZSN5HH'),
+(5, 251, 'PRENOTAZIONE', '-4.00', 'Pagamento prenotazione PR-3LQWVMQ4'),
+(5, 252, 'PRENOTAZIONE', '-8.00', 'Pagamento prenotazione PR-VDGH5333'),
+(5, 253, 'PRENOTAZIONE', '-8.00', 'Pagamento prenotazione PR-244KFMZ6');
 
 -- INCASSI AUTOMATICI PER OGNI PRENOTAZIONE
--- Genera le transazioni lato gestore per tutte le prenotazioni non annullate:
+-- Genera le transazioni lato gestore per tutte le prenotazioni non anate:
 --   ATTIVA -> INCASSO_SOSPESO
 --   CONCLUSA -> INCASSO_COMPLETATO
 -- Le ANNULLATE vengono escluse perchè nessun incasso spetta al gestore.
