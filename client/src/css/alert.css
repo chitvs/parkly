@@ -46,7 +46,7 @@
 
 .alert-fixed-top {
   position: fixed;
-  top: 85px; /* Appena sotto l'header */
+  top: 85px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 1050;
@@ -58,7 +58,7 @@
 
 .alert-fixed-bottom {
   position: fixed;
-  bottom: 30px; /* Perfetto per il footer */
+  bottom: 30px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 1050;

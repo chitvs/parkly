@@ -1,6 +1,4 @@
-/* ==========================================================================
-   PARKLY UNIFIED MODALS & POPUPS
-   ========================================================================== */
+/* PARKLY UNIFIED MODALS & POPUPS */
 
 /* 1. OVERLAY E BACKDROP (Bootstrap + Custom) */
 .modal-backdrop.show {
@@ -17,7 +15,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10500; /* Alto per coprire tutto */
+  z-index: 10500;
   padding: 1.25rem;
 }
 
@@ -43,8 +41,8 @@
 /* 3. TIPOGRAFIA (Titoli e Sottotitoli) */
 .modal-title-text, 
 .modal-title {
-  font-weight: 800; /* bold*/
-  color: #00408a; /* Blu Parkly */
+  font-weight: 800; 
+  color: #00408a; 
   font-size: 1.5rem;
   margin-bottom: 0.35rem;
   letter-spacing: -0.02em;
@@ -73,7 +71,7 @@
   opacity: 1;
   border: none;
   transition: background 0.2s, color 0.2s;
-  padding: 0; /* Reset per Bootstrap */
+  padding: 0; 
   margin: 0;
 }
 
@@ -168,7 +166,7 @@
 .modal-submit-btn, 
 .cta-btn {
   width: 100%;
-  height: 52px; /* Altezza fissa coerente con gli input */
+  height: 52px; 
   padding: 0 24px;
   background-color: #00408A;
   color: #fff;
