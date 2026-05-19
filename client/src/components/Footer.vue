@@ -7,22 +7,27 @@ import IconGitHub from '../icons/IconGitHub.vue';
 
 const router = useRouter()
 
+
+//  Gestisce la navigazione verso rotte che richiedono privilegi specifici o l'autenticazione,
+//  intercettando eventuali tentativi di accesso non autorizzato e mostrando un alert.
+//  path = Il percorso di destinazione router (es. '/profile' o '/diventa-gestore').
+//  requiresNotGestore = Flag opzionale. Se true, blocca l'accesso per chi ha già il ruolo 'GESTORE'.
 const handleProtectedNavigation = (path, requiresNotGestore = false) => {
-    // controlla il login
-    if (!authStore.utente) {
-        alertStore.mostra('error', 'Devi effettuare l\'accesso per visualizzare questa pagina.')
-        return
-    }
+  //  Se l'utente non c'è, blocca la navigazione e mostra l'errore.
+  if (!authStore.utente) {
+    alertStore.mostra('error', 'Devi effettuare l\'accesso per visualizzare questa pagina.')
+    return
+  }
 
-    // se è "Diventa Gestore", l'utente non deve esserlo già
-    if (requiresNotGestore && authStore.utente.ruolo === 'GESTORE') {
-        alertStore.mostra('error', 'Sei già un gestore della piattaforma!')
-        return
-    }
+  // Se l'azione è "Diventa Gestore", l'utente non deve esserlo già.
+  if (requiresNotGestore && authStore.utente.ruolo === 'GESTORE') {
+    alertStore.mostra('error', 'Sei già un gestore della piattaforma!')
+    return
+  }
 
-    // tutto ok, puliamo eventuali alert precedenti e navighiamo
-    alertStore.pulisci()
-    router.push(path)
+  // Se supera tutti i controlli: pulisce eventuali alert residui dallo store e avvia il routing.
+  alertStore.pulisci()
+  router.push(path)
 }
 </script>
 
@@ -30,15 +35,15 @@ const handleProtectedNavigation = (path, requiresNotGestore = false) => {
   <footer class="main-footer">
     <div class="footer-container">
       <div class="footer-content">
-        
+
         <div class="footer-column brand-column">
           <div class="logo">
-            <img :src="logoInteroUrl" alt="Logo Parkly" class="logo-image" width="180px" color="#ffffff"/>
+            <img :src="logoInteroUrl" alt="Logo Parkly" class="logo-image" width="180px" color="#ffffff" />
           </div>
           <p class="brand-slogan">
             Trova, prenota e gestisci il tuo parcheggio in modo semplice, veloce e sicuro. Ovunque tu sia.
           </p>
-          
+
           <div class="github-container">
             <a href="https://github.com/chitvs/parkly" target="_blank" class="github-pill">
               <IconGitHub></IconGitHub>
@@ -50,9 +55,14 @@ const handleProtectedNavigation = (path, requiresNotGestore = false) => {
         <div class="footer-column">
           <h4>Esplora</h4>
           <ul>
-            <li><RouterLink to="/">Home</RouterLink></li>
-            <li><RouterLink to="/garage">Trova un garage</RouterLink></li>
-            <li><a href="#" @click.prevent="handleProtectedNavigation('/diventa-gestore', true)">Diventa Gestore</a></li>
+            <li>
+              <RouterLink to="/">Home</RouterLink>
+            </li>
+            <li>
+              <RouterLink to="/garage">Trova un garage</RouterLink>
+            </li>
+            <li><a href="#" @click.prevent="handleProtectedNavigation('/diventa-gestore', true)">Diventa Gestore</a>
+            </li>
           </ul>
         </div>
 
@@ -91,10 +101,10 @@ const handleProtectedNavigation = (path, requiresNotGestore = false) => {
 
 <style scoped>
 .main-footer {
-  background-color: #001D3D; 
-  color: #94a3b8; 
+  background-color: #001D3D;
+  color: #94a3b8;
   font-family: 'Inter', 'Segoe UI', sans-serif;
-  margin-top: auto; 
+  margin-top: auto;
   padding-top: 4rem;
   position: relative;
 }
@@ -151,7 +161,7 @@ const handleProtectedNavigation = (path, requiresNotGestore = false) => {
 
 .github-pill:hover {
   background-color: #ffffff;
-  color: #06162d; 
+  color: #06162d;
   transform: translateY(-3px);
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
 }
@@ -193,7 +203,7 @@ ul a {
   cursor: pointer;
 }
 
-/* Bellissimo effetto hover: il testo si illumina e scorre di 4px a destra */
+/* Effetto hover: il testo si illumina e scorre di 4px a destra */
 ul a:hover {
   color: #ffffff;
   transform: translateX(4px);
@@ -204,7 +214,8 @@ ul a:hover {
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   padding: 1.5rem 0;
   font-size: 0.85rem;
-  background-color: #030e1d; /* Tonalità ancora più scura per lo stacco */
+  background-color: #030e1d;
+  /* Tonalità ancora più scura per lo stacco */
 }
 
 .bottom-flex {
@@ -231,16 +242,18 @@ ul a:hover {
 /* Responsività per schermi più piccoli */
 @media (max-width: 992px) {
   .footer-content {
-    grid-template-columns: 1fr 1fr; /* Su tablet passa a 2 colonne */
+    grid-template-columns: 1fr 1fr;
+    /* Su tablet passa a 2 colonne */
   }
 }
 
 @media (max-width: 576px) {
   .footer-content {
-    grid-template-columns: 1fr; /* Su smartphone passa a 1 colonna */
+    grid-template-columns: 1fr;
+    /* Su smartphone passa a 1 colonna */
     gap: 2rem;
   }
-  
+
   .bottom-flex {
     flex-direction: column;
     text-align: center;

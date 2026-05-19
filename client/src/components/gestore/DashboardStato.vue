@@ -3,6 +3,7 @@ import { ref, computed, onUnmounted, watch } from 'vue'
 import { alertStore } from '../../store/alert'
 import PlanimetriaGarage from '../PlanimetriaGarage.vue'
 
+// Dati ricevuti dal DB (tramite il padre) per incrociare posti, garage e prenotazioni
 const props = defineProps({
     mieiGarage: { type: Array, required: true },
     postiPerGarage: { type: Object, required: true },
@@ -12,12 +13,14 @@ const props = defineProps({
 
 const emit = defineEmits(['verifica-disponibilita', 'manage-posto'])
 
-const STEP_MIN = 30
-const MAX_HOURS = 48
+// Costanti che governano lo slider del tempo
+const STEP_MIN = 30 // Ogni scatto dello slider fa avanzare l'orologio di 30 minuti
+const MAX_HOURS = 48 // Quante ore nel futuro posso vedere
 const MAX_STEPS = (MAX_HOURS * 60) / STEP_MIN
 
-const sliderStep = ref(0)
+const sliderStep = ref(0) // Livello corrente dello slider (0 = adesso)
 
+//Calcola l'oggetto Date() esatto in base a dove si trova la levetta dello slider.
 const sliderTime = computed(() => {
     const t = new Date()
     t.setSeconds(0, 0)
@@ -25,51 +28,61 @@ const sliderTime = computed(() => {
     return t
 })
 
+//Genera la stringa formattata mostrata sopra lo slider ("Oggi · 14:30" o "Adesso").
 const sliderLabel = computed(() => {
     const t = sliderTime.value
     const now = new Date()
     const diffH = Math.round((t - now) / 3_600_000)
     const timeStr = t.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
     const dateStr = t.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })
+
     if (sliderStep.value === 0) return `Adesso · ${timeStr}`
-    if (diffH < 24) return `${timeStr}  (+${diffH}h)`
-    return `${dateStr} · ${timeStr}`
+    if (diffH < 24) return `${timeStr}  (+${diffH}h)` // Entro le 24 ore mostra "+X ore"
+    return `${dateStr} · ${timeStr}` // Oltre, mostra data e orario
 })
 
 const isPlaying = ref(false)
 let playTimer = null
 
+//Avvia/Ferma l'avanzamento automatico dello slider simulando lo scorrere del tempo.
 const togglePlay = () => {
     if (isPlaying.value) {
         clearInterval(playTimer)
         isPlaying.value = false
     } else {
         isPlaying.value = true
+        // Scatta in avanti di 1 step ogni 150ms. Se arriva a fine corsa (MAX_STEPS) riparte da 0.
         playTimer = setInterval(() => {
             sliderStep.value = sliderStep.value >= MAX_STEPS ? 0 : sliderStep.value + 1
         }, 150)
     }
 }
 
+// Pulizia timer in uscita per evitare memory leak
 onUnmounted(() => { if (playTimer) clearInterval(playTimer) })
 
+//Restituisce il totale dei posti configurati in un garage.
 const totalePosti = (idGarage) => {
     const list = props.postiPerGarage[idGarage] ?? []
     return list.filter(p => p.isattivo !== false).length || list.length
 }
 
+//Analizza l'array di prenotazioni per vedere quante sono contemporaneamente
+//ATTIVE nell'istante temporale "ts". Ritorna la percentuale 
 const occupazioneAt = (idGarage, ts) => {
     const tot = totalePosti(idGarage)
     if (!tot) return props.occupazioneGarage[idGarage] ?? 0
+
     const occ = props.prenotazioni.filter(p =>
         Number(p.id_garage) === Number(idGarage) &&
         p.stato === 'ATTIVA' &&
-        new Date(p.iniziososta) <= ts &&
-        new Date(p.finesosta) > ts
+        new Date(p.iniziososta) <= ts && // È già iniziata
+        new Date(p.finesosta) > ts       // e non è ancora finita.
     ).length
     return Math.round((occ / tot) * 100)
 }
 
+//Mappa l'occupazione per ogni garage legata allo sliderTime.
 const occSlider = computed(() => {
     const out = {}
     for (const g of props.mieiGarage) {
@@ -80,6 +93,7 @@ const occSlider = computed(() => {
     return out
 })
 
+//Calcola i quante auto entrano / escono all'interno di una finestra temporale (es. 1 ora).
 const flussoAt = (idGarage, from, toTs) => ({
     arrivi: props.prenotazioni.filter(p =>
         Number(p.id_garage) === Number(idGarage) && p.stato === 'ATTIVA' &&
@@ -91,6 +105,7 @@ const flussoAt = (idGarage, from, toTs) => ({
     ).length,
 })
 
+//Fornisce il flusso della PROSSIMA ORA rispetto alla posizione dello slider.
 const flussoSlider = computed(() => {
     const from = sliderTime.value
     const to = new Date(from.getTime() + 3_600_000)
@@ -101,6 +116,7 @@ const flussoSlider = computed(() => {
     return out
 })
 
+//Assembla tutti i KPI finali (totali, ingressi, uscite) in un oggetto unico pronto per il template.
 const kpiPerGarage = computed(() => {
     const out = {}
     for (const g of props.mieiGarage) {
@@ -120,6 +136,7 @@ const kpiPerGarage = computed(() => {
 
 const TIMELINE_SLOTS = 24
 
+//Costruisce l'asse X del grafico orario "Prossime 24 ore", partendo da sliderTime.
 const timelineSlots = computed(() => {
     const base = sliderTime.value
     return Array.from({ length: TIMELINE_SLOTS }, (_, i) => {
@@ -131,6 +148,7 @@ const timelineSlots = computed(() => {
     })
 })
 
+//Per ogni slot della timeline, calcola l'altezza della barra di occupazione per comporre il grafico in CSS puro.
 const timelinePerGarage = computed(() => {
     const out = {}
     for (const g of props.mieiGarage) {
@@ -142,6 +160,7 @@ const timelinePerGarage = computed(() => {
     return out
 })
 
+// Metodi per i colori delle progress-bar in base all'allerta/urgenza
 const getOccColor = (pct) => {
     if (pct >= 90) return '#E74C3C'
     if (pct >= 75) return '#E67E22'
@@ -160,6 +179,7 @@ const planimetriaAperta = ref({})
 const filtriDate = ref({})
 const mapError = ref({})
 
+// Converte in orario locale per l'input datetime-local HTML5
 const formatForDatetimeLocal = (date) => {
     const tzOffset = date.getTimezoneOffset() * 60000;
     const localISOTime = (new Date(date - tzOffset)).toISOString().slice(0, 16);
@@ -172,10 +192,10 @@ const isRicercaManualeAttiva = computed(() => {
     return Object.values(usaDateManuali.value).some(stato => stato === true)
 })
 
+//Svincola un garage specifico dall'uso dello slider globale. Serve se l'utente vuole usare il calendario fisso ignorando lo slider.
 const attivaRicercaManuale = (id) => {
     usaDateManuali.value[id] = true
-
-    if (isPlaying.value) togglePlay()
+    if (isPlaying.value) togglePlay() // Blocca l'animazione globale
 
     const adesso = new Date()
     const traUnOra = new Date(adesso.getTime() + 3_600_000)
@@ -193,7 +213,7 @@ const togglePlanimetria = (id) => {
         usaDateManuali.value[id] = false
 
         const start = sliderTime.value;
-        const end = new Date(start.getTime() + 3_600_000);
+        const end = new Date(start.getTime() + 3_600_000); // Imposta una permanenza standard di 1h
         filtriDate.value[id] = {
             inizio: formatForDatetimeLocal(start),
             fine: formatForDatetimeLocal(end)
@@ -211,19 +231,21 @@ const onVerifica = (id) => {
         alertStore.mostra('error', 'Inserisci orario di inizio e fine per aggiornare la mappa.')
         return
     }
-    
-    // Se la validazione passa, puliamo eventuali alert di errore precedenti
+
     alertStore.pulisci()
     emit('verifica-disponibilita', { inizio: filtro.inizio, fine: filtro.fine })
 }
 
 let mapUpdateTimer = null;
 
+// Sincronizza lo stato delle mappe aperte con lo scorrere dello slider globale
 watch(sliderTime, (newTime) => {
     clearTimeout(mapUpdateTimer);
 
+    // Aggiorna gli input per tutti i garage aperti
     props.mieiGarage.forEach(garage => {
         const id = garage.id_garage;
+        // Salta quelli messi in manuale per non sovrascrivere la scelta utente
         if (planimetriaAperta.value[id] && !usaDateManuali.value[id]) {
             const end = new Date(newTime.getTime() + 3_600_000);
             filtriDate.value[id] = {
@@ -233,12 +255,47 @@ watch(sliderTime, (newTime) => {
         }
     });
 
+    // Richiede i nuovi dati al DB per ri-renderizzare le mappe 
     props.mieiGarage.forEach(garage => {
         const id = garage.id_garage;
         if (planimetriaAperta.value[id] && !usaDateManuali.value[id]) {
             onVerifica(id);
         }
     });
+});
+
+// Calcola l'occupazione in tempo reale sul frontend per la planimetria
+const postiDinamici = computed(() => {
+    const mappa = {};
+    
+    for (const garage of props.mieiGarage) {
+        const idG = garage.id_garage;
+        const posti = props.postiPerGarage[idG] || [];
+        
+        // Capisce se stiamo guardando il calendario manuale o lo slider temporale
+        const tempoDaEsaminare = (usaDateManuali.value[idG] && filtriDate.value[idG]?.inizio)
+            ? new Date(filtriDate.value[idG].inizio)
+            : sliderTime.value;
+
+        // Inietta "is_occupato" in ogni singolo posto incrociando i dati
+        mappa[idG] = posti.map(posto => {
+            const occupatoOra = props.prenotazioni.some(p => {
+                const isStessoPosto = Number(p.id_posto) === Number(posto.id_posto);
+                const stato = p.stato ? String(p.stato).trim().toUpperCase() : '';
+                
+                if (!isStessoPosto || (stato !== 'ATTIVA' && stato !== 'CONFERMATA')) return false;
+                
+                const inizio = new Date(p.iniziososta ? p.iniziososta.replace(' ', 'T') : '');
+                const fine = new Date(p.finesosta ? p.finesosta.replace(' ', 'T') : '');
+                
+                return !isNaN(inizio.getTime()) && inizio <= tempoDaEsaminare && fine > tempoDaEsaminare;
+            });
+            
+            // Restituisce il posto con la sovrascrittura in tempo reale
+            return { ...posto, is_occupato: occupatoOra };
+        });
+    }
+    return mappa;
 });
 </script>
 
@@ -317,7 +374,7 @@ watch(sliderTime, (newTime) => {
                             <line x1="3" y1="9" x2="21" y2="9" />
                         </svg>
                         <span>{{ kpiPerGarage[garage.id_garage].occupati }}/{{ kpiPerGarage[garage.id_garage].totPosti
-                            }} posti occupati</span>
+                        }} posti occupati</span>
                     </div>
                     <div class="kpi-chip kpi-arrivi">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -423,9 +480,11 @@ watch(sliderTime, (newTime) => {
                                     </button>
                                 </div>
                                 <div class="plan-filter-inputs d-flex gap-2">
-                                    <input type="datetime-local" class="form-input form-input--sm" :class="{ 'is-invalid-input': mapError[garage.id_garage] }"
+                                    <input type="datetime-local" class="form-input form-input--sm"
+                                        :class="{ 'is-invalid-input': mapError[garage.id_garage] }"
                                         v-model="filtriDate[garage.id_garage].inizio">
-                                    <input type="datetime-local" class="form-input form-input--sm" :class="{ 'is-invalid-input': mapError[garage.id_garage] }"
+                                    <input type="datetime-local" class="form-input form-input--sm"
+                                        :class="{ 'is-invalid-input': mapError[garage.id_garage] }"
                                         v-model="filtriDate[garage.id_garage].fine">
                                     <button class="btn-primary btn-primary--sm"
                                         :disabled="!filtriDate[garage.id_garage].inizio || !filtriDate[garage.id_garage].fine"
@@ -433,10 +492,11 @@ watch(sliderTime, (newTime) => {
                                         Aggiorna mappa
                                     </button>
                                 </div>
-                                <div v-if="mapError[garage.id_garage]" class="text-danger small mt-1">Inserisci orario di inizio e fine.</div>
+                                <div v-if="mapError[garage.id_garage]" class="text-danger small mt-1">Inserisci orario
+                                    di inizio e fine.</div>
                             </div>
                         </div>
-                        <PlanimetriaGarage :posti="postiPerGarage[garage.id_garage] || []"
+                        <PlanimetriaGarage :posti="postiDinamici[garage.id_garage] || []"
                             :mappaTestuale="garage.mappatestuale" :isGestoreMode="true"
                             @manage="$emit('manage-posto', $event)" />
                     </div>
@@ -489,7 +549,7 @@ watch(sliderTime, (newTime) => {
 
 .sticky-nav {
     position: sticky;
-    top: 80px;
+    top: 88px;
     z-index: 100;
     box-shadow: 0 10px 30px rgba(0, 32, 74, 0.08);
 }

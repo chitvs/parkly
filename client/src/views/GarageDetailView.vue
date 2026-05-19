@@ -25,11 +25,14 @@ const indiceFotoAttiva = ref(null)
 
 // genera la data e ora attuale in formato locale ISO per bloccare le date passate nel calendario nativo
 const oggiIso = computed(() => {
+    // Calcola l'offset del fuso orario corrente per ottenere la stringa ISO corretta
     const tzoffset = (new Date()).getTimezoneOffset() * 60000; // offset in millisecondi
     return (new Date(Date.now() - tzoffset)).toISOString().slice(0, 16);
 })
 
+// Gestore eventi tastiera per chiudere la modale foto o scorrere tra di esse
 const handleKeydown = (e) => {
+    // Funziona solo se c'è una foto attualmente visualizzata a schermo intero
     if (indiceFotoAttiva.value !== null) {
         if (e.key === 'Escape') chiudiFoto()
         if (e.key === 'ArrowRight') fotoSuccessiva()
@@ -38,65 +41,74 @@ const handleKeydown = (e) => {
 }
 
 onMounted(async () => {
-    // listener per utilizzare ESC e le frecce
+    // listener per utilizzare ESC e le frecce nella galleria immagini
     document.addEventListener('keydown', handleKeydown)
 
+    // Pulisce lo store ed effettua la fetch dei dati completi del garage
     garageStore.clearGarageData()
     await garageStore.fetchGarage(Number(props.id))
 
+    // Se il garage non esiste (es. id invalido), reindirizza alla pagina 404
     if (!garageStore.currentGarage) {
         router.push({ name: 'NotFound' })
         return
     }
 
+    // Effettua la fetch dei posti (senza filtri data iniziali) e delle recensioni
     await garageStore.fetchPosti(props.id, '', '')
     await garageStore.fetchRecensioni(props.id)
 
+    // Se arrivano già checkIn e checkOut dai parametri dell'URL, aggiorna automaticamente la mappa
     if (checkIn.value && checkOut.value) {
         await aggiornaMappa()
     }
 })
 
+// Pulizia del listener alla distruzione del componente per evitare memory leaks
 onUnmounted(() => {
     // rimuovo il listener quando il componente viene distrutto
     document.removeEventListener('keydown', handleKeydown)
 })
 
+// Ascolta i cambiamenti delle date per resettare la selezione ed evitare prenotazioni non valide
 watch([checkIn, checkOut], () => {
     isMapConfirmed.value = false
     postoSelezionato.value = null
     alertStore.pulisci() // Pulisce eventuali errori precedenti quando si cambiano le date
 })
 
-// Estrae le foto in modo sicuro
+// Estrae le foto in modo sicuro dal garage corrente o restituisce array vuoto
 const fotoGarage = computed(() => {
-    // Il database di solito restituisce i nomi delle colonne in minuscolo
     return garageStore.currentGarage?.foto_urls || []
 })
 
+// Apre la modale per visualizzare una foto a schermo intero
 const apriFoto = (index) => {
     indiceFotoAttiva.value = index
-    document.body.style.overflow = 'hidden' // Blocca lo scroll della pagina
+    document.body.style.overflow = 'hidden' // Blocca lo scroll della pagina sottostante
 }
 
+// Chiude la modale della galleria foto
 const chiudiFoto = () => {
     indiceFotoAttiva.value = null
-    document.body.style.overflow = '' // Sblocca lo scroll
+    document.body.style.overflow = '' // Sblocca lo scroll della pagina
 }
 
+// Passa all'immagine successiva nella galleria
 const fotoSuccessiva = () => {
     if (indiceFotoAttiva.value === null || fotoGarage.value.length === 0) return
-    // passa alla foto successiva, tornando alla prima se siamo all'ultima
+    // passa alla foto successiva, tornando alla prima se siamo all'ultima (% length)
     indiceFotoAttiva.value = (indiceFotoAttiva.value + 1) % fotoGarage.value.length
 }
 
+// Passa all'immagine precedente nella galleria
 const fotoPrecedente = () => {
     if (indiceFotoAttiva.value === null || fotoGarage.value.length === 0) return
     // passa alla precedente, andando all'ultima se siamo alla prima
     indiceFotoAttiva.value = (indiceFotoAttiva.value - 1 + fotoGarage.value.length) % fotoGarage.value.length
 }
 
-// leggiamo i prezzi base direttamente dal record del garage
+// Computed property che legge e prepara i prezzi base direttamente dal record del garage
 const tariffePerVeicolo = computed(() => {
     const g = garageStore.currentGarage;
     if (!g) return {};
@@ -106,35 +118,42 @@ const tariffePerVeicolo = computed(() => {
     if (g.tariffaauto) tariffe['AUTO'] = Number(g.tariffaauto);
     if (g.tariffafurgone) tariffe['FURGONE'] = Number(g.tariffafurgone);
 
+    // Se non è specificata una tariffa auto, si prova a usare una tariffa base generica come fallback
     if (!tariffe['AUTO'] && g.tariffabase) tariffe['AUTO'] = Number(g.tariffabase);
 
     return tariffe;
 });
 
+// Calcola se c'è un sovrapprezzo per la ricarica elettrica da mostrare nell'interfaccia
 const sovrapprezzoElettrica = computed(() => {
     const val = garageStore.currentGarage?.sovrapprezzoelettrica;
     return val && Number(val) > 0 ? Number(val).toFixed(2) : null;
 });
 
+// Calcola se c'è uno sconto disabili impostato dal gestore
 const scontoDisabili = computed(() => {
     const val = garageStore.currentGarage?.scontodisabili;
     return val && Number(val) > 0 ? Number(val).toFixed(2) : null;
 });
 
+// Rimuove spazi o caratteri speciali dalla targa e la forza in maiuscolo
 const formattaTarga = () => {
     targa.value = targa.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
 }
 
+// Valida la targa in formato standard italiano (es: AA123BB)
 const isTargaValida = computed(() => {
     const regex = /^[A-Z]{2}\d{3}[A-Z]{2}$/
     return regex.test(targa.value)
 })
 
+// Rimuove spazi, formatta il codice disabili CUDE in maiuscolo consentendo solo trattini
 const formattaCude = () => {
     // rimuove qualsiasi carattere che non sia lettera, numero o trattino, e converte in maiuscolo
     codiceDisabilita.value = codiceDisabilita.value.replace(/[^a-zA-Z0-9-]/g, '').toUpperCase()
 }
 
+// Verifica che il codice disabili rispetti i criteri solo se il posto è riservato a disabili
 const isCudeValido = computed(() => {
     // se non abbiamo selezionato un posto per disabili, il campo è tecnicamente "valido" a prescindere
     if (!postoSelezionato.value?.isdisabili) return true;
@@ -144,9 +163,11 @@ const isCudeValido = computed(() => {
     return regex.test(codiceDisabilita.value);
 })
 
+// Funzione chiamata per validare le date di sosta e aggiornare la disponibilità dei posti in mappa
 const aggiornaMappa = async () => {
     alertStore.pulisci()
 
+    // Verifica che entrambi i campi data siano compilati
     if (!checkIn.value || !checkOut.value) {
         alertStore.mostra('error', 'Inserisci data di arrivo e partenza prima di controllare.')
         return
@@ -156,21 +177,27 @@ const aggiornaMappa = async () => {
     const dataPartenza = new Date(checkOut.value)
     const adesso = new Date()
 
+    // Verifica che l'arrivo non sia passato
     if (dataArrivo < adesso) {
         alertStore.mostra('error', 'Non puoi prenotare per un orario passato.')
         return
     }
 
+    // Verifica che la partenza avvenga dopo l'arrivo
     if (dataPartenza <= dataArrivo) {
         alertStore.mostra('error', 'L\'orario di partenza deve essere successivo a quello di arrivo.')
         return
     }
 
+    // Richiede allo store i posti disponibili in quel frangente temporale
     await garageStore.fetchPosti(props.id, checkIn.value, checkOut.value)
+
+    // Conferma l'apertura della mappa cliccabile e resetta eventuale posto già selezionato
     isMapConfirmed.value = true
     postoSelezionato.value = null
 }
 
+// Resetta tutto lo stato di prenotazione per ripartire da zero
 const resetSelezione = async () => {
     checkIn.value = ''
     checkOut.value = ''
@@ -181,25 +208,30 @@ const resetSelezione = async () => {
     isMapConfirmed.value = false
     alertStore.pulisci()
 
+    // Richiede la mappa senza vincoli temporali (modalità visualizzazione)
     await garageStore.fetchPosti(props.id, '', '')
 }
 
+// Calcola il prezzo della sosta in base alla durata e alla tariffa oraria del posto
 const prezzoTotale = computed(() => {
     if (!checkIn.value || !checkOut.value || !postoSelezionato.value) return 0
     const ore = (new Date(checkOut.value) - new Date(checkIn.value)) / (1000 * 60 * 60)
     return ore > 0 ? (ore * postoSelezionato.value.tariffaoraria).toFixed(2) : 0
 })
 
+// Calcola la durata della sosta in ore per riepilogarla in UI
 const durataOre = computed(() => {
     if (!checkIn.value || !checkOut.value) return 0
     const ore = (new Date(checkOut.value) - new Date(checkIn.value)) / (1000 * 60 * 60)
     return ore > 0 ? ore.toFixed(1) : 0
 })
 
+// Funzione principale per l'invio della prenotazione al backend
 const gestisciPrenotazione = async () => {
     if (!postoSelezionato.value) return
     alertStore.pulisci()
 
+    // Ultimi controlli di validazione lato client
     if (!isTargaValida.value) {
         alertStore.mostra('error', 'Inserisci una targa valida prima di procedere.')
         return
@@ -210,8 +242,9 @@ const gestisciPrenotazione = async () => {
         return
     }
 
-    isPrenotando.value = true;
+    isPrenotando.value = true; // Mostra stato di caricamento sul pulsante
 
+    // Prepara il payload per l'API
     const payload = {
         id_posto: postoSelezionato.value.id_posto,
         targa: targa.value,
@@ -222,19 +255,25 @@ const gestisciPrenotazione = async () => {
         codice_disabilita: codiceDisabilita.value
     }
 
+    // Invoca store di prenotazione
     const res = await garageStore.prenota(payload)
 
     isPrenotando.value = false;
 
     if (res.success) {
+        // Se l'utente è loggato, aggiorna visivamente il suo saldo riducendolo
         if (authStore.utente) {
             authStore.utente.saldo = parseFloat(authStore.utente.saldo) - parseFloat(prezzoTotale.value);
-            authStore.setUtente(authStore.utente);
+            authStore.setUtente(authStore.utente); // Aggiorna lo store autenticazione
         }
 
+        // Ricarica la mappa aggiornando le nuove disponibilità
         await aggiornaMappa()
 
+        // Mostra il successo e il codice univoco generato
         alertStore.mostra('success', `Prenotazione avvenuta con successo! Il tuo codice è: ${res.prenotazione.codiceprenotazione}`)
+
+        // Pulisce i campi compilati
         postoSelezionato.value = null
         targa.value = ''
         note.value = ''
@@ -246,16 +285,19 @@ const gestisciPrenotazione = async () => {
 
 const recensioneSelezionata = ref(null)
 
+// Gestisce l'apertura del modale per mostrare la recensione completa quando è troppo lunga
 const apriModalCommento = (recensione) => {
     recensioneSelezionata.value = recensione
     document.body.style.overflow = 'hidden'
 }
 
+// Chiude il modale recensione
 const chiudiModalCommento = () => {
     recensioneSelezionata.value = null
     document.body.style.overflow = ''
 }
 
+// Formatta la data del commento (es. "Maggio 2026")
 const formattaDataRecensione = (dataString) => {
     if (!dataString) return ''
     const data = new Date(dataString)
@@ -265,17 +307,22 @@ const formattaDataRecensione = (dataString) => {
     }).format(data)
 }
 
+// Computed property che calcola le percentuali dei voti da 1 a 5 stelle per la barra progressi
 const distribuzioneVoti = computed(() => {
     const recensioni = garageStore.recensioni
     const totale = recensioni.length
     const distrib = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }
     if (totale === 0) return distrib
+
+    // Conta le occorrenze di ciascun voto intero
     recensioni.forEach(r => {
         const voto = Math.floor(r.votogenerale || 0)
         if (distrib[voto] !== undefined) {
             distrib[voto]++
         }
     })
+
+    // Trasforma i conteggi assoluti in percentuale
     for (let i = 1; i <= 5; i++) {
         distrib[i] = (distrib[i] / totale) * 100
     }
@@ -285,11 +332,13 @@ const distribuzioneVoti = computed(() => {
 const recensioniPerPagina = ref(4)
 const paginaRecensioniCorrente = ref(1)
 
+// Computed property per gestire lo slice di recensioni in base alla paginazione attiva
 const recensioniPaginate = computed(() => {
     const inizio = (paginaRecensioniCorrente.value - 1) * recensioniPerPagina.value
     return garageStore.recensioni.slice(inizio, inizio + recensioniPerPagina.value)
 })
 
+// Chiude eventuali modali di commento aperte al cambio della pagina recensioni
 watch(paginaRecensioniCorrente, () => {
     chiudiModalCommento()
 })
@@ -355,19 +404,19 @@ watch(paginaRecensioniCorrente, () => {
                         <div class="price-line" v-if="tariffePerVeicolo['MOTO']">
                             <span class="v-tipo">Moto</span>
                             <span class="prezzo-valore-small">€{{ tariffePerVeicolo['MOTO'].toFixed(2)
-                            }}<span>/h</span></span>
+                                }}<span>/h</span></span>
                         </div>
 
                         <div class="price-line" v-if="tariffePerVeicolo['AUTO']">
                             <span class="v-tipo">Auto</span>
                             <span class="prezzo-valore-small">€{{ tariffePerVeicolo['AUTO'].toFixed(2)
-                            }}<span>/h</span></span>
+                                }}<span>/h</span></span>
                         </div>
 
                         <div class="price-line" v-if="tariffePerVeicolo['FURGONE']">
                             <span class="v-tipo">Furgone</span>
                             <span class="prezzo-valore-small">€{{ tariffePerVeicolo['FURGONE'].toFixed(2)
-                            }}<span>/h</span></span>
+                                }}<span>/h</span></span>
                         </div>
 
                         <div class="special-rates-container" v-if="sovrapprezzoElettrica || scontoDisabili">
@@ -486,7 +535,7 @@ watch(paginaRecensioniCorrente, () => {
                                                         <img v-if="recensione.fotoprofilo_url"
                                                             :src="recensione.fotoprofilo_url" alt="User avatar">
                                                         <span v-else>{{ recensione.nome.charAt(0).toUpperCase()
-                                                        }}</span>
+                                                            }}</span>
                                                     </div>
 
                                                     <div class="user-info">

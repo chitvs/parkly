@@ -9,13 +9,14 @@ import handicapIcon from '../../assets/handicap.svg'
 import copertoIcon from '../../assets/parcheggio_coperto.svg'
 
 const props = defineProps({
-    isEditing: { type: Boolean, default: false },
-    garageData: { type: Object, default: null },
-    staSalvando: { type: Boolean, default: false }
+    isEditing: { type: Boolean, default: false }, // Seleziona la modalità: Creazione o Modifica
+    garageData: { type: Object, default: null },  // I dati del garage da pre-compilare se in modalità Modifica
+    staSalvando: { type: Boolean, default: false } // Blocca il bottone per evitare doppi invii
 })
 
 const emit = defineEmits(['save', 'open-info', 'update-photos'])
 
+// Importa le logiche per la mappa geografica e per l'editor della planimetria
 const { calcolandoCoordinate, loadLeaflet, initMap, calcolaCoordinate } = useGarageMapGestore()
 const {
     dimensioniMappa, griglia, strumentoAttivo, postiConfigurati, nuovoPosto,
@@ -24,6 +25,7 @@ const {
     rimuoviPostoConfigurato, selezionaStrumento, clickCella, ricostruisciGriglia
 } = usePlanimetriaEditor()
 
+// Dati del form
 const localGarage = ref({
     nome: '', descrizione: '', via: '', civico: '', cap: '', citta: '', provincia: '',
     latitudine: null, longitudine: null, tariffabase: null, tariffamoto: null, tariffafurgone: null,
@@ -32,16 +34,20 @@ const localGarage = ref({
 })
 const erroriValidazione = ref({})
 
-// Gestione selezione foto
+// --- Gestione selezione foto ---
 const fotoSelezionate = ref([])
 const handleFotoSelezionate = (event) => {
+    // Converte FileList in Array e lo emette al padre che gestirà l'upload su supabase
     fotoSelezionate.value = Array.from(event.target.files)
     emit('update-photos', fotoSelezionate.value)
 }
 
-onMounted(async () => {
-    await loadLeaflet()
 
+// Pre-popola i dati in caso di modifica e inizializza la mappa interattiva.
+onMounted(async () => {
+    await loadLeaflet() // Carica dinamicamente la libreria JS della mappa
+
+    // Se stiamo modificando un garage esistente, sovrascrive i campi vuoti con i dati del DB
     if (props.isEditing && props.garageData) {
         const g = props.garageData
         localGarage.value = {
@@ -55,23 +61,29 @@ onMounted(async () => {
             orarioapertura: g.orarioapertura?.substring(0, 5) || '08:00',
             orariochiusura: g.orariochiusura?.substring(0, 5) || '20:00'
         }
+        // Ripristina l'elenco dei posti auto configurati
         if (g.posti_raw) {
             postiConfigurati.value = g.posti_raw.map(p => ({
                 codice: p.codiceposto, tipo: p.tipoveicolo,
                 isElettrica: p.iselettrica, isDisabili: p.isdisabili, isCoperto: p.iscoperto
             }))
         }
+        // Ricostruisce la matrice bidimensionale partendo dalla stringa salvata nel DB
         ricostruisciGriglia(g.mappatestuale, g.nrighe, g.ncolonne)
     }
 
+    // nextTick assicura che il div "#mappa-garage-form" sia effettivamente nel DOM prima di iniettare Leaflet
     await nextTick()
     initMap('mappa-garage-form', localGarage.value.latitudine, localGarage.value.longitudine, (lat, lng) => {
+        // Callback eseguita quando l'utente clicca un punto sulla mappa
         localGarage.value.latitudine = lat
         localGarage.value.longitudine = lng
         erroriValidazione.value.coordinate = null
     })
 })
 
+
+// Converte via, civico, e città in coordinate (lat/lon)
 const handleCercaZona = async () => {
     const res = await calcolaCoordinate(localGarage.value.via, localGarage.value.civico, localGarage.value.citta, localGarage.value.provincia)
     if (res.success) {
@@ -82,48 +94,56 @@ const handleCercaZona = async () => {
 }
 
 const inputCodicePosto = ref(null)
-const errorePosto = ref('') 
+const errorePosto = ref('')
 
+// Aggiunge un nuovo posto all'elenco (es. "P01") e auto-incrementa il codice.
 const handleAggiungiPosto = () => {
     const codiceAttuale = nuovoPosto.value.codice
     const res = aggiungiPostoConfigurato()
 
     if (res && !res.success) {
-        errorePosto.value = res.error 
-        alertStore.mostra('error', res.error) // Usiamo lo store
+        errorePosto.value = res.error
+        alertStore.mostra('error', res.error)
     } else {
         errorePosto.value = ''
 
+        // Espressione regolare per riconoscere il prefisso e il numero (es. "Posto 004")
         const match = codiceAttuale.match(/^([a-zA-Z\s\-_]+)(\d+)$/)
         if (match) {
             const prefisso = match[1]
             const numero = parseInt(match[2], 10)
-            const padding = match[2].length 
+            const padding = match[2].length // Mantiene gli zeri iniziali (04 -> 05)
             nuovoPosto.value.codice = `${prefisso}${String(numero + 1).padStart(padding, '0')}`
         }
 
+        // Rimette a fuoco l'input per velocizzare l'inserimento multiplo
         if (inputCodicePosto.value) {
             inputCodicePosto.value.focus()
         }
     }
 }
 
+/**
+ * Gestisce l'interazione con la griglia di disegno della planimetria.
+ * Poggia un posto o cancella una cella, passando le coordinate (riga, colonna) al composable.
+ */
 const handleCellaClick = (r, c) => {
     const strumentoUtilizzato = strumentoAttivo.value
     const res = clickCella(r, c)
-    
+
     if (res && !res.success) {
-        alertStore.mostra('error', res.error) // Usiamo lo store al posto dell'alert nativo
-        return 
+        alertStore.mostra('error', res.error)
+        return
     }
 
+    // Seleziona automaticamente il prossimo posto da posizionare per velocizzare il lavoro
     if (strumentoUtilizzato && strumentoUtilizzato !== 'GOMMA') {
         const indiceAttuale = postiConfigurati.value.findIndex(p => p.codice === strumentoUtilizzato.codice)
-        
+
         if (indiceAttuale !== -1) {
             for (let i = indiceAttuale + 1; i < postiConfigurati.value.length; i++) {
                 const prossimoPosto = postiConfigurati.value[i]
-                
+
                 if (!codiciPosizionati.value.has(prossimoPosto.codice)) {
                     selezionaStrumento(prossimoPosto)
                     break
@@ -133,11 +153,12 @@ const handleCellaClick = (r, c) => {
     }
 }
 
+// Validazione lato client di tutti i campi obbligatori prima dell'invio.
+// Popola l'oggetto `errori` e ne valuta la lunghezza.
 const validaForm = () => {
     const errori = {}
     const g = localGarage.value
 
-    // Validazione indirizzi
     if (!g.nome?.trim()) errori.nome = 'Obbligatorio.'
 
     if (!g.via?.trim()) {
@@ -170,9 +191,9 @@ const validaForm = () => {
 
     if (!g.latitudine || !g.longitudine) errori.coordinate = 'Clicca sulla mappa per catturare le coordinate esatte.'
 
-    // Validazione tariffe
     if (!g.tariffabase || g.tariffabase <= 0) errori.tariffabase = 'La tariffa auto è obbligatoria e > 0.'
 
+    // Analizza quali tipi di veicoli sono stati inseriti e richiede le tariffe solo se necessarie
     const tipiPresenti = new Set()
     let necessitaElettrica = false
     let necessitaDisabili = false
@@ -191,10 +212,10 @@ const validaForm = () => {
     if (necessitaDisabili && (g.scontodisabili === null || g.scontodisabili === '')) errori.scontodisabili = 'Imposta uno sconto (anche 0).'
     else if (g.scontodisabili < 0) errori.scontodisabili = 'Non può essere negativo.'
 
-    // Validazione mappa
     if (postiConfigurati.value.length === 0) errori.mappatestuale = 'Devi configurare almeno un posto auto.'
     else if (codiciPosizionati.value.size < postiConfigurati.value.length) errori.mappatestuale = 'Devi posizionare TUTTI i posti creati sulla scacchiera.'
 
+    //se errori è più lungo di 0 vuol dire che ci sono errori
     if (Object.keys(errori).length > 0) {
         alertStore.mostra('error', 'Controlla i campi in rosso prima di procedere.')
     }
@@ -203,6 +224,7 @@ const validaForm = () => {
     return Object.keys(errori).length === 0
 }
 
+//Blocca la riduzione della griglia (cambio dimensioni mappa) se questa azione andrebbe a tagliare fuori posti già disegnati.
 const verificaRidimensionamento = (tipo) => {
     const nuovoValore = dimensioniMappa.value[tipo]
 
@@ -210,6 +232,7 @@ const verificaRidimensionamento = (tipo) => {
     const colonneAttuali = righeAttuali > 0 ? griglia.value[0].length : 0
     let occupato = false
 
+    // Scannerizza solo le celle che verranno eliminate per vedere se contengono veicoli
     if (tipo === 'righe' && nuovoValore < righeAttuali) {
         for (let r = nuovoValore; r < righeAttuali; r++) {
             for (let c = 0; c < colonneAttuali; c++) {
@@ -235,12 +258,14 @@ const verificaRidimensionamento = (tipo) => {
 
     if (occupato) {
         alertStore.mostra('error', "Impossibile ridurre le dimensioni: l'area da rimuovere contiene dei posti. Usa prima lo strumento Gomma per cancellarli.")
+        // Ripristina la dimensione precedente
         dimensioniMappa.value[tipo] = tipo === 'righe' ? righeAttuali : colonneAttuali
     } else {
         ridimensionaGriglia()
     }
 }
 
+//Format finale del payload da spedire.
 const inviaDati = () => {
     if (!validaForm()) return
     emit('save', {
@@ -295,7 +320,7 @@ const inviaDati = () => {
                         <input type="text" :class="['form-input', { 'input-error': erroriValidazione.civico }]"
                             v-model="localGarage.civico" placeholder="Es. 10">
                         <span v-if="erroriValidazione.civico" class="form-error-text">{{ erroriValidazione.civico
-                        }}</span>
+                            }}</span>
                     </div>
                 </div>
 
@@ -316,7 +341,7 @@ const inviaDati = () => {
                             v-model="localGarage.citta"
                             @input="localGarage.citta = localGarage.citta.replace(/\d/g, '')" placeholder="Es. Roma">
                         <span v-if="erroriValidazione.citta" class="form-error-text">{{ erroriValidazione.citta
-                        }}</span>
+                            }}</span>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Provincia (Sigla)*</label>
@@ -326,7 +351,7 @@ const inviaDati = () => {
                             @input="localGarage.provincia = localGarage.provincia.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 2)"
                             placeholder="Es. RM">
                         <span v-if="erroriValidazione.provincia" class="form-error-text">{{ erroriValidazione.provincia
-                        }}</span>
+                            }}</span>
                     </div>
                 </div>
 
@@ -586,7 +611,6 @@ const inviaDati = () => {
 </template>
 
 <style scoped>
-/* Ripristino esatto del CSS originale della form */
 .vista {
     animation: fadeIn 0.25s ease;
 }
@@ -615,7 +639,7 @@ const inviaDati = () => {
 .page-header h1 {
     font-size: 1.6rem;
     font-weight: 700;
-    color:  #00408A;
+    color: #00408A;
     letter-spacing: -0.5px;
     margin: 0 0 4px;
     font-family: 'Inter', sans-serif;
@@ -740,7 +764,7 @@ const inviaDati = () => {
     font-size: 0.9rem;
     font-weight: 700;
     cursor: pointer;
-    font-family: 'Inter',sans-serif;
+    font-family: 'Inter', sans-serif;
     transition: background 0.15s, transform 0.1s;
 }
 

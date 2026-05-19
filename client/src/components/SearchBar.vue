@@ -1,15 +1,16 @@
 <script setup>
 import { ref } from 'vue'
-import { strategic_places } from '../constants/places.js'
+import { strategic_places } from '../constants/places.js' // Punti di Interesse
 
+// Parametri gestiti dal componente padre tramite v-model
 const props = defineProps({
     location: { type: String, default: '' },
     checkIn: { type: String, default: '' },
     checkOut: { type: String, default: '' },
     showSubmitButton: { type: Boolean, default: false },
-    simple: { type: Boolean, default: false },
+    simple: { type: Boolean, default: false }, // Se true, rimuove la parte con check-in e check-out (modo compatto)
     placeholder: { type: String, default: 'Cerca un punto di interesse...' },
-    hasDateError: { type: Boolean, default: false }
+    hasDateError: { type: Boolean, default: false } // Trigger visivo per bordare i campi in rosso in caso di errori di data
 })
 
 const emit = defineEmits(['update:location', 'update:checkIn', 'update:checkOut', 'search', 'suggestion-selected'])
@@ -17,17 +18,23 @@ const emit = defineEmits(['update:location', 'update:checkIn', 'update:checkOut'
 const suggestions = ref([])
 const showSuggestions = ref(false)
 
+// Eseguita ogni volta che l'utente digita una lettera nella barra di ricerca per mostrare la tendina dei suggerimenti.
+// e = L'evento di input HTML.
 const handleSearchInput = (e) => {
     const value = e.target.value
+    // Propaga in tempo reale il nuovo testo al componente genitore
     emit('update:location', value)
 
     const query = value.toLowerCase().trim()
+
+    // Non avvia la ricerca per query corte
     if (query.length < 2) {
         suggestions.value = []
         showSuggestions.value = false
         return
     }
 
+    // Filtra l'array di costanti: cerca il testo nel nome principale o nei sinonimi (es: "Termini" per "Stazione Termini")
     suggestions.value = strategic_places.filter(p =>
         p.name.toLowerCase().includes(query) ||
         p.synonyms.some(s => s.toLowerCase().includes(query))
@@ -36,15 +43,21 @@ const handleSearchInput = (e) => {
         lat: p.coords.lat,
         lon: p.coords.lng
     }))
+
     showSuggestions.value = suggestions.value.length > 0
 }
 
+
+// Gestisce la selezione di un suggerimento cliccato dall'elenco a tendina.
+// Aggiorna il testo dell'input e manda le coordinate al padre.
+// place = Oggetto che contiene nome e coordinate geografiche.
 const selectSuggestion = (place) => {
     emit('update:location', place.name)
     showSuggestions.value = false
     emit('suggestion-selected', place)
 }
 
+//Chiude la tendina dell'autocompletamento se l'utente clicca fuori dalla casella.
 const handleBlur = () => {
     showSuggestions.value = false
 }
@@ -78,11 +91,13 @@ const handleBlur = () => {
                 <input type="datetime-local" :value="checkIn" @input="$emit('update:checkIn', $event.target.value)"
                     required>
             </div>
+
             <div class="input-group" :class="{ 'is-invalid-group': hasDateError }">
                 <label>Check-out</label>
                 <input type="datetime-local" :value="checkOut" @input="$emit('update:checkOut', $event.target.value)"
                     required>
             </div>
+
             <button v-if="showSubmitButton" @click="$emit('search')" type="button" class="search-btn">Cerca</button>
         </template>
     </div>

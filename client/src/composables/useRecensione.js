@@ -1,15 +1,21 @@
+/**
+* Gestisce lo stato e la logica per le recensioni 
+* (creazione, modifica ed eliminazione), intefacciandosi direttamente
+* con recensioniStore. 
+*/
+
 import { ref, computed } from 'vue'
 import { recensioniStore } from '../store/recensioni.js'
 
 export function useRecensione() {
-  // 1. Stato del modale
+
+  // STATI
   const showReviewModal = ref(false)
-  const currentStep = ref(1)
+  const currentStep = ref(1) // Gestisce i passaggi del form 
   const selectedBookingForReview = ref(null)
-  const isEditing = ref(false)
+  const isEditing = ref(false) // Flag per distinguere tra nuova recensione (POST) e modifica (PUT)
   const reviewError = ref('')
 
-  // 2. Dati del form
   const recensioneForm = ref({
     votoGenerale: 0,
     commento: '',
@@ -20,32 +26,37 @@ export function useRecensione() {
     sicurezza: 0
   })
 
-  // 3. Controlli
+  // Controlli di validazione
+
+  // Verifica che l'utente abbia assegnato almeno una stella a tutti i parametri di dettaglio prima di permettere l'invio del form.
   const isStep2Complete = computed(() => {
     return recensioneForm.value.posizione > 0 &&
-           recensioneForm.value.qualitaPrezzo > 0 &&
-           recensioneForm.value.pulizia > 0 &&
-           recensioneForm.value.spazio > 0 &&
-           recensioneForm.value.sicurezza > 0
+      recensioneForm.value.qualitaPrezzo > 0 &&
+      recensioneForm.value.pulizia > 0 &&
+      recensioneForm.value.spazio > 0 &&
+      recensioneForm.value.sicurezza > 0
   })
 
-  // 4. Azioni
+
+
+  // Avvia il flusso per iniziare a scrivere una recensione.
   const iniziaRecensione = (booking, starValue) => {
     reviewError.value = ''
     selectedBookingForReview.value = booking
     isEditing.value = false
-    
+
+    // Reset del form
     recensioneForm.value = {
       votoGenerale: starValue,
       commento: '',
       posizione: 0, qualitaPrezzo: 0, pulizia: 0, spazio: 0, sicurezza: 0
     }
-    
+
     currentStep.value = 1
     showReviewModal.value = true
   }
 
-  // Apre la modale pre-compilando i dati
+  // In caso di modifica invece avvia il flusso e recupera i valori già esistenti
   const apriModifica = async (booking) => {
     reviewError.value = ''
     selectedBookingForReview.value = booking
@@ -53,9 +64,8 @@ export function useRecensione() {
     currentStep.value = 1
     showReviewModal.value = true
 
-    // Recuperiamo i dati preesistenti dal server
     const response = await recensioniStore.getReview(booking.id_prenotazione)
-    
+
     if (response.success && response.data) {
       const rec = response.data
       recensioneForm.value = {
@@ -76,6 +86,7 @@ export function useRecensione() {
     showReviewModal.value = false
   }
 
+  // In base alla flag isEditing gestisce quale chiamata tra POST e PUT utilizzare
   const inviaRecensione = async () => {
     reviewError.value = ''
     const payload = {
@@ -90,9 +101,8 @@ export function useRecensione() {
       commento: recensioneForm.value.commento
     }
 
-    // Scegliamo dinamicamente il metodo da chiamare
-    const response = isEditing.value 
-      ? await recensioniStore.updateReview(payload) 
+    const response = isEditing.value
+      ? await recensioniStore.updateReview(payload)
       : await recensioniStore.postReview(payload)
 
     if (response.success) {
@@ -102,14 +112,16 @@ export function useRecensione() {
     }
   }
 
-  // Elimina la recensione corrente
+  // Chiede conferma all'utente e procede all'eliminazione della recensione.
   const eliminaRecensione = async () => {
     const conferma = window.confirm("Sei sicuro di voler eliminare definitivamente questa recensione?")
     if (!conferma) return false
 
     reviewError.value = ''
-    const { id_prenotazione, id_utente, id_garage } = selectedBookingForReview.value
-    const response = await recensioniStore.deleteReview(id_prenotazione, id_utente, id_garage)
+
+    const { id_prenotazione, id_garage } = selectedBookingForReview.value
+
+    const response = await recensioniStore.deleteReview(id_prenotazione, id_garage)
 
     if (response.success) {
       chiudiModale()
@@ -126,12 +138,13 @@ export function useRecensione() {
     selectedBookingForReview,
     recensioneForm,
     isStep2Complete,
-    isEditing, 
+    isEditing,
+    reviewError,
+
     iniziaRecensione,
-    apriModifica, 
+    apriModifica,
     chiudiModale,
     inviaRecensione,
-    eliminaRecensione,
-    reviewError
+    eliminaRecensione
   }
 }

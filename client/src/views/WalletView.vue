@@ -1,25 +1,30 @@
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { authStore } from '../store/auth.js'
 import { walletStore } from '../store/wallet.js'
 import { alertStore } from '../store/alert.js'
+
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
-import 'bootstrap-icons/font/bootstrap-icons.css'
 import Pagination from '../components/Pagination.vue'
+import 'bootstrap-icons/font/bootstrap-icons.css'
 
+// Variabili per gestire gli stati di caricamento dei bottoni e delle tabelle
 const isLoading = ref(false)
 const isLoadingTransazioni = ref(false)
+// Array locale per memorizzare la lista dei movimenti (storico)
 const transazioni = ref([])
 
-// paginazione
+// Variabili per la paginazione delle transazioni
 const paginaCorrente = ref(1)
 const elementiPerPagina = ref(5)
 
+// Computed property che recupera in modo reattivo il saldo dal profilo utente (nello store auth)
 const saldoAttuale = computed(() => {
     return parseFloat(authStore.utente?.saldo || 0)
 })
 
+// Oggetto reattivo per memorizzare i dati del form di "Ricarica"
 const formRicarica = reactive({
     titolare: '',
     numeroCarta: '',
@@ -28,12 +33,14 @@ const formRicarica = reactive({
     importo: null
 })
 
+// Funzione asincrona per recuperare la lista delle transazioni dal backend
 const fetchTransazioni = async () => {
     isLoadingTransazioni.value = true
     try {
         const response = await walletStore.getTransazioni()
 
         if (response.success && response.data) {
+            // Mappiamo i dati per assicurarci che l'importo sia sempre un Float in javascript
             transazioni.value = response.data.map(tx => ({
                 ...tx,
                 importo: parseFloat(tx.importo)
@@ -48,99 +55,128 @@ const fetchTransazioni = async () => {
     }
 }
 
+// Al caricamento della pagina, esegui il fetch dello storico transazioni
 onMounted(async () => {
     await fetchTransazioni()
 })
 
+// Computed property che taglia l'array delle transazioni in base alla pagina attuale
 const transazioniPaginate = computed(() => {
     const inizio = (paginaCorrente.value - 1) * elementiPerPagina.value
     return transazioni.value.slice(inizio, inizio + elementiPerPagina.value)
 })
 
-// formattazione
+// --- FUNZIONI DI FORMATTAZIONE DEGLI INPUT (Per migliorare la UX durante la digitazione) ---
+
+// Formatta il nome del titolare della carta di credito
 const formattaTitolare = () => {
-    // rimuove numeri e caratteri non validi, mantiene lettere (anche accentate), spazi e apostrofi. Converte in Maiuscolo.
+    // Rimuove numeri e caratteri speciali, ammettendo lettere (anche accentate), spazi e apostrofi. Converte in Maiuscolo.
     formRicarica.titolare = formRicarica.titolare.replace(/[^a-zA-ZÀ-ÿ\s']/g, '').toUpperCase()
 }
 
-const formattaNumeroCarta = () => {
-    let val = formRicarica.numeroCarta.replace(/\D/g, '')
-    val = val.replace(/(.{4})/g, '$1 ').trim()
-    formRicarica.numeroCarta = val.substring(0, 19)
+// Formatta l'intestatario del conto bancario
+const formattaIntestatario = () => {
+    // Rimuove numeri e caratteri non validi
+    prelievoForm.intestatario = prelievoForm.intestatario.replace(/[^a-zA-ZÀ-ÿ\s']/g, '').toUpperCase()
 }
 
+// Formatta visivamente il numero di carta di credito inserendo uno spazio ogni 4 cifre
+const formattaNumeroCarta = () => {
+    let val = formRicarica.numeroCarta.replace(/\D/g, '') // Elimina tutto ciò che non è un numero
+    val = val.replace(/(.{4})/g, '$1 ').trim() // Gruppi di 4 separati da spazio
+    formRicarica.numeroCarta = val.substring(0, 19) // Blocca la lunghezza massima a 16 cifre + 3 spazi
+}
+
+// Formatta la scadenza della carta inserendo in automatico lo slash (MM/YY)
 const formattaScadenza = () => {
     let val = formRicarica.scadenza.replace(/\D/g, '')
     if (val.length > 2) {
         val = val.substring(0, 2) + '/' + val.substring(2, 4)
     }
-    formRicarica.scadenza = val.substring(0, 5)
+    formRicarica.scadenza = val.substring(0, 5) // Max 5 caratteri
 }
 
+// Forza il CVV ad essere esclusivamente numerico (max 4 caratteri per alcune carte come Amex)
 const formattaCVV = () => {
     formRicarica.cvv = formRicarica.cvv.replace(/\D/g, '').substring(0, 4)
 }
 
+// Formatta i valori monetari (es. aggiunge il simbolo € e due decimali)
 const formattaValuta = (valore) => {
     return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(valore)
 }
 
+// Formatta le date delle transazioni per la tabella
 const formattaData = (dataString) => {
     const opzioni = { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }
     return new Date(dataString).toLocaleDateString('it-IT', opzioni)
 }
 
+// Limita l'importo della ricarica per evitare che superi i 1000 euro massimi consentiti
 const limitaImporto = () => {
-    // se l'utente digita un numero maggiore di 1000, lo forziamo a 1000
+    // Se l'utente digita un numero maggiore di 1000, lo forziamo a 1000
     if (formRicarica.importo > 1000) {
         formRicarica.importo = 1000
     } else if (formRicarica.importo < 0) {
-        formRicarica.importo = 0
+        formRicarica.importo = 0 // Impedisce numeri negativi
     }
 }
 
-// submit e validazioni
+// Limita l'importo del prelievo in modo che l'utente non superi il proprio saldo disponibile
+const limitaImportoPrelievo = () => {
+    // Se l'utente digita un numero maggiore del saldo attuale, lo forziamo al massimo disponibile
+    if (prelievoForm.importo > saldoAttuale.value) {
+        prelievoForm.importo = saldoAttuale.value
+    } else if (prelievoForm.importo < 0) {
+        prelievoForm.importo = 0
+    }
+}
+
+// --- SUBMIT E VALIDAZIONI ---
+
+// Gestisce la sottomissione del form di ricarica
 const handleRicarica = async () => {
     alertStore.pulisci()
 
-    // validazione Importo
+    // Validazione base: Importo minimo 5€
     if (formRicarica.importo < 5) {
         alertStore.mostra('error', "L'importo minimo per la ricarica è di 5,00€.")
         return
     }
 
+    // Validazione base: Importo massimo 1000€
     if (formRicarica.importo > 1000) {
         alertStore.mostra('error', "Non puoi ricaricare più di 1.000,00€ in una singola transazione.")
         return
     }
 
-    // validazione Titolare (almeno due parole)
+    // Validazione Titolare: deve essere composto da almeno due parole (nome e cognome)
     const paroleTitolare = formRicarica.titolare.trim().split(/\s+/)
     if (paroleTitolare.length < 2) {
         alertStore.mostra('error', "Inserisci sia il nome che il cognome del titolare della carta.")
         return
     }
 
-    // validazione scadenza carta
+    // Validazione scadenza carta e logica di controllo date
     if (formRicarica.scadenza.length === 5) {
         const [meseStr, annoStr] = formRicarica.scadenza.split('/')
 
-        // controlliamo che mese e anno siano effettivamente numeri validi
+        // Controlliamo che mese e anno siano effettivamente numeri validi convertendoli in interi
         const numMese = parseInt(meseStr, 10)
         const numAnno = parseInt(annoStr, 10)
 
-        // un mese deve essere tra 1 e 12
+        // Un mese logico deve essere tra 1 e 12
         if (isNaN(numMese) || numMese < 1 || numMese > 12 || isNaN(numAnno)) {
             alertStore.mostra('error', "Mese o anno di scadenza non validi.")
             return
         }
 
         const dataOggi = new Date()
-        const meseAttuale = dataOggi.getMonth() + 1 // i mesi in JS partono da 0
-        // prendi le ultime due cifre dell'anno corrente e convertile in numero in modo sicuro
+        const meseAttuale = dataOggi.getMonth() + 1 // in JS i mesi partono da 0
+        // Prende le ultime due cifre dell'anno corrente (es. 2026 -> 26) 
         const annoAttuale = dataOggi.getFullYear() % 100
 
-        // controlla se l'anno è passato, oppure se è l'anno corrente ma il mese è passato
+        // Controlla se la carta è scaduta basandosi sull'anno e mese attuali
         if (numAnno < annoAttuale || (numAnno === annoAttuale && numMese < meseAttuale)) {
             alertStore.mostra('error', "La carta inserita risulta scaduta.")
             return
@@ -150,7 +186,7 @@ const handleRicarica = async () => {
         return
     }
 
-    // se tutto è ok, procede con la ricarica
+    // Se tutto è ok, procede con la simulazione di ricarica
     isLoading.value = true
 
     try {
@@ -161,14 +197,16 @@ const handleRicarica = async () => {
         if (response.success) {
             alertStore.mostra('success', `Ricarica di ${formattaValuta(formRicarica.importo)} effettuata con successo!`)
 
+            // Resetta i campi del form dopo il successo
             formRicarica.titolare = ''
             formRicarica.numeroCarta = ''
             formRicarica.scadenza = ''
             formRicarica.cvv = ''
             formRicarica.importo = null
 
+            // Aggiorna la tabella delle transazioni
             await fetchTransazioni()
-            paginaCorrente.value = 1
+            paginaCorrente.value = 1 // Ritorna alla pagina 1
         } else {
             alertStore.mostra('error', response.error || "Errore durante la ricarica. Verifica i dati.")
         }
@@ -179,7 +217,10 @@ const handleRicarica = async () => {
     }
 }
 
+// Tab attiva per scegliere tra 'ricarica' e 'prelievo'
 const tabAttiva = ref('ricarica')
+
+// Oggetto reattivo per memorizzare i dati del form di "Prelievo"
 const prelievoForm = reactive({
     importo: null,
     metodo: 'Bonifico Bancario',
@@ -187,6 +228,15 @@ const prelievoForm = reactive({
     coordinate: ''
 })
 
+// Watcher sulla tab: se l'utente cambia schermata verso "prelievo" e non ha fondi, mostra un avviso
+watch(tabAttiva, (nuovaTab) => {
+    alertStore.pulisci()
+    if (nuovaTab === 'prelievo' && saldoAttuale.value < 5) {
+        alertStore.mostra('error', "Saldo insufficiente per richiedere un prelievo. Il minimo è di 5,00€.")
+    }
+})
+
+// Formatta la visibilità dell'IBAN con gli spazi (se è selezionato bonifico)
 const formattaCoordinate = () => {
     if (prelievoForm.metodo === 'Bonifico Bancario') {
         // Rimuove spazi e caratteri speciali, converte in maiuscolo
@@ -197,36 +247,49 @@ const formattaCoordinate = () => {
     }
 }
 
-// Funzione per gestire il prelievo
+// Funzione per gestire l'invio del form di Prelievo
 const handlePrelievo = async () => {
     alertStore.pulisci()
 
+    // Validazione: Input di importo valido
     if (!prelievoForm.importo || prelievoForm.importo <= 0) {
         alertStore.mostra('error', "Inserisci un importo valido.")
         return
     }
+    // Validazione: limite minimo stabilito a 5 euro
     if (prelievoForm.importo < 5) {
         alertStore.mostra('error', "L'importo minimo per il prelievo è di 5,00€.")
         return
     }
+    // Validazione: Non superare la giacenza
     if (prelievoForm.importo > saldoAttuale.value) {
         alertStore.mostra('error', "Saldo insufficiente.")
         return
     }
 
+    // Validazione coordinate mancanti
     if (!prelievoForm.coordinate.trim()) {
         alertStore.mostra('error', "Inserisci le coordinate per l'accredito.")
         return
     }
 
     if (prelievoForm.metodo === 'Bonifico Bancario') {
+        // Validazione Intestatario Conto (almeno due parole: nome e cognome)
+        const paroleIntestatario = prelievoForm.intestatario.trim().split(/\s+/)
+        if (paroleIntestatario.length < 2) {
+            alertStore.mostra('error', "Inserisci sia il nome che il cognome dell'intestatario del conto.")
+            return
+        }
+
+        // Controllo regex dell'IBAN (deve iniziare con due lettere e avere numeri/lettere di lunghezza adeguata)
         const ibanRegex = /^[A-Z]{2}\d{2}[A-Z0-9]{1,30}$/
-        const ibanPulito = prelievoForm.coordinate.replace(/\s/g, '').toUpperCase()
+        const ibanPulito = prelievoForm.coordinate.replace(/\s/g, '').toUpperCase() // Rimuove gli spazi per la regex
         if (!ibanRegex.test(ibanPulito)) {
             alertStore.mostra('error', "Formato IBAN non valido.")
             return
         }
     } else if (prelievoForm.metodo === 'PayPal') {
+        // Controllo regex base per verificare che l'input sia una mail
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
         if (!emailRegex.test(prelievoForm.coordinate)) {
             alertStore.mostra('error', "Inserisci un indirizzo email PayPal valido.")
@@ -236,18 +299,20 @@ const handlePrelievo = async () => {
 
     isLoading.value = true
     try {
-        // Prepariamo una dicitura breve per la UI
+        // Prepariamo una dicitura breve per la UI (per oscurare parzialmente l'IBAN o l'email nel database)
         let dicituraBreve = '';
-        
+
         if (prelievoForm.metodo === 'Bonifico Bancario') {
             const ultimeCifre = prelievoForm.coordinate.slice(-4);
             dicituraBreve = `Bonifico (***${ultimeCifre})`;
         } else if (prelievoForm.metodo === 'PayPal') {
             const [nome, dominio] = prelievoForm.coordinate.split('@');
+            // Cripta il nome della mail (es: mar***@dominio.it)
             const nomeMascherato = nome.length > 3 ? nome.substring(0, 3) + '***' : nome + '***';
             dicituraBreve = `PayPal (${nomeMascherato}@${dominio})`;
         }
 
+        // Chiamata all'API passando importo e descrizione metodo criptato
         const response = await walletStore.prelevaFondi({
             importo: parseFloat(prelievoForm.importo),
             metodo: dicituraBreve
@@ -255,6 +320,7 @@ const handlePrelievo = async () => {
 
         if (response.success) {
             alertStore.mostra('success', "Prelievo effettuato con successo.")
+            // Reset form
             prelievoForm.importo = null
             prelievoForm.coordinate = ''
             await fetchTransazioni()
@@ -341,16 +407,11 @@ const handlePrelievo = async () => {
 
                         <form v-else-if="tabAttiva === 'prelievo'" @submit.prevent="handlePrelievo">
 
-                            <div v-if="saldoAttuale < 5" class="info-prelievo"
-                                style="border-left: 3px solid #c62828; color: #c62828; background: #fff5f5;">
-                                Saldo insufficiente per richiedere un prelievo. Il minimo è di 5,00€.
-                            </div>
-
                             <div class="form-group highlight-box">
                                 <label>Importo da prelevare (€)</label>
                                 <input type="number" step="0.01" min="5" class="amount-input"
-                                    v-model.number="prelievoForm.importo" :max="saldoAttuale" placeholder="es. 50.00"
-                                    required>
+                                    v-model.number="prelievoForm.importo" :max="saldoAttuale"
+                                    @input="limitaImportoPrelievo" placeholder="es. 50.00" required>
                                 <small class="hint-text">Disponibile: {{ formattaValuta(saldoAttuale) }}</small>
                             </div>
 
@@ -366,8 +427,7 @@ const handlePrelievo = async () => {
 
                             <div class="form-group" v-if="prelievoForm.metodo === 'Bonifico Bancario'">
                                 <label>Intestatario del Conto</label>
-                                <input type="text" v-model="prelievoForm.intestatario"
-                                    @input="prelievoForm.intestatario = prelievoForm.intestatario.toUpperCase()"
+                                <input type="text" v-model="prelievoForm.intestatario" @input="formattaIntestatario"
                                     placeholder="MARIO ROSSI" required>
                             </div>
 
@@ -379,7 +439,7 @@ const handlePrelievo = async () => {
                                     required>
                             </div>
 
-                            <button type="submit" class="btn fill w-100" :disabled="isLoading">
+                            <button type="submit" class="btn fill w-100" :disabled="isLoading || saldoAttuale < 5">
                                 {{ isLoading ? 'Elaborazione...' : 'Conferma Prelievo' }}
                             </button>
 
@@ -432,12 +492,9 @@ const handlePrelievo = async () => {
                             </div>
 
                             <div v-if="transazioni.length > 0" class="mt-3 d-flex justify-content-center">
-                                <Pagination
-                                    compact
-                                    v-model:paginaCorrente="paginaCorrente"
+                                <Pagination compact v-model:paginaCorrente="paginaCorrente"
                                     v-model:elementiPerPagina="elementiPerPagina"
-                                    :totaleElementi="transazioni.length"
-                                />
+                                    :totaleElementi="transazioni.length" />
                             </div>
 
                         </div>
@@ -457,13 +514,12 @@ const handlePrelievo = async () => {
     --primary-blue: #00408A;
     --deep-blue: #042571;
     --border-light: #e0e0e0;
-    --bg-light: #f8f9fa;
     --text-dark: #333;
     --white: #ffffff;
 }
 
 .page-container {
-    background: var(--bg-light, #f8f9fa);
+    background: #ffffff;
     min-height: 100vh;
     font-family: 'Inter', -apple-system, sans-serif;
     display: flex;
@@ -475,7 +531,7 @@ const handlePrelievo = async () => {
 }
 
 .basic-hero.centered-hero {
-    background: linear-gradient(135deg, #00408A 0%, #042571 100%);
+    background: radial-gradient(circle at center, #002d5e 0%, #001D3D 100%);
     color: var(--white, #fff);
     padding: 56px 20px 48px;
     text-align: center;
@@ -836,44 +892,5 @@ const handlePrelievo = async () => {
     background: white;
     color: var(--primary-blue);
     border-bottom: 2px solid var(--primary-blue);
-}
-
-.info-prelievo {
-    font-size: 0.75rem;
-    color: #666;
-    margin: 15px 0;
-    padding: 10px;
-    background: #f9f9f9;
-    border-radius: 6px;
-}
-
-
-.tx-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.1rem;
-    flex-shrink: 0;
-    line-height: 0;
-}
-
-.tx-icon i {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0;
-    padding: 0;
-}
-
-.icon-pending {
-    background-color: #FFF4E5;
-    color: #FF9800;
-}
-
-.text-pending {
-    color: #e98c00 !important;
 }
 </style>

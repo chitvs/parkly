@@ -1,11 +1,17 @@
+// Gestisce la mappa interattiva (Leaflet/OpenStreetMap) per permettere al 
+// gestore di posizionare il pin del proprio garage.
+
 import { ref } from 'vue'
 
 export function useGarageMapGestore() {
+
+    // Inizializzazione 
+
     const calcolandoCoordinate = ref(false)
     let mapInstance = null
     let markerInstance = null
 
-    // Carica Leaflet dinamicamente solo quando serve
+    // Carica Leaflet dinamicamente solo quando serve, per non appesantire il bundle iniziale
     const loadLeaflet = () => {
         return new Promise((resolve) => {
             if (window.L) return resolve()
@@ -20,7 +26,9 @@ export function useGarageMapGestore() {
         })
     }
 
-    // Aggiorna il marker sulla mappa
+    // Gestione interfaccia mappa
+
+    // Aggiorna visivamente il marker sulla mappa
     const updateMarker = (lat, lng) => {
         if (!mapInstance) return
         if (markerInstance) mapInstance.removeLayer(markerInstance)
@@ -28,7 +36,7 @@ export function useGarageMapGestore() {
         mapInstance.setView([lat, lng], 18)
     }
 
-    // Inizializza la mappa e gestisce il click dell'utente
+    // Inizializza la mappa e gestisce il click manuale dell'utente
     const initMap = (elementId, defaultLat, defaultLng, onMapClick) => {
         if (mapInstance) mapInstance.remove()
 
@@ -44,6 +52,7 @@ export function useGarageMapGestore() {
             const newLat = parseFloat(e.latlng.lat.toFixed(6))
             const newLng = parseFloat(e.latlng.lng.toFixed(6))
             updateMarker(newLat, newLng)
+            
             // Passa le coordinate al componente che usa il composable
             if (onMapClick) onMapClick(newLat, newLng)
         })
@@ -53,7 +62,7 @@ export function useGarageMapGestore() {
         }
     }
 
-    // Cerca le coordinate partendo dall'indirizzo
+    // Cerca le coordinate partendo dall'indirizzo testuale
     const calcolaCoordinate = async (via, civico, citta, provincia) => {
         if (!via || !civico || !citta || !provincia) {
             return { success: false, error: 'Compila Via, Civico, Città e Provincia prima di cercare la zona.' }

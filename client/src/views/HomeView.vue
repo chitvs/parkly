@@ -9,35 +9,45 @@ import SearchBar from '../components/SearchBar.vue'
 import 'bootstrap-icons/font/bootstrap-icons.css'
 
 const router = useRouter()
+
+// Stato locale per catturare input dalla SearchBar
 const searchLocation = ref('')
 const checkIn = ref('')
 const checkOut = ref('')
+
+// Stato per la sezione carosello "Garage in evidenza"
 const randomGarages = ref([])
-const scrollContainer = ref(null)
-const canScrollLeft = ref(false)
-const canScrollRight = ref(true)
+const scrollContainer = ref(null) // Riferimento al div scorrevole del carosello
+const canScrollLeft = ref(false)  // Flag per disabilitare freccia sinistra
+const canScrollRight = ref(true)  // Flag per disabilitare freccia destra
 
 onMounted(() => {
+    // Previeni il comportamento standard dei browser che ricordano la posizione di scroll al reload
     if ('scrollRestoration' in history) {
         history.scrollRestoration = 'manual'
     }
+    // Timeout minimo per assicurarsi che il DOM sia renderizzato prima di forzare in alto la finestra
     setTimeout(() => {
         window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
     }, 10)
 
+    // Inizia la fetch asincrona per popolare i garage in vetrina
     fetchRandomGarages()
 })
 
+// Chiamata all'API per scaricare garage, mischiarli ed estrarne 8 in maniera casuale
 const fetchRandomGarages = async () => {
     try {
         const response = await fetch('/api/garage')
         const data = await response.json()
 
         if (data.success && data.garage && data.garage.length > 0) {
+            // Ordina casualmente l'array sfruttando il generatore random
             const shuffled = data.garage.sort(() => 0.5 - Math.random())
-            // limite di 8 garage
+            // Applica il limite massimo di 8 garage da visualizzare in vetrina
             const selected = shuffled.slice(0, 8)
 
+            // Mappa i dati in una struttura più pulita e gestisce il fallback maiuscolo/minuscolo delle url immagini dal DB
             randomGarages.value = selected.map(g => ({
                 id: g.id_garage,
                 nome: g.nome,
@@ -47,6 +57,7 @@ const fetchRandomGarages = async () => {
                     (g.Foto_URLs && g.Foto_URLs.length > 0) ? g.Foto_URLs[0] : null
             }))
 
+            // Aspetta che le card siano disegnate nel DOM per ricalcolare i limiti delle frecce
             await nextTick()
             checkScrollBounds()
         } else {
@@ -58,18 +69,23 @@ const fetchRandomGarages = async () => {
     }
 }
 
+// Funzione richiamata dal componente figlio SearchBar al click su 'Cerca'
 const handleSearch = () => {
-    // Permettiamo la ricerca parziale. Controlliamo solo la coerenza se le date ci sono entrambe.
+    // Permettiamo la ricerca parziale (es: solo destinazione). 
+    // Controlliamo la validità temporale SOLO se l'utente ha provato ad inserire entrambe le date.
     if (checkIn.value && checkOut.value) {
         const dataIn = new Date(checkIn.value)
         const dataOut = new Date(checkOut.value)
+
+        // Verifica che checkOut sia rigorosamente successivo al checkIn
         if (dataOut <= dataIn) {
             alertStore.mostra('error', 'L\'orario di partenza deve essere successivo a quello di arrivo.')
-            return
+            return // Blocca la navigazione
         }
     }
 
     alertStore.pulisci()
+    // Reindirizza l'utente alla vista mappa/ricerca passando i parametri nella query string dell'URL
     router.push({
         name: 'garage',
         query: {
@@ -80,48 +96,60 @@ const handleSearch = () => {
     })
 }
 
+// Redirezionamento rapido ad uno specifico garage
 const goToGarage = (id) => {
     router.push(`/garage/${id}`)
 }
 
+// Scrive una località predefinita e lancia la ricerca
 const goQuick = (loc) => {
     router.push({ name: 'garage', query: { location: loc } })
 }
 
+// Controlla lo stato utente prima di mandarlo alla pagina per diventare gestore
 const handleDiventaGestore = () => {
+    // Se non c'è sessione, mostra un errore
     if (!authStore.utente) {
         alertStore.mostra('error', 'Devi essere loggato per poter diventare un gestore.')
         return
     }
-    // Il v-if sulla card nasconde già il bottone ai gestori, quindi qui basta reindirizzare
+    // Il template nasconde già questo blocco se l'utente è GIA' gestore
     router.push('/diventa-gestore')
 }
 
+// Gestisce la logica del pulsante destro/sinistro nel carosello "Esplora"
 const scrollGallery = (direction) => {
     if (!scrollContainer.value) return
 
     const container = scrollContainer.value
+    // Prende la dimensione dinamica della prima carta per capire di quanti pixel spostarsi esattamente
     const card = container.querySelector('.garage-card-wrapper')
 
     if (!card) return
 
     const cardWidth = card.offsetWidth
 
+    // Applica lo scroll nativo del browser col behavior fluido "smooth"
     container.scrollBy({
         left: direction === 'right' ? cardWidth : -cardWidth,
         behavior: 'smooth'
     })
 }
 
+// Event handler legato al tag div per monitorare lo scroll attuale ed accendere/spegnere le frecce del carosello
 const checkScrollBounds = () => {
     if (!scrollContainer.value) return;
 
+    // Proprietà fisiche del box HTML
     const { scrollLeft, scrollWidth, clientWidth } = scrollContainer.value;
 
+    // Se lo scrollLeft è maggiore di 2px (margine di tolleranza), possiamo scorrere indietro
     canScrollLeft.value = scrollLeft > 2;
+    // Se la somma di pixel passati + finestra visibile è minore dello spessore totale del box, possiamo ancora scorrere avanti
     canScrollRight.value = Math.ceil(scrollLeft + clientWidth) < scrollWidth - 2;
 }
 
+// Dati statici per popolare i pulsanti chip "ricerca rapida" sotto alla search bar
 const quickSearches = [
     { label: 'Termini', location: 'Stazione Termini' },
     { label: 'Colosseo', location: 'Colosseo' },
@@ -130,6 +158,7 @@ const quickSearches = [
     { label: 'Trastevere', location: 'Trastevere' },
 ]
 
+// Array statico usato dal v-for nel template per la sezione "Come funziona"
 const steps = [
     { num: '01', icon: 'bi-geo-alt', title: 'Cerca', desc: 'Inserisci la destinazione e l\'orario. Vedi tutti i garage disponibili sulla mappa.' },
     { num: '02', icon: 'bi-grid-3x3-gap', title: 'Scegli il posto', desc: 'Seleziona un garage e dalla planimetria interattiva seleziona il posto più adatto al tuo veicolo.' },
@@ -137,6 +166,7 @@ const steps = [
     { num: '04', icon: 'bi-patch-check', title: 'Parcheggia', desc: 'Il posto è tuo. Ricevi il ticket, entra e lascia il tuo veicolo in tutta tranqullità.' },
 ]
 
+// Array statico usato dal v-for per la sezione "Perché Parkly" (feature cards)
 const features = [
     { icon: 'bi-map', title: 'Mappa interattiva', desc: 'Visualizza garage e disponibilità in tempo reale, e filtra per tipo di veicolo e servizi.' },
     { icon: 'bi-lightning-charge', title: 'Prenotazione immediata', desc: 'Il tuo posto viene bloccato all\'istante ed è garantito.' },

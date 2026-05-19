@@ -1,43 +1,53 @@
+// Gestisce la logica per la visualizzazione della planimetria del garage.
+// Include la gestione della griglia la configurazione
+// dei posti auto, l'algoritmo di sizionamento e la conversione
+// della mappa visiva in una singola stringa testuale per il database.
+
 import { ref, computed } from 'vue'
 
 export function usePlanimetriaEditor() {
+
+    // Costante che definisce quante celle (w = larghezza, h = altezza) occupa ogni veicolo
     const MAPPA_DIMENSIONI = {
         'MOTO': { w: 1, h: 1 },
         'AUTO': { w: 2, h: 1 },
         'FURGONE': { w: 2, h: 2 }
     }
 
+    // Stati 
     const dimensioniMappa = ref({ righe: 6, colonne: 12 })
     const griglia = ref([])
     const strumentoAttivo = ref(null)
     const postiConfigurati = ref([])
     const nuovoPosto = ref({ codice: '', tipo: 'AUTO', isDisabili: false, isElettrica: false, isCoperto: true })
 
-    // 1. Inizializza o ridimensiona la griglia
-    const ridimensionaGriglia = () => {
-        const nuova = []
-        for (let r = 0; r < dimensioniMappa.value.righe; r++) {
-            const riga = []
-            for (let c = 0; c < dimensioniMappa.value.colonne; c++) {
-                riga.push(griglia.value[r]?.[c] || null)
-            }
-            nuova.push(riga)
-        }
-        griglia.value = nuova
-    }
-
-    // Set con i codici dei posti attualmente posizionati sulla griglia
+    // Set contenente i codici dei posti attualmente posizionati fisicamente sulla griglia.
+    // 'isRoot' indica l'angolo in alto a sinistra di un veicolo (utile per mezzi più grandi di 1x1).
     const codiciPosizionati = computed(() => {
         const codici = new Set()
-        griglia.value.forEach(riga => riga.forEach(cella => { if (cella?.isRoot) codici.add(cella.codice) }))
+        griglia.value.forEach(riga => riga.forEach(cella => {
+            if (cella?.isRoot) codici.add(cella.codice)
+        }))
         return codici
     })
 
-    // Genera codici automatici in base alle spunte e al tipo
+    // Adatta la lista dei posti configurati al formato richiesto dal componente di anteprima della mappa
+    const postiConvertitiPerAnteprima = computed(() =>
+        postiConfigurati.value.map(p => ({
+            codiceposto: p.codice,
+            tipoveicolo: p.tipo,
+            iselettrica: p.isElettrica,
+            isdisabili: p.isDisabili,
+            iscoperto: p.isCoperto,
+            is_occupato: false // in anteprima nessun posto è occupato
+        }))
+    )
+
+    // Genera codici automatici progressivi in base alle spunte e al tipo di veicolo (es. A01, E02, D01)
     const generaCodiceAutomatico = () => {
         let prefisso = nuovoPosto.value.tipo.charAt(0).toUpperCase()
-        
-        // Se è disabili o elettrico, il prefisso diventa D o E (sovrascrivendo A/M/F)
+
+        // Disabili o Elettrico sovrascrivono il prefisso del tipo di veicolo base
         if (nuovoPosto.value.isDisabili) {
             prefisso = 'D'
         } else if (nuovoPosto.value.isElettrica) {
@@ -53,16 +63,15 @@ export function usePlanimetriaEditor() {
         return `${prefisso}${String(maxNum + 1).padStart(2, '0')}`
     }
 
-    // Compila automaticamente le opzioni se l'utente scrive a mano il codice
+    // Compila automaticamente le spunte se l'utente digita manualmente una lettera chiave nel codice
     const autoCompilaPosto = () => {
         const cod = nuovoPosto.value.codice.toUpperCase()
         if (!cod) return
-        
+
         if (cod.startsWith('M')) nuovoPosto.value.tipo = 'MOTO'
         else if (cod.startsWith('F')) nuovoPosto.value.tipo = 'FURGONE'
         else if (cod.startsWith('A')) nuovoPosto.value.tipo = 'AUTO'
-        
-        // Se scrive a mano E o D, attiva in automatico le spunte
+
         if (cod.startsWith('E')) {
             nuovoPosto.value.isElettrica = true
             nuovoPosto.value.isDisabili = false
@@ -72,15 +81,15 @@ export function usePlanimetriaEditor() {
         }
     }
 
-    // Aggiunge il posto e ricorda le selezioni per il prossimo
+    // Salva il posto nell'elenco (palette) e ricorda le spunte attuali per facilitare 
+    // l'inserimento multiplo in serie di posti dello stesso tipo.
     const aggiungiPostoConfigurato = () => {
-        // Se il campo è vuoto, usa il generatore automatico (es. E01, D01, ecc.)
         const cod = nuovoPosto.value.codice.trim().toUpperCase() || generaCodiceAutomatico()
-        
+
         if (postiConfigurati.value.find(p => p.codice === cod)) {
             return { success: false, error: 'Codice posto già esistente!' }
         }
-        
+
         postiConfigurati.value.push({
             codice: cod,
             tipo: nuovoPosto.value.tipo,
@@ -88,23 +97,48 @@ export function usePlanimetriaEditor() {
             isDisabili: nuovoPosto.value.isDisabili,
             isCoperto: nuovoPosto.value.isCoperto
         })
-        
-        // Salviamo in memoria lo stato delle spunte appena confermate
+
+        // Salviamo in memoria lo stato delle spunte per riapplicarlo subito dopo
         const tipoSalvato = nuovoPosto.value.tipo
         const isElettricaSalvata = nuovoPosto.value.isElettrica
         const isDisabiliSalvata = nuovoPosto.value.isDisabili
         const isCopertoSalvato = nuovoPosto.value.isCoperto
-        
-        // Ripristiniamo la variabile 'nuovoPosto' mantenendo però le spunte
-        nuovoPosto.value = { 
-            codice: '', 
-            tipo: tipoSalvato, 
-            isDisabili: isDisabiliSalvata, 
-            isElettrica: isElettricaSalvata, 
-            isCoperto: isCopertoSalvato 
+
+        nuovoPosto.value = {
+            codice: '',
+            tipo: tipoSalvato,
+            isDisabili: isDisabiliSalvata,
+            isElettrica: isElettricaSalvata,
+            isCoperto: isCopertoSalvato
         }
-        
+
         return { success: true }
+    }
+
+    const rimuoviPostoConfigurato = (index) => {
+        const cod = postiConfigurati.value[index].codice
+        postiConfigurati.value.splice(index, 1)
+
+        // Rimuove fisicamente il posto dalla griglia visiva se era già stato posizionato
+        for (let r = 0; r < dimensioniMappa.value.righe; r++) {
+            for (let c = 0; c < dimensioniMappa.value.colonne; c++) {
+                const cella = griglia.value[r][c]
+                if (cella?.codice === cod && cella.isRoot) rimuoviItemIn(r, c)
+            }
+        }
+    }
+
+    // Ricrea la matrice mantenendo i posti già disegnati. Chiamata anche all'init.
+    const ridimensionaGriglia = () => {
+        const nuova = []
+        for (let r = 0; r < dimensioniMappa.value.righe; r++) {
+            const riga = []
+            for (let c = 0; c < dimensioniMappa.value.colonne; c++) {
+                riga.push(griglia.value[r]?.[c] || null)
+            }
+            nuova.push(riga)
+        }
+        griglia.value = nuova
     }
 
     const selezionaStrumento = (posto) => {
@@ -112,9 +146,11 @@ export function usePlanimetriaEditor() {
         strumentoAttivo.value = { ...posto, w: dim.w, h: dim.h }
     }
 
+    // Funzione interna: "Svuota" le celle occupate da un veicolo a partire dalla sua cella Root (r, c)
     const rimuoviItemIn = (r, c) => {
         const cella = griglia.value[r][c]
         if (!cella) return
+
         const rootCella = griglia.value[cella.rootR][cella.rootC]
         for (let i = 0; i < rootCella.h; i++) {
             for (let j = 0; j < rootCella.w; j++) {
@@ -125,17 +161,7 @@ export function usePlanimetriaEditor() {
         }
     }
 
-    const rimuoviPostoConfigurato = (index) => {
-        const cod = postiConfigurati.value[index].codice
-        postiConfigurati.value.splice(index, 1)
-        for (let r = 0; r < dimensioniMappa.value.righe; r++) {
-            for (let c = 0; c < dimensioniMappa.value.colonne; c++) {
-                const cella = griglia.value[r][c]
-                if (cella?.codice === cod && cella.isRoot) rimuoviItemIn(r, c)
-            }
-        }
-    }
-
+    // Gestisce il click su un quadrato della griglia visiva
     const clickCella = (r, c) => {
         if (strumentoAttivo.value === 'GOMMA') {
             rimuoviItemIn(r, c)
@@ -146,6 +172,7 @@ export function usePlanimetriaEditor() {
 
         const p = strumentoAttivo.value
 
+        // Controlli di validazione (collisioni e bordi)
         if (codiciPosizionati.value.has(p.codice)) {
             return { success: false, error: 'Posto già posizionato. Usa la gomma per rimuoverlo prima di spostarlo.' }
         }
@@ -153,6 +180,7 @@ export function usePlanimetriaEditor() {
             return { success: false, error: 'Spazio insufficiente: uscirai dai bordi della planimetria.' }
         }
 
+        // Controllo se tutte le celle necessarie sono libere
         for (let i = 0; i < p.h; i++) {
             for (let j = 0; j < p.w; j++) {
                 if (griglia.value[r + i][c + j] !== null) {
@@ -161,12 +189,15 @@ export function usePlanimetriaEditor() {
             }
         }
 
+        // Posizionamento effettivo: la cella in alto a sinistra diventa 'Root', le altre sono solo ingombro
         for (let i = 0; i < p.h; i++) {
             for (let j = 0; j < p.w; j++) {
                 griglia.value[r + i][c + j] = {
                     isRoot: i === 0 && j === 0,
-                    codice: p.codice, tipo: p.tipo,
-                    w: p.w, h: p.h, rootR: r, rootC: c
+                    codice: p.codice,
+                    tipo: p.tipo,
+                    w: p.w, h: p.h,
+                    rootR: r, rootC: c
                 }
             }
         }
@@ -174,7 +205,8 @@ export function usePlanimetriaEditor() {
         return { success: true }
     }
 
-    // 2. Output
+    // Trasforma la matrice visiva in una stringa di testo.
+    // Formato: CODICE:WxH separati da trattino. Es. riga: "X:1x1-A01:2x1-X:1x1"
     const stringaMappaGenerata = computed(() => {
         if (!griglia.value.length) return ''
         const righeStr = []
@@ -182,24 +214,19 @@ export function usePlanimetriaEditor() {
             const celleStr = []
             for (let c = 0; c < dimensioniMappa.value.colonne; c++) {
                 const cella = griglia.value[r][c]
+                // X:1x1 rappresenta una mattonella vuota
                 if (!cella) celleStr.push('X:1x1')
                 else if (cella.isRoot) celleStr.push(`${cella.codice}:${cella.w}x${cella.h}`)
             }
             if (celleStr.length > 0) righeStr.push(celleStr.join('-'))
         }
         const mappaFinale = righeStr.join('\n')
+        // Evitiamo di restituire stringhe con una mappa di sole 'X' se è completamente vuota
         return mappaFinale.replace(/X:1x1(-X:1x1)*\n/g, '').trim() === 'X:1x1' ? '' : mappaFinale
     })
 
-    const postiConvertitiPerAnteprima = computed(() =>
-        postiConfigurati.value.map(p => ({
-            codiceposto: p.codice, tipoveicolo: p.tipo,
-            iselettrica: p.isElettrica, isdisabili: p.isDisabili,
-            iscoperto: p.isCoperto, is_occupato: false
-        }))
-    )
-
-    // 3. Parser inverso (per caricare una mappa esistente in fase di modifica)
+    // Funzione inversa: parte da una stringa e ricostruisce la matrice visiva 
+    // (usata in fase di "Modifica Garage" per ripristinare il lavoro precedente).
     const ricostruisciGriglia = (mappa, righe = 10, colonne = 15) => {
         dimensioniMappa.value = { righe, colonne }
         ridimensionaGriglia()
@@ -235,16 +262,7 @@ export function usePlanimetriaEditor() {
         })
     }
 
-    // 4. Utility reset
-    const svuotaPlanimetria = () => {
-        postiConfigurati.value = []
-        nuovoPosto.value = { codice: '', tipo: 'AUTO', isDisabili: false, isElettrica: false, isCoperto: true }
-        strumentoAttivo.value = null
-        dimensioniMappa.value = { righe: 6, colonne: 12 }
-        ridimensionaGriglia()
-    }
-
-    // Costruttore
+    // Costruttore eseguito alla creazione del composable
     ridimensionaGriglia()
 
     return {
@@ -263,6 +281,5 @@ export function usePlanimetriaEditor() {
         selezionaStrumento,
         clickCella,
         ricostruisciGriglia,
-        svuotaPlanimetria
     }
 }
