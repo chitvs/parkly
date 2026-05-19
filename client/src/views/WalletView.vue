@@ -893,4 +893,13 @@ const handlePrelievo = async () => {
     color: var(--primary-blue);
     border-bottom: 2px solid var(--primary-blue);
 }
+
+.icon-pending {
+    background-color: #FFF4E5;
+    color: #FF9800;
+}
+
+.text-pending {
+    color: #e98c00 !important;
+}
 </style>
