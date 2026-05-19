@@ -187,6 +187,7 @@
   background-color: #003070;
   box-shadow: 0 6px 20px rgba(0, 64, 138, 0.25);
   transform: translateY(-1px);
+  color: #fff
 }
 
 .modal-submit-btn:active:not(:disabled), 
