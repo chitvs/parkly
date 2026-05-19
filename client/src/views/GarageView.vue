@@ -150,21 +150,58 @@ watch([checkIn, checkOut], async ([newIn, newOut]) => {
     }
 })
 
+
+// Funzione centralizzata per creare e aggiornare lo stato dei marker sulla mappa
+const syncMapMarkers = () => {
+    if (!fullMapInstance) return
+
+    const activeIds = garagesFiltrati.value.map(g => g.id_garage)
+
+    garages.value.forEach(g => {
+        if (g.latitudine && g.longitudine) {
+            
+            // Se il marker per questo garage non esiste ancora, lo CREIAMO
+            if (!markersRefs[g.id_garage]) {
+                const customIcon = L.divIcon({
+                    className: 'custom-garage-marker',
+                    html: '<div class="marker-pin"></div>',
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10]
+                })
+
+                const marker = L.marker([g.latitudine, g.longitudine], { icon: customIcon })
+
+                marker.bindPopup(`
+                    <div class="map-popup-content">
+                        <strong>${g.nome}</strong><br>${g.indirizzo}<br>
+                        <a href="/garage/${g.id_garage}" class="popup-detail-link">Vedi dettagli →</a>
+                    </div>
+                `)
+
+                marker.on('mouseover', () => setHover(g, true))
+                marker.on('mouseout', () => setHover(g, false))
+
+                // Lo salviamo in memoria
+                markersRefs[g.id_garage] = marker
+            }
+
+            // Ora che siamo certi che il marker esista, lo mostriamo o lo nascondiamo in base ai filtri
+            const currentMarker = markersRefs[g.id_garage]
+            if (activeIds.includes(g.id_garage)) {
+                currentMarker.addTo(fullMapInstance)
+            } else {
+                currentMarker.remove()
+            }
+        }
+    })
+}
+
 // Watcher molto importante: sincronizza i marcatori visibili sulla mappa Leaflet quando i filtri cambiano
 watch(garagesFiltrati, async (newGarages) => {
     // Al cambio filtri si resetta sempre la paginazione 
     paginaCorrente.value = 1
     elementiVisibiliFS.value = 6
-
-    if (!fullMapInstance) return
-    const activeIds = newGarages.map(g => g.id_garage)
-
-    // Aggiunge o rimuove dal layer Mappa solo i marker che superano i filtri
-    Object.keys(markersRefs).forEach(id => {
-        const marker = markersRefs[id]
-        activeIds.includes(Number(id)) ? marker.addTo(fullMapInstance) : marker.remove()
-    })
-    await nextTick()
+    syncMapMarkers()
 }, { deep: true }) // Deep in modo da reagire ai cambiamenti interni
 
 const handlePageChange = async () => {
@@ -287,33 +324,8 @@ const openMapFullscreen = async () => {
         // Ricavo l'array degli id che superano filtri correnti in memoria
         const activeIds = garagesFiltrati.value.map(g => g.id_garage)
 
-        // Iterazione per pre-creare i marker di TUTTI i garage, nascondendo quelli non attivi
-        garages.value.forEach(g => {
-            if (g.latitudine && g.longitudine) {
-                const customIcon = L.divIcon({
-                    className: 'custom-garage-marker',
-                    html: '<div class="marker-pin"></div>',
-                    iconSize: [20, 20],
-                    iconAnchor: [10, 10]
-                })
+        syncMapMarkers()
 
-                const marker = L.marker([g.latitudine, g.longitudine], { icon: customIcon })
-
-                // Compilazione del popup bianco che appare quando clicco il marker
-                marker.bindPopup(`
-                    <div class="map-popup-content">
-                        <strong>${g.nome}</strong><br>${g.indirizzo}<br>
-                        <a href="/garage/${g.id_garage}" class="popup-detail-link">Vedi dettagli →</a>
-                    </div>
-                `)
-
-                markersRefs[g.id_garage] = marker
-                if (activeIds.includes(g.id_garage)) marker.addTo(fullMapInstance)
-
-                marker.on('mouseover', () => setHover(g, true))
-                marker.on('mouseout', () => setHover(g, false))
-            }
-        })
         // Se al lancio Mappa l'utente aveva già cercato una destinazione, inserisco il PIN rosso
         if (matchedPOI.value) {
             placeSearchMarker(matchedPOI.value.coords.lat, matchedPOI.value.coords.lng, matchedPOI.value.name)
