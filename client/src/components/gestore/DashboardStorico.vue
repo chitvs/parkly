@@ -12,6 +12,9 @@ const props = defineProps({
 
 defineEmits(['apri-chat'])
 
+
+// Converte i timestamp  restituiti dal server in una stringa compatta "DD/MM/YY HH:MM".
+// iso = Stringa Data in formato ISO
 const formatData = (iso) => {
     if (!iso) return '-'
     const d = new Date(iso)
@@ -19,9 +22,12 @@ const formatData = (iso) => {
         + ' ' + d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
 }
 
+//Restituisce le classi CSS di colore associate allo stato di vita della prenotazione.
 const statoBadge = (stato) =>
     stato === 'ATTIVA' ? 'badge--green' : stato === 'ANNULLATA' ? 'badge--red' : 'badge--gray'
 
+// --- Logica paginazione ---
+// Ricalca la stessa logica usata nell'elenco Garage.
 const paginaCorrente = ref(1)
 const elementiPerPagina = ref(5)
 
@@ -72,9 +78,10 @@ watch(() => props.prenotazioni, () => {
                             <td class="td-muted">{{ formatData(p.finesosta) }}</td>
                             <td class="td-bold td-blue">€ {{ Number(p.prezzototale).toFixed(2) }}</td>
                             <td><span :class="['badge', statoBadge(p.stato)]">{{ p.stato }}</span></td>
+
                             <td class="text-center">
-                                <button :style="{ visibility: p.stato === 'ATTIVA' ? 'visible' : 'hidden' }" @click="$emit('apri-chat', p)" class="btn-chat"
-                                    title="Scrivi al cliente">
+                                <button :style="{ visibility: p.stato === 'ATTIVA' ? 'visible' : 'hidden' }"
+                                    @click="$emit('apri-chat', p)" class="btn-chat" title="Scrivi al cliente">
                                     <span v-if="p.nonletti > 0" class="chat-notification-dot"></span>
                                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -92,13 +99,9 @@ watch(() => props.prenotazioni, () => {
             </div>
         </div>
 
-        <div class="pagination-container mt-4" v-if="prenotazioni.length > 0">
-            <Pagination 
-                v-model:paginaCorrente="paginaCorrente" 
-                v-model:elementiPerPagina="elementiPerPagina"
-                :totaleElementi="prenotazioni.length" 
-                @cambio-pagina="scrollInAlto"
-            />
+        <div class="pagination-container" v-if="prenotazioni.length > 0">
+            <Pagination v-model:paginaCorrente="paginaCorrente" v-model:elementiPerPagina="elementiPerPagina"
+                :totaleElementi="prenotazioni.length" @cambio-pagina="scrollInAlto" />
         </div>
     </section>
 </template>
@@ -106,11 +109,21 @@ watch(() => props.prenotazioni, () => {
 <style scoped>
 .vista {
     animation: fadeIn 0.25s ease;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .centered-container {
@@ -156,7 +169,8 @@ watch(() => props.prenotazioni, () => {
 
 .parkly-table {
     width: 100%;
-    min-width: 850px; 
+    min-width: 850px;
+    /* Impedisce il collasso delle colonne sui dispositivi mobili attivando lo scroll pulito */
     border-collapse: collapse;
     font-size: 0.875rem;
 }
@@ -300,8 +314,9 @@ watch(() => props.prenotazioni, () => {
     border: 2px solid #fff;
 }
 
-.mt-4 {
-    margin-top: 1.5rem;
+.pagination-container {
+    margin-top: auto !important;
+    padding-top: 2rem;
 }
 
 .pagination-container {

@@ -2,39 +2,38 @@
 import { computed } from 'vue';
 
 const props = defineProps({
-    posti: { type: Array, default: () => [] },
-    mappaTestuale: { type: String, default: '' },
-    selectedId: Number,
-    isAnteprima: { type: Boolean, default: false },
+    posti: { type: Array, default: () => [] }, // Dati effettivi estratti dal DB per ogni posto
+    mappaTestuale: { type: String, default: '' }, // Stringa "ASCII-art" per la disposizione
+    selectedId: Number, // ID del posto cliccato dall'utente
+    isAnteprima: { type: Boolean, default: false }, // Se true, l'utente sta solo guardando la mappa prima di inserire le date
     mostraErrori: { type: Boolean, default: true },
-    isGestoreMode: { type: Boolean, default: false }
+    isGestoreMode: { type: Boolean, default: false } // Cambia l'aspetto e i permessi di click (per il pannello admin)
 });
 
 const emit = defineEmits(['select', 'error', 'manage']);
 
+
+// Funzione helper per recuperare i dettagli completi del DB (es. tipo veicolo, stato) basandosi sul codice identificativo del posto.
+// codice = Il codice univoco stampato sulla mappa (es. "P01").
 const getDatiPosto = (codice) => {
     return props.posti.find(p => p.codiceposto === codice);
 };
 
-/*
- * parsing della stringa in matrice
- * ogni token è "CODICEPOSTO:COLxROW" oppure "X" per spazio vuoto.
- * 
- * ad es:
- *   PXX:1x1 moto (larga 1 unità, alta 1)
- *   PXX:2x1 auto (larga 2 unità, alta 1)
- *   PXX:2x2 furgone (larga 2 unità, alta 2)
- *   X       spazio/corsia
- *
- * le X di "riempimento" sotto i furgoni "non contano" perchè vengono "mangiate" dallo span del furgone
- */
+
+// PARSING DELLA STRINGA ASCII IN MATRICE 
+// Trasforma una stringa testuale con in un array 2D.
+// Il formato dei token è: `CODICE:COLONNE x RIGHE`.
+// Se manca la dimensione, il default è 1x1. "X" rappresenta strada/muro vuoto.
 const matrice = computed(() => {
     if (!props.mappaTestuale) return [];
+
+    // Divide per riga e per blocco
     return props.mappaTestuale.trim().split('\n').map(riga =>
         riga.split('-').map(token => {
             let codice = token;
             let span = '1x1';
 
+            // Estrae la dimensione (colSpan x rowSpan) se presente
             if (token.includes(':')) {
                 [codice, span] = token.split(':');
             }
@@ -45,6 +44,7 @@ const matrice = computed(() => {
     );
 });
 
+//Calcola il numero totale di unità in larghezza.
 const numUnitaColonne = computed(() => {
     if (matrice.value.length === 0) return {};
 
@@ -53,6 +53,9 @@ const numUnitaColonne = computed(() => {
     ));
 });
 
+// Questo computed genera la lista di div finali da disegnare sulla mappa.
+// Risolve i "buchi" creati da veicoli molto grandi (come i furgoni 2x2) che si espandono 
+// su più righe. Usa l'oggetto `occupate` per tenere traccia delle celle già occupate.
 const celle = computed(() => {
     const risultato = [];
     const occupate = {};
@@ -61,18 +64,21 @@ const celle = computed(() => {
         let unitaCorrente = 1;
 
         riga.forEach((cella) => {
+            // Se questa coordinata è stata coperta da un veicolo grosso della riga precedente, skippiamo in avanti
             while (occupate[unitaCorrente] > r + 1) {
                 unitaCorrente++;
             }
 
             const { codice, colSpan, rowSpan } = cella;
 
+            // Se questo è un veicolo che scende verso il basso, segnamo le colonne sottostanti come "occupate"
             if (rowSpan > 1) {
                 for (let i = 0; i < colSpan; i++) {
                     occupate[unitaCorrente + i] = r + 1 + rowSpan;
                 }
             }
 
+            // Aggiungiamo l'oggetto alla lista finale
             if (codice === 'X') {
                 risultato.push({
                     tipo: 'vuota',
@@ -87,7 +93,7 @@ const celle = computed(() => {
                     tipo: 'posto',
                     key: `${codice}-${r}-${unitaCorrente}`,
                     codice,
-                    posto: getDatiPosto(codice),
+                    posto: getDatiPosto(codice), // Lega il dato visuale ai dati del database
                     gridRow: r + 1,
                     gridColumn: unitaCorrente,
                     rowSpan,
@@ -102,6 +108,10 @@ const celle = computed(() => {
     return risultato;
 });
 
+
+// Applica dinamicamente regole CSS Grid al container padre.
+// Imposta una colonna fissa di 30px per unità.
+// Se una riga contiene solo asfalto vuoto ('X'), la fa più stretta (60px), altrimenti alta (90px).
 const gridStyle = computed(() => {
     if (!matrice.value.length) return {};
 
@@ -120,6 +130,7 @@ const gridStyle = computed(() => {
     };
 });
 
+// Genera lo stile che dice a ciascun div dove espandersi nella griglia.
 const getCellaStyle = (cella) => ({
     gridRow: cella.rowSpan > 1
         ? `${cella.gridRow} / span ${cella.rowSpan}`
@@ -129,36 +140,47 @@ const getCellaStyle = (cella) => ({
         : String(cella.gridColumn),
 });
 
+
+// Valuta lo stato visivo di un posto (colorazione e classi) in base alle regole di business.
+// codice = Il codice del posto.
 const getClassePosto = (codice) => {
     if (props.isAnteprima) return 'anteprima';
 
     const posto = getDatiPosto(codice);
-    if (!posto) return 'non-configurato';
-    
+    if (!posto) return 'non-configurato'; // Errore: mappa e db non sono allineati
+
+    // Se sono loggato come proprietario del garage vedo colori diversi (es. quelli in manutenzione)
     if (props.isGestoreMode) {
-        if (posto.is_in_manutenzione) return 'manutenzione'; 
-        if (posto.is_occupato) return 'occupato'; 
-        return 'gestione-attivo'; 
+        if (posto.is_in_manutenzione) return 'manutenzione';
+        if (posto.is_occupato) return 'occupato';
+        return 'gestione-attivo';
     }
 
+    // Modalità cliente normale
     if (props.selectedId === posto.id_posto) return 'selezionato';
     if (posto.is_occupato) return 'occupato';
     return 'libero';
 };
 
+
+// Reagisce al click su un parcheggio specifico.
+// Filtra i click non validi (es. posto già occupato, date mancanti in anteprima).
 const gestisciClick = (codice) => {
+    // Blocco se mancano date
     if (props.isAnteprima) {
         emit('error', 'Seleziona prima le date di arrivo e partenza per selezionare un posto.');
         return;
     }
-    
+
     const posto = getDatiPosto(codice);
 
+    // Se è il gestore a cliccare, si emette un evento per aprire il popup di modifica/manutenzione
     if (props.isGestoreMode) {
-        if (posto) emit('manage', posto); // Invia l'evento al padre invece di selezionarlo
+        if (posto) emit('manage', posto);
         return;
     }
 
+    // Se è il cliente e il posto è libero, lo seleziona per prenotarlo
     if (posto && !posto.is_occupato) {
         emit('select', posto);
     }
@@ -168,7 +190,6 @@ const gestisciClick = (codice) => {
 <template>
     <div class="planimetria" :data-gestore="isGestoreMode">
 
-        <!-- Legenda -->
         <div class="legenda-container">
             <div class="legenda">
                 <span class="box-legenda bianco"></span>Libero
@@ -182,7 +203,6 @@ const gestisciClick = (codice) => {
             </div>
         </div>
 
-        <!-- Traduzione della planimetria ASCII in una CSS grid -->
         <div class="mappa-container">
             <div v-if="!mappaTestuale" class="no-data">Nessuna mappa testuale definita per questo garage.</div>
 
@@ -398,9 +418,11 @@ img.box-legenda {
 .planimetria[data-gestore="true"] .occupato {
     cursor: pointer;
 }
+
 .planimetria[data-gestore="true"] .occupato:hover {
     filter: brightness(0.95);
 }
+
 .selezionato {
     background: #00408A !important;
     color: white !important;
@@ -433,7 +455,7 @@ img.box-legenda {
 }
 
 .manutenzione {
-    background: #fff4e6; 
+    background: #fff4e6;
     border: 2px dashed #ff922b !important;
     color: #ff922b !important;
     cursor: pointer;

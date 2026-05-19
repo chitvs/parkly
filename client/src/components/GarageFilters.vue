@@ -1,18 +1,20 @@
 <script setup>
 import { computed } from 'vue'
 
+// Props in entrata: valori correnti dei filtri di ricerca nel componente padre
 const props = defineProps({
-    filterTipoVeicolo: String,
-    maxPrice: Number,
-    filter24h: Boolean,
-    filterCoperto: Boolean,
-    filterElettrico: Boolean,
-    filterDisabili: Boolean,
-    minHeight: Number,
-    raggioKm: { type: Number, default: 2 },
-    hasLocation: { type: Boolean, default: false }
+    filterTipoVeicolo: String, // 'ALL', 'AUTO', 'MOTO' o 'FURGONE'
+    maxPrice: Number,          // Tetto massimo di prezzo accettabile
+    filter24h: Boolean,        // Garage aperto 24h
+    filterCoperto: Boolean,    // Garage al chiuso/coperto
+    filterElettrico: Boolean,  // Presenza di colonnine di ricarica
+    filterDisabili: Boolean,   // Presenza di posti per disabili
+    minHeight: Number,         // Altezza minima del veicolo per i garage al coperto
+    raggioKm: { type: Number, default: 2 },       // Raggio spaziale della ricerca rispetto al target
+    hasLocation: { type: Boolean, default: false } // Flag per abilitare/nascondere lo slider del raggio
 })
 
+// Ogni volta che l'utente interagisce con un filtro, viene emesso l'evento corrispondente al padre.
 const emit = defineEmits([
     'update:filterTipoVeicolo',
     'update:maxPrice',
@@ -24,6 +26,11 @@ const emit = defineEmits([
     'update:raggioKm'
 ])
 
+
+// Pattern "Proxy Computed":
+//get (Lettura): Quando l'HTML deve mostrare i dati, chiede il valore alla variabile. Il get va a leggere la prop e gliela restituisce.
+// set (Scrittura): Quando l'utente muove lo slider, l'HTML cerca di sovrascrivere prezzo lanciando l'evento emit.
+//In questo modo, il padre riceve l'aggiornamento, cambia il dato originario, e la prop si aggiorna a cascata,modificando l'HTML in modo fluido.
 const tipoVeicolo = computed({
     get: () => props.filterTipoVeicolo,
     set: val => emit('update:filterTipoVeicolo', val)
@@ -31,7 +38,7 @@ const tipoVeicolo = computed({
 
 const prezzo = computed({
     get: () => props.maxPrice,
-    set: val => emit('update:maxPrice', Number(val))
+    set: val => emit('update:maxPrice', Number(val)) // Assicura la conversione a Numero
 })
 
 const h24 = computed({

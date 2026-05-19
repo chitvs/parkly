@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import Pagination from '../Pagination.vue'
 
+// Riceve la lista completa dei garage dal padre 
 const props = defineProps({
     mieiGarage: {
         type: Array,
@@ -12,21 +13,29 @@ const props = defineProps({
 
 defineEmits(['modifica', 'toggle-stato'])
 
+// --- Logica Paginazione ---
 const paginaCorrente = ref(1)
 const elementiPerPagina = ref(5)
 
+//Computed array che restituisce solo la parte dell'array completo corrispondente alla pagina attuale, in base a quanti elementi mostrare.
 const mieiGaragePaginati = computed(() => {
     const inizio = (paginaCorrente.value - 1) * elementiPerPagina.value
     return props.mieiGarage.slice(inizio, inizio + elementiPerPagina.value)
 })
 
+
+// Riporta lo scroll in cima alla pagina quando l'utente naviga tra le pagine della tabella.
 const scrollInAlto = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
+
+// Se l'array cambia (es. il gestore aggiunge o cancella un garage),  
+// riporta l'utente alla pagina 1 per prevenire errori in cui si trova in una pagina vuota.
 watch(() => props.mieiGarage, () => {
     paginaCorrente.value = 1
 }, { deep: true })
+
 </script>
 
 <template>
@@ -88,6 +97,7 @@ watch(() => props.mieiGarage, () => {
                 </table>
             </div>
         </div>
+
         <div class="pagination-container mt-4" v-if="mieiGarage.length > 0">
             <Pagination v-model:paginaCorrente="paginaCorrente" v-model:elementiPerPagina="elementiPerPagina"
                 :totaleElementi="mieiGarage.length" @cambio-pagina="scrollInAlto" />

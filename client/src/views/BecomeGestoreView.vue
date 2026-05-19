@@ -2,21 +2,23 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { authStore } from '../store/auth.js'
-import { alertStore } from '../store/alert.js' // Importiamo lo store globale
+import { alertStore } from '../store/alert.js'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 
 const router = useRouter()
+// Variabile reattiva per gestire lo stato di caricamento e disabilitare il bottone
 const isLoading = ref(false)
 
+// Funzione richiamata al click del bottone per effettuare l'upgrade dell'utente a gestore
 const confirmUpgrade = async () => {
+    // Attiva lo spinner di caricamento
     isLoading.value = true
-    alertStore.pulisci() // Pulisce eventuali alert precedenti
+    alertStore.pulisci() // Pulisce eventuali alert precedenti per evitare sovrapposizioni
 
     const result = await authStore.upgradeToGestore()
 
     if (result.success) {
-        // Mostriamo un feedback positivo prima del redirect
         alertStore.mostra('success', 'Congratulazioni! Ora sei un Gestore e puoi pubblicare i tuoi garage.')
         router.replace('/')
     } else {
@@ -46,7 +48,8 @@ const confirmUpgrade = async () => {
                     <div class="mb-4">
                         <img src="../assets/LogoParklyBlu.svg" style="height: 70px; width: auto;">
                     </div>
-                    <h3 class="mb-4" style="color: var(--deep-blue, #00204A); font-weight:700;">Sei pronto a iniziare?</h3>
+                    <h3 class="mb-4" style="color: var(--deep-blue, #00204A); font-weight:700;">Sei pronto a iniziare?
+                    </h3>
                     <br>
                     <button @click="confirmUpgrade" class="btn-primary w-100" style="height: 52px; font-size: 1.1rem;"
                         :disabled="isLoading">

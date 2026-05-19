@@ -1,17 +1,25 @@
+/**
+ * --- RECENSIONI STORE ---
+ * 
+ * * Gestisce le operazioni leagte alle recensioni.
+ * * NOTE ARCHITETTONICHE:
+ * - A differenza degli altri store lascia ai singoli componenti Vue 
+ * il compito di salvare e mostrare i dati restituiti.
+ */
+
 import { reactive } from 'vue'
+import { apiFetch } from '../utils/apiClient'
 
 export const recensioniStore = reactive({
-  
+
   // Invia una nuova recensione al server
   async postReview(reviewData) {
     try {
-      const response = await fetch('/api/recensioni', {
+      const response = await apiFetch('/api/recensioni', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify(reviewData)
       });
-      
+
       return await response.json();
     } catch (error) {
       console.error("Errore invio recensione:", error);
@@ -22,13 +30,11 @@ export const recensioniStore = reactive({
   // Aggiorna una recensione esistente
   async updateReview(reviewData) {
     try {
-      const response = await fetch(`/api/recensioni/${reviewData.id_prenotazione}`, {
+      const response = await apiFetch(`/api/recensioni/${reviewData.id_prenotazione}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify(reviewData)
       });
-      
+
       return await response.json();
     } catch (error) {
       console.error("Errore modifica recensione:", error);
@@ -40,11 +46,10 @@ export const recensioniStore = reactive({
   async deleteReview(id_prenotazione, id_garage) {
     try {
       // Passiamo id_utente e id_garage come query parameters
-      const response = await fetch(`/api/recensioni/${id_prenotazione}?id_garage=${id_garage}`, {
+      const response = await apiFetch(`/api/recensioni/${id_prenotazione}?id_garage=${id_garage}`, {
         method: 'DELETE',
-        credentials: 'include'
       });
-      
+
       return await response.json();
     } catch (error) {
       console.error("Errore eliminazione recensione:", error);
@@ -52,14 +57,13 @@ export const recensioniStore = reactive({
     }
   },
 
-  // Recupera i dati di una recensione specifica
+  // Recupera i dati di una recensione specifica modo tale da pre-comipilare il form in fase di modifica
   async getReview(id_prenotazione) {
     try {
-      const response = await fetch(`/api/recensioni/${id_prenotazione}`, {
+      const response = await apiFetch(`/api/recensioni/${id_prenotazione}`, {
         method: 'GET',
-        credentials: 'include'
       });
-      
+
       return await response.json();
     } catch (error) {
       console.error("Errore recupero recensione:", error);

@@ -1,4 +1,14 @@
+/**
+ * --- GARAGE STORE ---
+ * Gestisce l'intero dominio dei Garage.
+ * E' suddiviso in:
+ *  1. LATO CLIENTE: Ricerca, visualizzazione dettagli, mappa posti e prenotazione.
+ *  2. LATO GESTORE: Creazione/modifica garage, statistiche dashboard, manutenzioni.
+ * ============================================================================
+ */
+
 import { reactive, markRaw } from 'vue'
+import { apiFetch } from '../utils/apiClient'
 
 export const garageStore = reactive({
   // --- STATI CLIENT ---
@@ -8,7 +18,6 @@ export const garageStore = reactive({
 
   // --- STATI GESTORE ---
   mieiGarage: [],
-  storicoPrenotazioni: [],
   postiPerGarage: {},
   occupazioneGarage: {},
   idGarageSelezionato: 'TUTTI',
@@ -16,6 +25,10 @@ export const garageStore = reactive({
   // --- STATI CONDIVISI ---
   isLoading: false,
 
+
+  // AZIONI LATO CLIENTE
+
+  // Pulisice lo stato per evitare sfarfallii causati da dati vecchi quando si passa da un garage all'altro
   clearGarageData() {
     this.currentGarage = null
     this.posti = []
@@ -25,7 +38,7 @@ export const garageStore = reactive({
   async fetchGarage(id) {
     this.isLoading = true
     try {
-      const response = await fetch(`/api/garage/${id}`)
+      const response = await apiFetch(`/api/garage/${id}`)
       const data = await response.json()
       if (data.success) this.currentGarage = markRaw(data.garage)
       return data
@@ -36,13 +49,15 @@ export const garageStore = reactive({
     }
   },
 
+  // Reucpera i posti del garage con id
+  // N.B. : se forniti inizio e fine i posti vengono anche filtrati restituendo solo quelli disponibili per la prenotazione
   async fetchPosti(id, inizio, fine) {
     try {
       let url = `/api/garage/${id}/posti`;
       if (inizio && fine) {
         url += `?inizio=${inizio}&fine=${fine}`;
       }
-      const response = await fetch(url, { credentials: 'include' })
+      const response = await apiFetch(url)
       const data = await response.json()
       if (data.success) this.posti = markRaw(data.posti)
       return data
@@ -51,9 +66,10 @@ export const garageStore = reactive({
     }
   },
 
+  // Recupera le recensioni per il determinato garage. 
   async fetchRecensioni(id) {
     try {
-      const response = await fetch(`/api/garage/${id}/recensioni`)
+      const response = await apiFetch(`/api/garage/${id}/recensioni`)
       const data = await response.json()
       if (data.success) {
         this.recensioni = markRaw(data.recensioni)
@@ -63,13 +79,12 @@ export const garageStore = reactive({
     }
   },
 
+  // Metoto per prenotare un posto
   async prenota(payload) {
     try {
-      const response = await fetch('/api/prenotazioni', {
+      const response = await apiFetch('/api/prenotazioni', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-        credentials: 'include'
       })
       return await response.json()
     } catch (err) {
@@ -77,12 +92,14 @@ export const garageStore = reactive({
     }
   },
 
-  // --- METODI SPECIFICI PER IL GESTORE ---
 
+  // AZIONI LATO GESTORE ---
+
+  // Reucper i garage posseduti dal gestore
   async fetchGaragesGestore() {
     this.isLoading = true;
     try {
-      const response = await fetch('/api/garage/garages-gestore', { credentials: 'include' });
+      const response = await apiFetch('/api/garage/garages-gestore');
       const data = await response.json();
       return { success: response.ok, data };
     } catch (err) {
@@ -93,9 +110,10 @@ export const garageStore = reactive({
     }
   },
 
+  // Ritorna la percentuale dei posti occupati
   async fetchOccupazione(id) {
     try {
-      const response = await fetch(`/api/garage/${id}/occupazione`, { credentials: 'include' });
+      const response = await apiFetch(`/api/garage/${id}/occupazione`);
       const data = await response.json();
       return { success: response.ok, percentuale: data.percentuale };
     } catch (err) {
@@ -104,10 +122,12 @@ export const garageStore = reactive({
     }
   },
 
+  // Aggiorna i dati locali per il garage selezioanto
   setGarageSelezionato(id) {
     this.idGarageSelezionato = id;
   },
 
+  // Carica la dashboard del gestore, in particolare popolando i vari campi in base al garage selezionato
   async caricaDashboardGestore() {
     this.isLoading = true;
     try {
@@ -116,6 +136,7 @@ export const garageStore = reactive({
 
       this.mieiGarage = markRaw(res.data);
 
+      // Di default vengono mostrati tutti i garage
       if (this.idGarageSelezionato !== 'TUTTI') {
         const esisteAncora = this.mieiGarage.some(g => Number(g.id_garage) === Number(this.idGarageSelezionato));
         if (!esisteAncora) {
@@ -123,9 +144,11 @@ export const garageStore = reactive({
         }
       }
 
+      // Variabili temporanee
       const nuoviPosti = {};
       const nuovaOccupazione = {};
 
+      // Vengono eseguite le richieste in parallelo per ottimizzare i tempi
       await Promise.all(this.mieiGarage.map(async (g) => {
         try {
           const [rPosti, rOcc] = await Promise.all([
@@ -139,6 +162,7 @@ export const garageStore = reactive({
         }
       }));
 
+      // Aggiornamento locale dei nuovi risultati
       this.postiPerGarage = nuoviPosti;
       this.occupazioneGarage = nuovaOccupazione;
 
@@ -148,26 +172,12 @@ export const garageStore = reactive({
     }
   },
 
-  async caricaStoricoGestore() {
-    try {
-      const res = await fetch('/api/prenotazioni/prenotazioni-gestore', { credentials: 'include' });
-      if (res.ok) {
-        this.storicoPrenotazioni = await res.json();
-        return { success: true };
-      }
-      return { success: false };
-    } catch (err) {
-      return { success: false, error: err.message };
-    }
-  },
-
+  // Utlizzato dal gestore per creare un nuovo garage
   async createGarage(payload) {
     this.isLoading = true;
     try {
-      const res = await fetch('/api/garage/garages-gestore', {
+      const res = await apiFetch('/api/garage/garages-gestore', {
         method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       const data = await res.json();
@@ -180,14 +190,13 @@ export const garageStore = reactive({
     }
   },
 
+  // Utilizzato per modificare i dati del garage selezionato
   async updateGarage(id, garageData) {
     this.isLoading = true
     try {
-      const response = await fetch(`/api/garage/garages-gestore/${id}`, {
+      const response = await apiFetch(`/api/garage/garages-gestore/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(garageData),
-        credentials: 'include'
       })
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || 'Errore durante l\'aggiornamento')
@@ -202,9 +211,8 @@ export const garageStore = reactive({
   async uploadPhotos(idGarage, formData) {
     this.isLoading = true;
     try {
-      const response = await fetch(`/api/garage/${idGarage}/upload-photos`, {
+      const response = await apiFetch(`/api/garage/${idGarage}/upload-photos`, {
         method: 'POST',
-        credentials: 'include',
         body: formData
       });
       const data = await response.json();
@@ -217,6 +225,7 @@ export const garageStore = reactive({
     }
   },
 
+  // Utilizzata per simulare la mappa dei posti 
   async aggiornaMappaOrariGestore(inizioIso, fineIso) {
     await Promise.all(this.mieiGarage.map(async (g) => {
       try {
@@ -230,13 +239,12 @@ export const garageStore = reactive({
     }));
   },
 
+  // Permette di mettere un posto in manutenzione e quindi bloccarlo per evitare nuove prenotazioni.
   async addMaintenance(idGarage, idPosto, maintenanceData) {
     this.isLoading = true
     try {
-      const response = await fetch(`/api/garage/garages-gestore/${idGarage}/posti/${idPosto}/manutenzione`, {
+      const response = await apiFetch(`/api/garage/garages-gestore/${idGarage}/posti/${idPosto}/manutenzione`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify(maintenanceData),
       })
       const data = await response.json()
@@ -249,13 +257,12 @@ export const garageStore = reactive({
     }
   },
 
+  // Sblocca un posto in manutenzione rendendolo nuovamente disponibile per la prenotazione. 
   async removeMaintenance(idGarage, idPosto, idManutenzione) {
     this.isLoading = true;
     try {
-      const response = await fetch(`/api/garage/garages-gestore/${idGarage}/posti/${idPosto}/manutenzione/${idManutenzione}`, {
+      const response = await apiFetch(`/api/garage/garages-gestore/${idGarage}/posti/${idPosto}/manutenzione/${idManutenzione}`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include'
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Errore durante la rimozione');
