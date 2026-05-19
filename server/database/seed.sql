@@ -943,7 +943,7 @@ INSERT INTO Transazione (
 (5, 253, 'PRENOTAZIONE', '-8.00', 'Pagamento prenotazione PR-244KFMZ6');
 
 -- INCASSI AUTOMATICI PER OGNI PRENOTAZIONE
--- Genera le transazioni lato gestore per tutte le prenotazioni non anate:
+-- Genera le transazioni lato gestore per tutte le prenotazioni non annullate:
 --   ATTIVA -> INCASSO_SOSPESO
 --   CONCLUSA -> INCASSO_COMPLETATO
 -- Le ANNULLATE vengono escluse perchè nessun incasso spetta al gestore.
