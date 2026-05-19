@@ -3,6 +3,7 @@ import { ref, onMounted, nextTick } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
 import { authStore } from '../store/auth.js'
 import { alertStore } from '../store/alert.js'
+import { useGarages } from '../composables/useGarages.js'
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
 import SearchBar from '../components/SearchBar.vue'
@@ -36,10 +37,15 @@ onMounted(() => {
 })
 
 // Chiamata all'API per scaricare garage, mischiarli ed estrarne 8 in maniera casuale
+const { fetchGarages, garages } = useGarages()
+
 const fetchRandomGarages = async () => {
     try {
-        const response = await fetch('/api/garage')
-        const data = await response.json()
+        await fetchGarages(checkIn.value, checkOut.value)
+        const data = {
+            success: true,
+            garage: garages.value
+        }
 
         if (data.success && data.garage && data.garage.length > 0) {
             // Ordina casualmente l'array sfruttando il generatore random
