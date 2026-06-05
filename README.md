@@ -38,6 +38,7 @@ Parkly è un'applicazione web full-stack per la gestione e la prenotazione di pa
   - [Variabili d'ambiente](#variabili-dambiente)
   - [Avvio](#avvio)
 - [Autori](#autori)
+- [Licenza](#licenza)
 
 ## Architettura e tecnologie utilizzate
 
@@ -207,3 +208,7 @@ Se il server risponde con successo, l'applicazione è connessa correttamente.
 ## Autori
 
 Sviluppato da Andrea Carbone, Alessandro Chitarrini, Matteo Crugliano e Davide Gaglione.
+
+## Licenza
+
+Consultare il file [LICENSE](./LICENSE).
