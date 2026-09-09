@@ -14,152 +14,156 @@
   <img src="https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase" />
 </p>
 
-Parkly è un'applicazione web full-stack per la gestione e la prenotazione di parcheggi, un progetto nato durante il corso di _Tecnologie e Sistemi Web_, all'Università degli Studi di Roma "La Sapienza".
+[Italian 🇮🇹](README.it.md)
 
-## Indice
+---
 
-- [Architettura e tecnologie utilizzate](#architettura-e-tecnologie-utilizzate)
-- [Struttura del progetto](#struttura-del-progetto)
-- [Schema del database](#schema-del-database)
-- [Funzionalità](#funzionalità)
-  - [Flusso di autenticazione](#flusso-di-autenticazione)
-  - [Ricerca dei garage](#ricerca-dei-garage)
-  - [Prenotazione di un parcheggio](#prenotazione-di-un-parcheggio)
-  - [Gestione del portafoglio](#gestione-del-portafoglio)
-  - [Il ruolo Gestore e la pubblicazione di un garage](#il-ruolo-gestore-e-la-pubblicazione-di-un-garage)
-  - [Sistema di recensioni](#sistema-di-recensioni)
-  - [Chat interattiva](#chat-interattiva)
-  - [Manutenzione dei posti auto](#manutenzione-dei-posti-auto)
-- [Viste](#viste)
-- [Installazione](#installazione)
-  - [Prerequisiti](#prerequisiti)
-  - [Installazione delle dipendenze](#installazione-delle-dipendenze)
-  - [Configurazione del database](#configurazione-del-database)
-  - [Variabili d'ambiente](#variabili-dambiente)
-  - [Avvio](#avvio)
-- [Autori](#autori)
-- [Licenza](#licenza)
+Parkly is a full-stack web application for parking management and reservations, a project developed during the _Web Technologies and Systems_ course at Sapienza University of Rome.
 
-## Architettura e tecnologie utilizzate
+## Table of Contents
 
-Il progetto è strutturato secondo un'architettura client-server, separando l'interfaccia utente dalle API e dalla gestione dei dati.
+- [Architecture and technologies used](#architecture-and-technologies-used)
+- [Project structure](#project-structure)
+- [Database schema](#database-schema)
+- [Features](#features)
+  - [Authentication flow](#authentication-flow)
+  - [Garage search](#garage-search)
+  - [Parking spot reservation](#parking-spot-reservation)
+  - [Wallet management](#wallet-management)
+  - [The Manager role and publishing a garage](#the-manager-role-and-publishing-a-garage)
+  - [Review system](#review-system)
+  - [Interactive chat](#interactive-chat)
+  - [Parking spot maintenance](#parking-spot-maintenance)
+- [Views](#views)
+- [Installation](#installation)
+  - [Prerequisites](#prerequisites)
+  - [Installing dependencies](#installing-dependencies)
+  - [Database configuration](#database-configuration)
+  - [Environment variables](#environment-variables)
+  - [Running the application](#running-the-application)
+- [Authors](#authors)
+- [License](#license)
 
-Il frontend è basato su Vue.js e Vite. L'interfaccia è costruita con Bootstrap, mentre per il rendering e l'integrazione della mappa geografica è stato utilizzato Leaflet.
+## Architecture and technologies used
 
-Il backend è un server Node.js basato su Express. Per l'autenticazione abbiamo utilizzato express-session e cookie, proteggendo le password con bcrypt.
+The project is structured according to a client-server architecture, separating the user interface from the APIs and data management.
 
-Per quanto riguarda i dati abbiamo scelto un database relazionale, PostgreSQL (hostato tramite Supabase). Oltre al database, sfruttiamo il bucket di Supabase Storage (interfacciato tramite multer in memoria sul server) per la gestione di alcuni file statici, come le foto profilo degli utenti.
+The frontend is based on Vue.js and Vite. The user interface is built with Bootstrap, while Leaflet was used for rendering and integrating the geographic map.
 
-Infine, per le funzionalità in tempo reale della chat abbiamo integrato Socket.IO.
+The backend is a Node.js server based on Express. For authentication, we used express-session and cookies, protecting passwords with bcrypt.
 
-## Struttura del progetto
+Regarding data, we chose a relational database, PostgreSQL (hosted via Supabase). In addition to the database, we use the Supabase Storage bucket (interfaced via multer in memory on the server) to manage static files, such as user profile pictures.
+
+Finally, Socket.IO was integrated for real-time chat functionality.
+
+## Project structure
 
 ```
 parkly/
 ├── client/
 │   └── src/
-│       ├── assets/          # Immagini e icone
-│       ├── components/      # Componenti UI riutilizzabili
-│       ├── composables/     # Logica reattiva incapsulata
-│       ├── router/          # Routing lato client
-│       ├── store/           # Stato applicativo
-│       ├── utils/           # Funzioni ausiliarie
-│       └── views/           # Viste
+│       ├── assets/          # Images and icons
+│       ├── components/      # Reusable UI components
+│       ├── composables/     # Encapsulated reactive logic
+│       ├── router/          # Client-side routing
+│       ├── store/           # Application state
+│       ├── utils/           # Helper functions
+│       └── views/           # Views
 └── server/
     ├── database/
-    │   ├── parkly.sql       # Definizione dello schema
-    │   └── seed.sql         # Dati di esempio
+    │   ├── parkly.sql       # Schema definition
+    │   └── seed.sql         # Sample data
     ├── middleware/
     │   └── authMiddleware.js
-    ├── routes/              # Endpoint API
+    ├── routes/              # API endpoints
     └── index.js
 ```
 
-## Schema del database
+## Database schema
 
-Il database è composto da otto tabelle. `Utente` è l'entità centrale: un utente con ruolo `GESTORE` può possedere uno o più `Garage`, ciascuno composto da più `PostoAuto`. I posti possono essere temporaneamente esclusi dalla disponibilità tramite `ManutenzionePosto`. Una `Prenotazione` associa un utente a un posto per un intervallo temporale definito e costituisce il presupposto per le entità dipendenti: `Messaggio`, `Recensione` e `Transazione`. Di seguito il diagramma E-R:
+The database consists of eight tables. `Utente` is the central entity: a user with the `GESTORE` role can own one or more `Garage` entities, each consisting of multiple `PostoAuto` spots. Spots can be temporarily excluded from availability via `ManutenzionePosto`. A `Prenotazione` associates a user with a spot for a defined time interval and serves as the prerequisite for dependent entities: `Messaggio`, `Recensione`, and `Transazione`. Below is the ER diagram:
 
 <p align="center">
-  <img src="./client/src/assets/schema-database.svg" width="100%" alt="Diagramma E-R">
+  <img src="./client/src/assets/schema-database.svg" width="100%" alt="ER Diagram">
 </p>
 
-## Funzionalità
+## Features
 
-- Prenotazione di posti auto con selezione dell'intervallo orario e addebito automatico sul portafoglio.
-- Ricerca garage per posizione geografica su mappa interattiva e lista, con filtri per tipo di veicolo, accesso disabili, ricarica elettrica e copertura.
-- Portafoglio integrato con ricarica manuale e storico completo delle transazioni.
-- Chat in tempo reale tra cliente e gestore, contestualizzata alle prenotazioni attive.
-- Sistema di recensioni vincolate alle prenotazioni concluse.
-- Dashboard gestore con occupazione in tempo reale, statistiche mensili e planimetria interattiva del garage.
-- Gestione della manutenzione dei posti auto con esclusione automatica dalla disponibilità.
+- Parking spot reservations with time slot selection and automatic wallet charging.
+- Garage search by geographic location on an interactive map and list, with filters for vehicle type, disabled access, electric charging, and covered parking.
+- Integrated wallet with manual top-up and full transaction history.
+- Real-time chat between customer and manager, contextualized to active reservations.
+- Review system tied to completed reservations.
+- Manager dashboard with real-time occupancy, monthly statistics, and an interactive garage floor plan.
+- Parking spot maintenance management with automatic exclusion from availability.
 
-### Flusso di autenticazione
+### Authentication flow
 
-L'accesso è gestito tramite sessioni e password criptate. Gli utenti possono gestire il proprio profilo, personalizzare l'avatar, aggiornare i dati personali o richiedere il ruolo di Gestore. Il sistema supporta anche l'eliminazione dell'account tramite soft-delete per preservare l'integrità dello storico.
+Authentication is handled via sessions and encrypted passwords. Users can manage their profile, customize their avatar, update personal details, or request the Manager role. The system also supports account deletion via soft-delete to preserve the integrity of historical data.
 
-### Ricerca dei garage
+### Garage search
 
-La ricerca combina il posizionamento geografico e la disponibilità temporale. Lato client, il sistema calcola la distanza tra destinazione e garage, ordinando i risultati per vicinanza. I filtri reattivi permettono di affinare la ricerca per tipo di veicolo e servizi accessori come ricarica elettrica, accesso disabili e copertura del posto auto.
+Search combines geographic positioning and time availability. On the client side, the system calculates the distance between destination and garage, sorting results by proximity. Reactive filters allow users to refine the search by vehicle type and additional amenities such as electric charging, disabled access, and covered parking spots.
 
-Lato backend, il sistema verifica l'effettiva disponibilità dei posti interrogando il database con la clausola `OVERLAPS`. Questo incrocio temporale esclude i garage già occupati negli orari selezionati, garantendo all'utente solo risultati prenotabili.
+On the backend, the system verifies actual spot availability by querying the database using the `OVERLAPS` clause. This time cross-referencing excludes garages that are already occupied during the selected hours, ensuring users only see bookable results.
 
-### Prenotazione di un parcheggio
+### Parking spot reservation
 
-Il flusso di prenotazione garantisce la massima coerenza dei dati attraverso transazioni atomiche. L'utente seleziona il posto dalla planimetria interattiva e il client valida formalmente i dati calcolando il preventivo.
+The reservation flow guarantees maximum data consistency through atomic transactions. The user selects a spot from the interactive floor plan, and the client formally validates the data by calculating the price quote.
 
-Per prevenire conflitti di prenotazione simultanea, il server applica un lock a livello di tupla sul database. All'interno della stessa transazione, il sistema verifica il saldo, addebita il costo sul portafoglio e genera il ticket.
+To prevent simultaneous booking conflicts, the server applies a row-level lock on the database. Within the same transaction, the system verifies the balance, charges the cost to the wallet, and generates the ticket.
 
-### Gestione del portafoglio
+### Wallet management
 
-Parkly integra un portafoglio virtuale per semplificare i pagamenti, permettendo ricariche comprese tra 5€ e 1000€. L'uso di transazioni atomiche nel backend garantisce che l'aggiornamento del saldo e la registrazione del movimento nello storico avvengano simultaneamente.
+Parkly integrates a virtual wallet to simplify payments, allowing top-ups between €5 and €1000. The use of atomic transactions in the backend ensures that updating the balance and recording the transaction in the history occur simultaneously.
 
-Gli utenti possono consultare lo storico completo delle proprie attività tramite una lista cronologica paginata, che distingue esplicitamente ricariche, pagamenti e rimborsi.
+Users can view the full history of their activities through a paginated chronological list that explicitly distinguishes between top-ups, payments, and refunds.
 
-### Il ruolo Gestore e la pubblicazione di un garage
+### The Manager role and publishing a garage
 
-La dashboard dedicata ai gestori permette di pubblicare nuovi garage su Parkly attraverso un flusso guidato in tre fasi.
+The dedicated dashboard for managers allows publishing new garages on Parkly through a guided three-step flow.
 
-Nella prima fase viene definita la posizione del garage: partendo da un indirizzo, il sistema interroga un'API di geocodifica e genera delle coordinate, per garantire la massima precisione è permesso all'utente di affinare manualmente le coordinate tramite click diretto sulla mappa.
+In the first step, the garage location is defined: starting from an address, the system queries a geocoding API and generates coordinates; to ensure maximum accuracy, the user can manually refine the coordinates by clicking directly on the map.
 
-La seconda fase riguarda la configurazione tecnica dei posti auto. Il gestore definisce ogni parcheggio specificando la tipologia di veicolo e i servizi inclusi, come la ricarica elettrica, l'accessibilità per disabili o la copertura. Per velocizzare l'inserimento e migliorare l'esperienza dell'utente, il sistema è in grado di generare automaticamente i codici identificativi dei posti in base alla categoria selezionata.
+The second step involves the technical configuration of the parking spots. The manager defines each parking spot by specifying the vehicle type and included amenities, such as electric charging, wheelchair accessibility, or covered parking. To speed up data entry and improve user experience, the system can automatically generate spot identification codes based on the selected category.
 
-L'ultima fase consiste nel disegno della planimetria tramite una griglia interattiva. Ogni posto occupa uno spazio proporzionale alle dimensioni del veicolo e il componente PlanimetriaGarage ne renderizza l'anteprima in tempo reale elaborando i dati inseriti. Il layout finale viene salvato nel database come stringa testuale, permettendo al client di ricostruire fedelmente la piantina durante il processo di prenotazione.
+The final step consists of drawing the floor plan using an interactive grid. Each spot occupies space proportional to the vehicle's dimensions, and the PlanimetriaGarage component renders a real-time preview by processing the entered data. The final layout is saved in the database as a text string, allowing the client to faithfully reconstruct the floor plan during the reservation process.
 
-### Sistema di recensioni
+### Review system
 
-Al termine di una sosta, l'utente ha la possibilità di valutare la propria esperienza assegnando un voto da 1 a 5 stelle e lasciando un commento. Per garantire l'affidabilità e l'autenticità dei feedback mostrati agli altri utenti, il sistema permette di recensire esclusivamente i garage in cui si è effettivamente completata una prenotazione.
+At the end of a stay, users can rate their experience by giving a score from 1 to 5 stars and leaving a review. To ensure the reliability and authenticity of feedback shown to other users, the system only allows reviews for garages where a reservation has actually been completed.
 
-### Chat interattiva
+### Interactive chat
 
-Per facilitare la coordinazione tra utenti, Parkly integra un sistema di messaggistica in tempo reale basato su Socket.IO.
+To facilitate coordination between users, Parkly integrates a real-time messaging system based on Socket.IO.
 
-La chat è strettamente legata a una specifica prenotazione: il backend instrada i messaggi attraverso "room" private e verifica l'identità dei partecipanti prima di ogni invio.
+The chat is strictly tied to a specific reservation: the backend routes messages through private "rooms" and verifies the identity of participants before each transmission.
 
-### Manutenzione dei posti auto
+### Parking spot maintenance
 
-I gestori possono segnalare periodi di indisponibilità per singoli posti auto, specificando un intervallo temporale. Durante questi intervalli, i posti coinvolti vengono automaticamente esclusi dai risultati di ricerca e non sono prenotabili. Il sistema verifica l'assenza di sovrapposizioni tra manutenzioni e prenotazioni esistenti prima di confermare la pianificazione.
+Managers can report unavailability periods for individual parking spots by specifying a time window. During these intervals, the affected spots are automatically excluded from search results and cannot be booked. The system checks for any overlap between maintenance and existing reservations before confirming the schedule.
 
-## Viste
+## Views
 
-| Rotta | Componente | Descrizione |
+| Route | Component | Description |
 |---|---|---|
 | `/` | `HomeView` | Homepage |
-| `/garage` | `GarageView` | Lista garage con mappa interattiva e filtri |
-| `/garage/:id` | `GarageDetailView` | Dettaglio garage, disponibilità e prenotazione |
-| `/prenotazioni` | `BookingsView` | Storico e prenotazioni attive dell'utente |
-| `/portafoglio` | `WalletView` | Gestione saldo e storico transazioni |
-| `/dashboard-gestore` | `GestoreDashboardView` | Dashboard del gestore |
-| `/profile` | `ProfileView` | Impostazioni account ed eliminazione |
-| `/register` | `RegisterView` | Registrazione sulla piattaforma |
-| `/diventa-gestore` | `BecomeGestoreView` | Richiesta ruolo gestore |
+| `/garage` | `GarageView` | Garage list with interactive map and filters |
+| `/garage/:id` | `GarageDetailView` | Garage details, availability, and reservation |
+| `/prenotazioni` | `BookingsView` | User's active reservations and history |
+| `/portafoglio` | `WalletView` | Balance management and transaction history |
+| `/dashboard-gestore` | `GestoreDashboardView` | Manager dashboard |
+| `/profile` | `ProfileView` | Account settings and deletion |
+| `/register` | `RegisterView` | Platform registration |
+| `/diventa-gestore` | `BecomeGestoreView` | Manager role request |
 
-## Installazione
+## Installation
 
-### Prerequisiti
+### Prerequisites
 
-Node.js e un'istanza PostgreSQL, locale o remota.
+Node.js and a PostgreSQL instance, either local or remote.
 
-### Installazione delle dipendenze
+### Installing dependencies
 
 ```bash
 git clone https://github.com/chitvs/parkly.git
@@ -169,13 +173,13 @@ cd server && npm install
 cd ../client && npm install
 ```
 
-### Configurazione del database
+### Database configuration
 
-Dopo aver creato l'istanza del database (locale o remota), creare le tabelle con il codice in `parkly.sql` e popolarle con `seed.sql` per avere dei dati di prova.
+After creating the database instance (local or remote), create the tables using the code in `parkly.sql` and populate them with `seed.sql` to have test data.
 
-### Variabili d'ambiente
+### Environment variables
 
-Creare un file `.env` in `server/` con le seguenti variabili:
+Create a `.env` file in `server/` with the following variables:
 
 ```env
 DB_USER
@@ -190,25 +194,25 @@ SUPABASE_SERVICE_KEY
 ```
 
 > [!NOTE]  
-> Le variabili d'ambiente possono differire in base alla configurazione del database.
-> Durante lo sviluppo di Parkly Supabase è stato usato per creare l'istanza PostgreSQL e semplificare la collaborazione, dunque sono presenti le variabili `SUPABASE_URL` e `SUPABASE_SERVICE_KEY`.
+> Environment variables may vary depending on the database configuration.
+> During the development of Parkly, Supabase was used to create the PostgreSQL instance and simplify collaboration, which is why the `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` variables are present.
 
-### Avvio
+### Running the application
 
-Assicurarsi di essere nella root del progetto ed eseguire:
+Make sure you are in the project root and run:
 
 ```bash
 npm run dev
 ```
 
-Il client sarà disponibile su `http://localhost:5173`, il server su `http://localhost:3000`. Per testare il server collegarsi a `localhost:3000/test-db`.
+The client will be available at `http://localhost:5173`, and the server at `http://localhost:3000`. To test the server, visit `localhost:3000/test-db`.
 
-Se il server risponde con successo, l'applicazione è connessa correttamente.
+If the server responds successfully, the application is connected properly.
 
-## Autori
+## Authors
 
-Sviluppato da Andrea Carbone, Alessandro Chitarrini, Matteo Crugliano e Davide Gaglione.
+Developed by Andrea Carbone, Alessandro Chitarrini, Matteo Crugliano, and Davide Gaglione.
 
-## Licenza
+## License
 
-Consultare il file [LICENSE](./LICENSE).
+See the [LICENSE](./LICENSE) file.
